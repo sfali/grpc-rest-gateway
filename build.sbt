@@ -7,10 +7,10 @@ Global / onChangedBuildSource := ReloadOnSourceChanges
 ThisBuild / organization := "com.alphasystem"
 ThisBuild / scalaVersion := Scala213
 
-lazy val core = (projectMatrix in file("core"))
+lazy val runtime = (projectMatrix in file("runtime"))
   .defaultAxes()
   .settings(
-    name := "grpc-rest-gateway-core"
+    name := "grpc-rest-gateway-runtime"
   )
   .jvmPlatform(scalaVersions = Seq(Scala212, Scala213))
 
@@ -37,7 +37,7 @@ lazy val protocGenGrpcRestGatewayPlugin = protocGenProject("protoc-gen-grpc-rest
   )
 
 lazy val e2e = (projectMatrix in file("e2e"))
-  .dependsOn(core)
+  .dependsOn(runtime)
   .enablePlugins(LocalCodeGenPlugin)
   .defaultAxes()
   .settings(
@@ -65,5 +65,5 @@ lazy val `grpc-rest-gateway` =
     )
     .aggregate(protocGenGrpcRestGatewayPlugin.agg)
     .aggregate(
-      (codeGen.projectRefs ++ core.projectRefs)*
+      (codeGen.projectRefs ++ runtime.projectRefs)*
     )
