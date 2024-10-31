@@ -10,11 +10,11 @@ import io.netty.util.CharsetUtil
 import org.apache.commons.io.IOUtils
 
 object SwaggerHandler {
-  val SwaggerUiPath: Path   = Paths.get("META-INF/resources/webjars/swagger-ui/5.17.14") // must match dependendency version
-  val SpecsPrefix: Path     = Paths.get("/specs/")
-  val DocsPrefix: Path      = Paths.get("/docs/")
+  val SwaggerUiPath: Path = Paths.get("META-INF/resources/webjars/swagger-ui/5.17.14") // must match dependendency version
+  val SpecsPrefix: Path = Paths.get("/specs/")
+  val DocsPrefix: Path = Paths.get("/docs/")
   val DocsLandingPage: Path = Paths.get("/docs/index.html")
-  val RootPath: Path        = Paths.get("/")
+  val RootPath: Path = Paths.get("/")
 }
 
 @Sharable
@@ -23,11 +23,11 @@ class SwaggerHandler(services: Seq[GrpcGatewayHandler]) extends ChannelInboundHa
   override def channelRead(ctx: ChannelHandlerContext, msg: scala.Any): Unit = msg match {
     case req: FullHttpRequest =>
       val queryString = new QueryStringDecoder(req.uri())
-      val path        = Paths.get(queryString.path())
+      val path = Paths.get(queryString.path())
       val res = path match {
-        case RootPath        => Some(createRedirectResponse(req, DocsLandingPage))
-        case DocsPrefix      => Some(createRedirectResponse(req, DocsLandingPage))
-        case DocsLandingPage => Some(createStringResponse(req, indexPage.toString()))
+        case RootPath                      => Some(createRedirectResponse(req, DocsLandingPage))
+        case DocsPrefix                    => Some(createRedirectResponse(req, DocsLandingPage))
+        case DocsLandingPage               => Some(createStringResponse(req, indexPage.toString()))
         case p if p.startsWith(DocsPrefix) =>
           // swagger UI loading its own resources
           val resourcePath = SwaggerUiPath.resolve(RootPath.relativize(path).subpath(1, path.getNameCount))
@@ -51,7 +51,11 @@ class SwaggerHandler(services: Seq[GrpcGatewayHandler]) extends ChannelInboundHa
   }
 
   private def createStringResponse(req: FullHttpRequest, value: String) = {
-    val res = new DefaultFullHttpResponse(req.protocolVersion(), HttpResponseStatus.OK, Unpooled.copiedBuffer(value, CharsetUtil.UTF_8))
+    val res = new DefaultFullHttpResponse(
+      req.protocolVersion(),
+      HttpResponseStatus.OK,
+      Unpooled.copiedBuffer(value, CharsetUtil.UTF_8)
+    )
     res.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/html")
     setCommonHeaders(req, res)
     res
@@ -85,7 +89,7 @@ class SwaggerHandler(services: Seq[GrpcGatewayHandler]) extends ChannelInboundHa
   private val mimeTypes = new MimetypesFileTypeMap()
   mimeTypes.addMimeTypes("image/png png PNG")
   mimeTypes.addMimeTypes("text/css css CSS")
-  private val serviceUrls  = services.map(s => s"{url: '/specs/${s.name}.yml', name: '${s.name}'}").mkString(", ")
+  private val serviceUrls = services.map(s => s"{url: '/specs/${s.name}.yml', name: '${s.name}'}").mkString(", ")
   private val serviceNames = services.map(s => s.name).mkString(", ")
   private val indexPage =
     <html lang="en">
@@ -147,7 +151,7 @@ class SwaggerHandler(services: Seq[GrpcGatewayHandler]) extends ChannelInboundHa
         <script>
             window.onload = function() {{
                 const ui = SwaggerUIBundle({{
-                    urls: [{ serviceUrls }],
+                    urls: [{serviceUrls}],
                     dom_id: '#swagger-ui',
                     deepLinking: true,
                     presets: [

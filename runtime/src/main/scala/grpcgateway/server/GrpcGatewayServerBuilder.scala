@@ -10,16 +10,13 @@ import io.netty.handler.codec.http.{HttpObjectAggregator, HttpServerCodec}
 
 case class GrpcGatewayServerBuilder(
   port: Int = 80,
-  services: Seq[GrpcGatewayHandler] = Nil
-) {
+  services: Seq[GrpcGatewayHandler] = Nil) {
 
-  def forPort(port: Int): GrpcGatewayServerBuilder = {
+  def forPort(port: Int): GrpcGatewayServerBuilder =
     copy(port = port)
-  }
 
-  def addService(service: GrpcGatewayHandler): GrpcGatewayServerBuilder = {
+  def addService(service: GrpcGatewayHandler): GrpcGatewayServerBuilder =
     copy(services = services :+ service)
-  }
 
   def build(): GrpcGatewayServer = {
     val masterGroup = new NioEventLoopGroup()

@@ -9,18 +9,16 @@ class GrpcGatewayServer private[server] (
   bootstrap: ServerBootstrap,
   masterGroup: EventLoopGroup,
   slaveGroup: EventLoopGroup,
-  services: List[GrpcGatewayHandler]
-) {
-    private var channel: Option[ChannelFuture] = None
+  services: List[GrpcGatewayHandler]) {
+  private var channel: Option[ChannelFuture] = None
 
-    def start(): Unit = {
-      channel = Option(bootstrap.bind(port).sync())
-    }
+  def start(): Unit =
+    channel = Option(bootstrap.bind(port).sync())
 
-    def shutdown(): Unit = {
-      slaveGroup.shutdownGracefully()
-      masterGroup.shutdownGracefully()
-      services.foreach(_.shutdown())
-      channel.foreach(_.channel().closeFuture().sync())
-    }
+  def shutdown(): Unit = {
+    slaveGroup.shutdownGracefully()
+    masterGroup.shutdownGracefully()
+    services.foreach(_.shutdown())
+    channel.foreach(_.channel().closeFuture().sync())
+  }
 }
