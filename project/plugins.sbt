@@ -6,4 +6,4 @@ addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.10.0")
 addSbtPlugin("com.awwsmm.sbt" % "sbt-dependency-updater" % "0.4.0")
 addDependencyTreePlugin
 
-libraryDependencies += "com.thesamet.scalapb" %% "compilerplugin" % "0.11.15"
+libraryDependencies ++= Seq("com.thesamet.scalapb" %% "compilerplugin" % "0.11.15")

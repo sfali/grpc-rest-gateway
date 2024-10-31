@@ -1,4 +1,5 @@
 import scalapb.compiler.Version.scalapbVersion
+import Dependencies.*
 
 val Scala213 = "2.13.15"
 val Scala212 = "2.12.20"
@@ -10,7 +11,8 @@ ThisBuild / scalaVersion := Scala213
 lazy val runtime = (projectMatrix in file("runtime"))
   .defaultAxes()
   .settings(
-    name := "grpc-rest-gateway-runtime"
+    name := "grpc-rest-gateway-runtime",
+    libraryDependencies ++= RuntimeDependencies
   )
   .jvmPlatform(scalaVersions = Seq(Scala212, Scala213))
 
@@ -21,10 +23,7 @@ lazy val codeGen = (projectMatrix in file("code-gen"))
     name := "grpc-rest-gateway-code-gen",
     buildInfoKeys := Seq[BuildInfoKey](name, organization, version, scalaVersion, sbtVersion, Compile / allDependencies),
     buildInfoPackage := "com.alphasystem.compiler",
-    libraryDependencies ++= Seq(
-      "com.thesamet.scalapb" %% "compilerplugin" % scalapbVersion,
-      "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % scalapbVersion
-    )
+    libraryDependencies ++= CodegenDependencies
   )
   .jvmPlatform(scalaVersions = Seq(Scala212, Scala213))
 
@@ -43,10 +42,7 @@ lazy val e2e = (projectMatrix in file("e2e"))
   .settings(
     publish / skip := true,
     codeGenClasspath := (codeGenJVM212 / Compile / fullClasspath).value,
-    libraryDependencies ++= Seq(
-      "com.google.api.grpc" % "googleapis-common-protos" % "0.0.3" % "protobuf",
-      "org.scalameta" %% "munit" % "1.0.0" % Test
-    ),
+    libraryDependencies ++= E2EDependencies,
     testFrameworks += new TestFramework("munit.Framework"),
     Compile / PB.targets := Seq(
       scalapb.gen() -> (Compile / sourceManaged).value / "scalapb",
