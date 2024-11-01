@@ -68,10 +68,6 @@ private class SwaggerMessagePrinter(service: ServiceDescriptor, implicits: Descr
     val paths = methods.groupBy(extractPath)
     val definitions = methods.flatMap(m => extractDefs(m.getInputType) ++ extractDefs(m.getOutputType)).toSet
 
-    println(s"METHODS: ${methods.map(_.getName).mkString("[", ", ", "]")}")
-    println(s"PATHS: ${paths.keys.mkString("[", ", ", "]")}")
-    println(s"DEFINITIONS: ${definitions.map(_.getName).mkString("[", ", ", "]")}")
-
     new FunctionalPrinter()
       .add("swagger: '2.0'", "info:")
       .addIndented(

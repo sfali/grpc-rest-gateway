@@ -44,10 +44,7 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
   private val extendedFileDescriptor = ExtendedFileDescriptor(service.getFile)
   private val serviceName = service.getName
 
-  private val scalaPackageName = {
-    val fullName = extendedFileDescriptor.scalaPackage.fullName
-    fullName.replaceAll(s"\\.$serviceName", "")
-  }
+  private val scalaPackageName = extendedFileDescriptor.scalaPackage.fullName
 
   private val outputFileName = scalaPackageName.replace('.', '/') + "/" + serviceName + "GatewayHandler.scala"
 
@@ -65,7 +62,7 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
       .add(
         "import _root_.scalapb.GeneratedMessage",
         "import _root_.scalapb.json4s.JsonFormat",
-        "import _root_.grpcgateway.handlers._",
+        "import _root_.com.improving.grpc_rest_gateway.runtime.handlers._",
         "import _root_.io.grpc._",
         "import _root_.io.netty.handler.codec.http.{HttpMethod, QueryStringDecoder}"
       )
@@ -80,13 +77,18 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
       .print(Seq(service)) { case (p, s) => generateService(s)(p) }
       .result()
 
-  private def generateService(service: ServiceDescriptor): PrinterEndo =
-    _.add(s"class ${service.getName}GatewayHandler(channel: ManagedChannel)(implicit ec: ExecutionContext)")
+  private def generateService(service: ServiceDescriptor): PrinterEndo = { printer =>
+    val descriptor = ExtendedServiceDescriptor(service)
+
+    // this is NOT the FQN of the service, we are generating gateway handler in the same package as GRPC service
+    val grpcService = descriptor.companionObject.name
+    printer
+      .add(s"class ${service.getName}GatewayHandler(channel: ManagedChannel)(implicit ec: ExecutionContext)")
       .indent
       .add(
         "extends GrpcGatewayHandler(channel)(ec) {",
         s"""override val name: String = "${service.getName}"""",
-        s"private val stub = ${service.getName}Grpc.stub(channel)"
+        s"private val stub = $grpcService.stub(channel)"
       )
       .newline
       .call(generateSupportsCall(service))
@@ -95,6 +97,7 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
       .outdent
       .add("}")
       .newline
+  }
 
   private def getUnaryCallsWithHttpExtension(service: ServiceDescriptor) =
     service.getMethods.asScala.filter { m =>
@@ -140,6 +143,10 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
   }
 
   private def generateMethodHandlerCase(method: MethodDescriptor): PrinterEndo = { printer =>
+    val methodDescriptor = ExtendedMethodDescriptor(method)
+
+    // FQN of the input type, this done on the assumption that input types can be in the different package
+    val fullInputName = methodDescriptor.inputType.scalaType
     val http = method.getOptions.getExtension(AnnotationsProto.http)
     val methodName = method.getName.charAt(0).toLower + method.getName.substring(1)
     http.getPatternCase match {
@@ -149,7 +156,7 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
           .indent
           .add("val input = Try {")
           .indent
-          .call(generateInputFromQueryString(method.getInputType))
+          .call(generateInputFromQueryString(method.getInputType, fullInputName))
           .outdent
           .add("}")
           .add(s"Future.fromTry(input).flatMap(stub.$methodName)")
@@ -159,9 +166,7 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
           .add(s"""case ("POST", "${http.getPost}") => """)
           .add("for {")
           .addIndented(
-            s"""msg <- Future.fromTry(Try(JsonFormat.fromJsonString[${method
-              .getInputType
-              .getName}](body)).recoverWith(jsonException2GatewayExceptionPF))""",
+            s"""msg <- Future.fromTry(Try(JsonFormat.fromJsonString[$fullInputName](body)).recoverWith(jsonException2GatewayExceptionPF))""",
             s"res <- stub.$methodName(msg)"
           )
           .add("} yield res")
@@ -182,7 +187,7 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
           .indent
           .add("val input = Try {")
           .indent
-          .call(generateInputFromQueryString(method.getInputType))
+          .call(generateInputFromQueryString(method.getInputType, fullInputName))
           .outdent
           .add("}")
           .add(s"Future.fromTry(input).flatMap(stub.$methodName)")
@@ -191,57 +196,64 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
     }
   }
 
-  private def generateInputFromQueryString(d: Descriptor, prefix: String = ""): PrinterEndo = { printer =>
-    val args = d.getFields.asScala.map(f => s"${f.getJsonName} = ${inputName(f, prefix)}").mkString(", ")
+  private def generateInputFromQueryString(d: Descriptor, fullName: String, prefix: String = ""): PrinterEndo = {
+    printer =>
+      val args = d.getFields.asScala.map(f => s"${f.getJsonName} = ${inputName(f, prefix)}").mkString(", ")
 
-    printer
-      .print(d.getFields.asScala) { case (p, f) =>
-        f.getJavaType match {
-          case JavaType.MESSAGE =>
-            p.add(s"val ${inputName(f, prefix)} = {")
-              .indent
-              .call(generateInputFromQueryString(f.getMessageType, s"$prefix.${f.getJsonName}"))
-              .outdent
-              .add("}")
-          case JavaType.ENUM =>
-            p.add(s"val ${inputName(f, prefix)} = ")
-              .addIndented(
-                s"""${f.getName}.valueOf(queryString.parameters().get("$prefix${f.getJsonName}").asScala.head)"""
-              )
-          case JavaType.BOOLEAN =>
-            p.add(s"val ${inputName(f, prefix)} = ")
-              .addIndented(
-                s"""queryString.parameters().get("$prefix${f.getJsonName}").asScala.head.toBoolean"""
-              )
-          case JavaType.DOUBLE =>
-            p.add(s"val ${inputName(f, prefix)} = ")
-              .addIndented(
-                s"""queryString.parameters().get("$prefix${f.getJsonName}").asScala.head.toDouble"""
-              )
-          case JavaType.FLOAT =>
-            p.add(s"val ${inputName(f, prefix)} = ")
-              .addIndented(
-                s"""queryString.parameters().get("$prefix${f.getJsonName}").asScala.head.toFloat"""
-              )
-          case JavaType.INT =>
-            p.add(s"val ${inputName(f, prefix)} = ")
-              .addIndented(
-                s"""queryString.parameters().get("$prefix${f.getJsonName}").asScala.head.toInt"""
-              )
-          case JavaType.LONG =>
-            p.add(s"val ${inputName(f, prefix)} = ")
-              .addIndented(
-                s"""queryString.parameters().get("$prefix${f.getJsonName}").asScala.head.toLong"""
-              )
-          case JavaType.STRING =>
-            p.add(s"val ${inputName(f, prefix)} = ")
-              .addIndented(
-                s"""queryString.parameters().get("$prefix${f.getJsonName}").asScala.head"""
-              )
-          case jt => throw new Exception(s"Unknown java type: $jt")
+      printer
+        .print(d.getFields.asScala) { case (p, f) =>
+          f.getJavaType match {
+            case JavaType.MESSAGE =>
+              p.add(s"val ${inputName(f, prefix)} = {")
+                .indent
+                .call(
+                  generateInputFromQueryString(
+                    f.getMessageType,
+                    ExtendedMessageDescriptor(f.getMessageType).scalaType.fullName,
+                    s"$prefix.${f.getJsonName}"
+                  )
+                )
+                .outdent
+                .add("}")
+            case JavaType.ENUM =>
+              p.add(s"val ${inputName(f, prefix)} = ")
+                .addIndented(
+                  s"""${f.getName}.valueOf(queryString.parameters().get("$prefix${f.getJsonName}").asScala.head)"""
+                )
+            case JavaType.BOOLEAN =>
+              p.add(s"val ${inputName(f, prefix)} = ")
+                .addIndented(
+                  s"""queryString.parameters().get("$prefix${f.getJsonName}").asScala.head.toBoolean"""
+                )
+            case JavaType.DOUBLE =>
+              p.add(s"val ${inputName(f, prefix)} = ")
+                .addIndented(
+                  s"""queryString.parameters().get("$prefix${f.getJsonName}").asScala.head.toDouble"""
+                )
+            case JavaType.FLOAT =>
+              p.add(s"val ${inputName(f, prefix)} = ")
+                .addIndented(
+                  s"""queryString.parameters().get("$prefix${f.getJsonName}").asScala.head.toFloat"""
+                )
+            case JavaType.INT =>
+              p.add(s"val ${inputName(f, prefix)} = ")
+                .addIndented(
+                  s"""queryString.parameters().get("$prefix${f.getJsonName}").asScala.head.toInt"""
+                )
+            case JavaType.LONG =>
+              p.add(s"val ${inputName(f, prefix)} = ")
+                .addIndented(
+                  s"""queryString.parameters().get("$prefix${f.getJsonName}").asScala.head.toLong"""
+                )
+            case JavaType.STRING =>
+              p.add(s"val ${inputName(f, prefix)} = ")
+                .addIndented(
+                  s"""queryString.parameters().get("$prefix${f.getJsonName}").asScala.head"""
+                )
+            case jt => throw new Exception(s"Unknown java type: $jt")
+          }
         }
-      }
-      .add(s"${d.getName}($args)")
+        .add(s"$fullName($args)")
   }
 
   private def inputName(d: FieldDescriptor, prefix: String = ""): String = {
