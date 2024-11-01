@@ -1,4 +1,7 @@
-package grpcgateway.handlers
+package com.improving
+package grpc_rest_gateway
+package runtime
+package handlers
 
 import io.netty.channel.{ChannelFutureListener, ChannelHandlerContext, ChannelInboundHandlerAdapter}
 import io.netty.handler.codec.http.{FullHttpRequest, HttpResponseStatus}
@@ -19,5 +22,4 @@ class MethodNotFoundHandler extends ChannelInboundHandlerAdapter {
           .addListener(ChannelFutureListener.CLOSE)
       case _ => super.channelRead(ctx, msg)
     }
-
 }

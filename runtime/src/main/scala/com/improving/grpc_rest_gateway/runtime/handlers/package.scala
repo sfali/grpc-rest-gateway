@@ -1,12 +1,20 @@
-package grpcgateway
+package com.improving
+package grpc_rest_gateway
+package runtime
 
-import java.nio.charset.StandardCharsets
-
-import scalapb.json4s.JsonFormatException
 import io.grpc.Status.Code
 import io.netty.buffer.Unpooled
-import io.netty.handler.codec.http._
+import io.netty.handler.codec.http.{
+  DefaultFullHttpResponse,
+  FullHttpResponse,
+  HttpHeaderNames,
+  HttpMessage,
+  HttpResponseStatus,
+  HttpUtil
+}
+import scalapb.json4s.JsonFormatException
 
+import java.nio.charset.StandardCharsets
 import scala.util.{Failure, Try}
 
 package object handlers {
@@ -50,9 +58,7 @@ package object handlers {
 
     HttpUtil.setContentLength(res, buf.readableBytes)
     HttpUtil.setKeepAlive(res, HttpUtil.isKeepAlive(requestMsg))
-
     res
-
   }
 
   def jsonException2GatewayExceptionPF[U]: PartialFunction[Throwable, Try[U]] = {
@@ -60,5 +66,4 @@ package object handlers {
     case err: JsonFormatException  => Failure(InvalidArgument("Wrong json syntax: " + err.msg))
     case err => Failure(InvalidArgument("Wrong json input. Check proto file. Details: " + err.getMessage))
   }
-
 }

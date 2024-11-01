@@ -1,7 +1,10 @@
-package grpcgateway.server
+package com.improving
+package grpc_rest_gateway
+package runtime
+package server
 
+import runtime.handlers.GrpcGatewayHandler
 import com.typesafe.config.Config
-import grpcgateway.handlers.GrpcGatewayHandler
 import io.grpc.{ManagedChannel, ManagedChannelBuilder}
 import org.slf4j.LoggerFactory
 

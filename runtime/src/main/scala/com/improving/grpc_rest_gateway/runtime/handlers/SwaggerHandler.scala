@@ -1,4 +1,7 @@
-package grpcgateway.handlers
+package com.improving
+package grpc_rest_gateway
+package runtime
+package handlers
 
 import java.nio.file.{Path, Paths}
 import javax.activation.MimetypesFileTypeMap

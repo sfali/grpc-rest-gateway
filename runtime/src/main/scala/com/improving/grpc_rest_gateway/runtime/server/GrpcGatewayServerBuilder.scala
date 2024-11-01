@@ -1,6 +1,9 @@
-package grpcgateway.server
+package com.improving
+package grpc_rest_gateway
+package runtime
+package server
 
-import grpcgateway.handlers.{GrpcGatewayHandler, MethodNotFoundHandler, SwaggerHandler}
+import runtime.handlers.{GrpcGatewayHandler, MethodNotFoundHandler, SwaggerHandler}
 import io.netty.bootstrap.ServerBootstrap
 import io.netty.channel.ChannelInitializer
 import io.netty.channel.nio.NioEventLoopGroup
