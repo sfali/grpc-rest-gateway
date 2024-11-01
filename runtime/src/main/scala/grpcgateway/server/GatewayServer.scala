@@ -1,5 +1,6 @@
 package grpcgateway.server
 
+import com.typesafe.config.Config
 import grpcgateway.handlers.GrpcGatewayHandler
 import io.grpc.{ManagedChannel, ManagedChannelBuilder}
 import org.slf4j.LoggerFactory
@@ -45,12 +46,13 @@ object GatewayServer {
     serviceHost: String,
     servicePort: Int,
     gatewayPort: Int,
-    executor: Executor,
-    toHandlers: ManagedChannel => Seq[GrpcGatewayHandler]
+    toHandlers: ManagedChannel => Seq[GrpcGatewayHandler],
+    usePlainText: Boolean = true,
+    executor: Option[Executor] = None
   ): GatewayServer = {
     val channelBuilder = ManagedChannelBuilder.forAddress(serviceHost, servicePort)
-    channelBuilder.usePlaintext()
-    channelBuilder.executor(executor)
+    if (usePlainText) channelBuilder.usePlaintext()
+    executor.map(channelBuilder.executor)
     val channel = channelBuilder.build()
 
     var builder = GrpcGatewayServerBuilder.forPort(gatewayPort)
@@ -58,5 +60,21 @@ object GatewayServer {
       builder = builder.addService(handler)
 
     new GatewayServerImpl(builder.build(), gatewayPort)
+  }
+
+  def apply(
+    config: Config,
+    toHandlers: ManagedChannel => Seq[GrpcGatewayHandler],
+    executor: Option[Executor] = None
+  ): GatewayServer = {
+    val restGatewayConfig = config.getConfig("rest-gateway")
+    GatewayServer(
+      serviceHost = restGatewayConfig.getString("host"),
+      servicePort = restGatewayConfig.getInt("service-port"),
+      gatewayPort = restGatewayConfig.getInt("gateway-port"),
+      toHandlers = toHandlers,
+      usePlainText = restGatewayConfig.getBoolean("use-plain-text"),
+      executor = executor
+    )
   }
 }

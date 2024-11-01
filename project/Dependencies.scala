@@ -13,6 +13,7 @@ object Dependencies {
     val ScalaXml = "2.2.0"
     val Slf4j = "2.0.12"
     val SwaggerUi = "5.17.14"
+    val TypesafeConfig = "1.4.3"
   }
 
   val CodegenDependencies: Seq[ModuleID] = Seq(
@@ -29,6 +30,7 @@ object Dependencies {
     "io.grpc" % "grpc-netty" % V.GrpcJava,
     "com.thesamet.scalapb" %% "scalapb-json4s" % V.ScalaPbJson,
     "org.webjars" % "swagger-ui" % V.SwaggerUi,
+    "com.typesafe" % "config" % V.TypesafeConfig,
     "com.thesamet.scalapb.common-protos" %% "proto-google-common-protos-scalapb_0.11" % V.CommonProtos % "protobuf",
     "com.thesamet.scalapb.common-protos" %% "proto-google-common-protos-scalapb_0.11" % V.CommonProtos,
     "org.slf4j" % "slf4j-api" % V.Slf4j
