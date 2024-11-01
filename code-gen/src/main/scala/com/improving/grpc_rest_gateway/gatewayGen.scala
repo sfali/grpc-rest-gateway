@@ -1,6 +1,6 @@
-package com.alphasystem
+package com.improving.grpc_rest_gateway
 
-import com.alphasystem.compiler.BuildInfo
+import com.improving.grpc_rest_gateway.compiler.BuildInfo
 import protocbridge.{Artifact, SandboxedJvmGenerator}
 import scalapb.GeneratorOption
 
@@ -14,8 +14,8 @@ object gatewayGen {
           "grpc-rest-gateway-code-gen_2.12",
           BuildInfo.version
         ),
-        "com.alphasystem.compiler.GatewayGenerator$",
-        com.alphasystem.compiler.GatewayGenerator.suggestedDependencies
+        "com.improving.grpc_rest_gateway.compiler.GatewayGenerator$",
+        com.improving.grpc_rest_gateway.compiler.GatewayGenerator.suggestedDependencies
       ),
       options.map(_.toString)
     )

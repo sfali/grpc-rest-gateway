@@ -1,4 +1,4 @@
-package com.alphasystem.compiler
+package com.improving.grpc_rest_gateway.compiler
 
 import com.google.api.AnnotationsProto
 import com.google.api.HttpRule.PatternCase

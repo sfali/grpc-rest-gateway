@@ -47,8 +47,8 @@ object GatewayServer {
     servicePort: Int,
     gatewayPort: Int,
     toHandlers: ManagedChannel => Seq[GrpcGatewayHandler],
-    usePlainText: Boolean = true,
-    executor: Option[Executor] = None
+    executor: Option[Executor],
+    usePlainText: Boolean = true
   ): GatewayServer = {
     val channelBuilder = ManagedChannelBuilder.forAddress(serviceHost, servicePort)
     if (usePlainText) channelBuilder.usePlaintext()
@@ -65,7 +65,7 @@ object GatewayServer {
   def apply(
     config: Config,
     toHandlers: ManagedChannel => Seq[GrpcGatewayHandler],
-    executor: Option[Executor] = None
+    executor: Option[Executor]
   ): GatewayServer = {
     val restGatewayConfig = config.getConfig("rest-gateway")
     GatewayServer(

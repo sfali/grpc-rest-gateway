@@ -1,11 +1,10 @@
-import scalapb.compiler.Version.scalapbVersion
 import Dependencies.*
 
 val Scala213 = "2.13.15"
 val Scala212 = "2.12.20"
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
-ThisBuild / organization := "com.alphasystem"
+ThisBuild / organization := "com.improving"
 ThisBuild / scalaVersion := Scala213
 
 lazy val runtime = (projectMatrix in file("runtime"))
@@ -22,7 +21,7 @@ lazy val codeGen = (projectMatrix in file("code-gen"))
   .settings(
     name := "grpc-rest-gateway-code-gen",
     buildInfoKeys := Seq[BuildInfoKey](name, organization, version, scalaVersion, sbtVersion, Compile / allDependencies),
-    buildInfoPackage := "com.alphasystem.compiler",
+    buildInfoPackage := "com.improving.grpc_rest_gateway.compiler",
     libraryDependencies ++= CodegenDependencies
   )
   .jvmPlatform(scalaVersions = Seq(Scala212, Scala213))
@@ -31,7 +30,7 @@ lazy val codeGenJVM212 = codeGen.jvm(Scala212)
 
 lazy val protocGenGrpcRestGatewayPlugin = protocGenProject("protoc-gen-grpc-rest-gateway-plugin", codeGenJVM212)
   .settings(
-    Compile / mainClass := Some("com.alphasystem.compiler.GatewayGenerator"),
+    Compile / mainClass := Some("com.improving.grpc_rest_gateway.compiler.GatewayGenerator"),
     scalaVersion := Scala212
   )
 
@@ -46,7 +45,9 @@ lazy val e2e = (projectMatrix in file("e2e"))
     testFrameworks += new TestFramework("munit.Framework"),
     Compile / PB.targets := Seq(
       scalapb.gen() -> (Compile / sourceManaged).value / "scalapb",
-      genModule("com.alphasystem.compiler.GatewayGenerator$") -> (Compile / sourceManaged).value / "scalapb"
+      genModule(
+        "com.improving.grpc_rest_gateway.compiler.GatewayGenerator$"
+      ) -> (Compile / sourceManaged).value / "scalapb"
     )
   )
   .jvmPlatform(scalaVersions = Seq(Scala212, Scala213))

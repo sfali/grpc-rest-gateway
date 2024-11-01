@@ -1,6 +1,6 @@
-package com.alphasystem
+package com.improving.grpc_rest_gateway
 
-import com.alphasystem.compiler.BuildInfo
+import com.improving.grpc_rest_gateway.compiler.BuildInfo
 import protocbridge.{Artifact, SandboxedJvmGenerator}
 import scalapb.GeneratorOption
 
@@ -14,8 +14,8 @@ object swaggerGen {
           "codegen_2.12",
           BuildInfo.version
         ),
-        "com.alphasystem.compiler.SwaggerGenerator$",
-        com.alphasystem.compiler.SwaggerGenerator.suggestedDependencies
+        "com.improving.grpc_rest_gateway.compiler.SwaggerGenerator$",
+        com.improving.grpc_rest_gateway.compiler.SwaggerGenerator.suggestedDependencies
       ),
       options.map(_.toString)
     )
