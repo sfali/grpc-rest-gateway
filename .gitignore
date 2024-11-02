@@ -35,3 +35,4 @@ akka-diagnostics/
 /~$SSD_Rules.xlsx
 cassandra-bundle.jar
 *.dylib
+**/specs/*.yml

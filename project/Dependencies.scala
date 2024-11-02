@@ -7,11 +7,14 @@ object Dependencies {
     val CommonProtos = "2.9.6-0"
     val GrpcJava: String = scalapb.compiler.Version.grpcJavaVersion
     val JavaActivation = "1.1.1"
-    val Munit = "1.0.2"
+    val Logback = "1.5.12"
+    // val Munit = "1.0.2"
     val ScalaPb: String = scalapb.compiler.Version.scalapbVersion
     val ScalaPbJson = "0.12.1"
+    val ScalaTest = "3.2.19"
     val ScalaXml = "2.2.0"
     val Slf4j = "2.0.12"
+    val Sttp = "3.10.1"
     val SwaggerUi = "5.17.14"
     val TypesafeConfig = "1.4.3"
   }
@@ -37,7 +40,8 @@ object Dependencies {
   )
 
   val E2EDependencies: Seq[ModuleID] = Seq(
-    // "com.google.api.grpc" % "googleapis-common-protos" % "0.0.3" % "protobuf",
-    "org.scalameta" %% "munit" % V.Munit % Test
+    "ch.qos.logback" % "logback-classic" % V.Logback,
+    "org.scalatest" %% "scalatest" % V.ScalaTest % Test,
+    "com.softwaremill.sttp.client3" %% "core" % V.Sttp % Test
   )
 }
