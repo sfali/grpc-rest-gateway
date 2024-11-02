@@ -15,22 +15,10 @@ class TestServiceAImpl extends TestServiceAGrpc.TestServiceA {
   private val logger = LoggerFactory.getLogger(classOf[TestServiceAGrpc.TestServiceA])
   private val cache = mutable.Map.empty[Long, TestResponseA]
 
-  override def getRequest(request: TestRequestA): Future[TestResponseA] = {
-    val requestId = request.requestId
-    Try(validateRequestId(requestId)) match {
-      case Failure(ex)              => Future.failed(ex)
-      case Success(value) if !value =>
-        // this should never happen
-        Future.failed(
-          StatusProto.toStatusRuntimeException(
-            Status
-              .newBuilder()
-              .setCode(Code.INTERNAL_VALUE)
-              .setMessage("Unknown state")
-              .build()
-          )
-        )
-      case Success(_) =>
+  override def getRequest(request: TestRequestA): Future[TestResponseA] =
+    Try(validateRequestId(request.requestId)) match {
+      case Failure(ex) => Future.failed(ex)
+      case Success(requestId) =>
         logger.info("Serving get request: {}", requestId)
         cache.get(requestId) match {
           case Some(response) => Future.successful(response)
@@ -45,26 +33,12 @@ class TestServiceAImpl extends TestServiceAGrpc.TestServiceA {
               )
             )
         }
-
     }
-  }
 
-  override def process(request: TestRequestA): Future[TestResponseA] = {
-    val requestId = request.requestId
-    Try(validateRequestId(requestId)) match {
-      case Failure(ex)              => Future.failed(ex)
-      case Success(value) if !value =>
-        // this should never happen
-        Future.failed(
-          StatusProto.toStatusRuntimeException(
-            Status
-              .newBuilder()
-              .setCode(Code.INTERNAL_VALUE)
-              .setMessage("Unknown state")
-              .build()
-          )
-        )
-      case Success(_) =>
+  override def process(request: TestRequestA): Future[TestResponseA] =
+    Try(validateRequestId(request.requestId)) match {
+      case Failure(ex) => Future.failed(ex)
+      case Success(requestId) =>
         logger.info("Serving process request: {}", requestId)
         val response =
           cache.get(requestId) match {
@@ -74,7 +48,6 @@ class TestServiceAImpl extends TestServiceAGrpc.TestServiceA {
           }
         Future.successful(response)
     }
-  }
 
   private def validateRequestId(requestId: Long) =
     if (requestId <= 0) {
@@ -85,5 +58,5 @@ class TestServiceAImpl extends TestServiceAGrpc.TestServiceA {
           .setMessage(s"RequestId {$requestId} is not valid")
           .build()
       )
-    } else true
+    } else requestId
 }
