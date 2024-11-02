@@ -10,35 +10,29 @@ import rest_gateway_test.service.{TestServiceAImpl, TestServiceBImpl}
 import java.util.concurrent.{ExecutorService, Executors}
 import scala.concurrent.ExecutionContext
 
-private class GrpcServer private (executionContext: ExecutionContext) {
+class GrpcServer {
   private val logger = LoggerFactory.getLogger(classOf[GrpcServer])
-  private[this] var server: Option[Server] = None
+  private[this] var server: Server = _
 
   import GrpcServer._
 
-  private def start(executionContext: ExecutionContext): Unit = {
-    server = Some(
-      ServerBuilder
-        .forPort(GrpcPort)
-        .addService(TestServiceAGrpc.bindService(new TestServiceAImpl, executionContext))
-        .asInstanceOf[ServerBuilder[_]]
-        .addService(TestServiceBGrpc.bindService(new TestServiceBImpl, executionContext))
-        .asInstanceOf[ServerBuilder[_]]
-        .build()
-        .start()
-    )
+  private def start(executionContext: ExecutionContext): Server = {
+    server = ServerBuilder
+      .forPort(GrpcPort)
+      .addService(TestServiceAGrpc.bindService(new TestServiceAImpl, executionContext))
+      .asInstanceOf[ServerBuilder[_]]
+      .addService(TestServiceBGrpc.bindService(new TestServiceBImpl, executionContext))
+      .asInstanceOf[ServerBuilder[_]]
+      .build()
+      .start()
 
     logger.info("Server started, listening on {}", GrpcPort)
-    sys.addShutdownHook {
-      Console.err.println("*** shutting down gRPC server since JVM is shutting down")
-      stop()
-      Console.err.println("*** gRpc server shut down")
-    }
+    server
   }
 
-  private def stop(): Unit = server.foreach(_.shutdown())
+  def stop(): Unit = server.shutdown()
 
-  private def blockUntilShutdown(): Unit = server.foreach(_.awaitTermination())
+  private def blockUntilShutdown(): Unit = server.awaitTermination()
 }
 
 object GrpcServer {
@@ -46,10 +40,11 @@ object GrpcServer {
   private val GrpcPort = 8080
   val GatewayPort = 7070
 
-  def startGrpcServer(executorService: ExecutorService, blockUntilShutdown: Boolean = true): Unit = {
-    val server = new GrpcServer(ExecutionContext.global)
+  def startGrpcServer(executorService: ExecutorService, blockUntilShutdown: Boolean = true): GrpcServer = {
+    val server = new GrpcServer()
     server.start(ExecutionContext.fromExecutor(executorService))
     if (blockUntilShutdown) server.blockUntilShutdown()
+    server
   }
 
   def getGrpcClient: ManagedChannel = {
@@ -58,7 +53,7 @@ object GrpcServer {
     channelBuilder.build()
   }
 
-  def startGateWayServer(executorService: ExecutorService): Unit = {
+  def startGateWayServer(executorService: ExecutorService): GatewayServer = {
     implicit val ec: ExecutionContext = ExecutionContext.fromExecutor(executorService)
     val server = GatewayServer(
       serviceHost = host,
@@ -72,11 +67,6 @@ object GrpcServer {
       executor = Some(Executors.newFixedThreadPool(10))
     )
     server.start()
-
-    sys.addShutdownHook {
-      Console.err.println("*** shutting down gateway server since JVM is shutting down")
-      server.stop()
-      Console.err.println("Gateway server shutdown")
-    }
+    server
   }
 }
