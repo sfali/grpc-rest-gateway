@@ -4,10 +4,9 @@ package runtime
 package handlers
 
 import java.nio.charset.StandardCharsets
-
 import scalapb.GeneratedMessage
 import scalapb.json4s.JsonFormat
-import io.grpc.ManagedChannel
+import io.grpc.{ManagedChannel, StatusRuntimeException}
 import io.netty.channel.ChannelHandler.Sharable
 import io.netty.channel.{ChannelFutureListener, ChannelHandlerContext, ChannelInboundHandlerAdapter}
 import io.netty.handler.codec.http._
@@ -46,6 +45,12 @@ abstract class GrpcGatewayHandler(channel: ManagedChannel)(implicit ec: Executio
               val (body, status) = err match {
                 case e: GatewayException =>
                   e.details -> GRPC_HTTP_CODE_MAP.getOrElse(e.code, HttpResponseStatus.INTERNAL_SERVER_ERROR)
+                case err: StatusRuntimeException =>
+                  val grpcStatus = err.getStatus
+                  grpcStatus.getDescription -> GRPC_HTTP_CODE_MAP.getOrElse(
+                    grpcStatus.getCode.value(),
+                    HttpResponseStatus.INTERNAL_SERVER_ERROR
+                  )
                 case _ => "Internal error" -> HttpResponseStatus.INTERNAL_SERVER_ERROR
               }
 
@@ -53,7 +58,7 @@ abstract class GrpcGatewayHandler(channel: ManagedChannel)(implicit ec: Executio
                 requestMsg = req,
                 responseBody = body,
                 responseStatus = status,
-                responseContentType = "application/json"
+                responseContentType = "application/text"
               )
             }
             .foreach(resp => ctx.writeAndFlush(resp).addListener(ChannelFutureListener.CLOSE))
