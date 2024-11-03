@@ -1,0 +1,69 @@
+swagger: '2.0'
+info:
+  version: 0.1.0-SNAPSHOT
+  title: 'rest_gateway_test.api.scala_api.TestServiceB.TestServiceBProto'
+  description: 'REST API generated from TestServiceB'
+schemes:
+  - http
+  - https
+consumes:
+  - 'application/json'
+produces:
+  - 'application/json'
+paths:
+  /restgateway/test/testserviceb:
+    get:
+      tags:
+        - TestServiceB
+      summary:
+        'GetRequest'
+      description:
+        'Generated from rest_gateway_test.api.TestServiceB.GetRequest'
+      produces:
+        ['application/json']
+      responses:
+        200:
+          description: 'Normal response'
+          schema:
+            $ref: "#/definitions/TestResponseB"
+      parameters:
+      - name: requestId
+        in: query
+        type: integer
+        format: int64
+    post:
+      tags:
+        - TestServiceB
+      summary:
+        'Process'
+      description:
+        'Generated from rest_gateway_test.api.TestServiceB.Process'
+      produces:
+        ['application/json']
+      responses:
+        200:
+          description: 'Normal response'
+          schema:
+            $ref: "#/definitions/TestResponseB"
+      parameters:
+        - in: 'body'
+          name: body
+          schema:
+            $ref: "#/definitions/TestRequestB"
+definitions:
+  TestRequestB:
+    type: object
+    properties: 
+      requestId:
+        type: integer
+        format: int64
+  TestResponseB:
+    type: object
+    properties: 
+      success:
+        type: boolean
+      request_id:
+        type: integer
+        format: int64
+      result:
+        type: string

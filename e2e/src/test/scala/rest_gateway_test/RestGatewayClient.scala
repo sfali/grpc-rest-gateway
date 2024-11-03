@@ -1,13 +1,12 @@
 package rest_gateway_test
 
 import rest_gateway_test.api.model.common.{TestRequestB, TestResponseA, TestResponseB}
-import rest_gateway_test.server.GrpcServer
 import sttp.client3._
 import scalapb.json4s.JsonFormat
 
-class RestGatewayClient {
+class RestGatewayClient(gatewayPort: Int) {
 
-  private val baseUrl = s"http://localhost:${GrpcServer.GatewayPort}"
+  private val baseUrl = s"http://localhost:$gatewayPort"
   private val basePath = "restgateway/test"
   private val serviceAUri = s"$baseUrl/$basePath/testservicea"
   private val serviceBUri = s"$baseUrl/$basePath/testserviceb"

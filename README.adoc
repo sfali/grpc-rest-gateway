@@ -1,2 +1,94 @@
-= grpc-rest-gateway
-Rest gateway for GRPC end point
+= gRPC to REST Gateway
+
+gRPC to REST gateway generates a reverse-proxy server which converts REST HTTP API into gRPC. This project is based on work done by https://github.com/btlines/grpcgateway[grpcgateway].
+
+== About this project
+
+This project has two main modules, namely `grpc-rest-gateway-runtime` and `grpc-rest-gateway-code-gen`.
+
+=== Runtime library &mdash; `grpc-rest-gateway-runtime`
+
+Following are main classes in runtime library:
+
+. `GrpcGatewayHandler` &mdash; base abstract class responsible for dispatch given HTTP call to corresponding function in gRPC service.
+. `SwaggerHandler` &mdash; responsible for Open API yaml files and generate Swagger UI.
+. Server classes to build REST server and transform gRPC response HTTP response.
+
+=== Code generation library &mdash; `grpc-rest-gateway-code-gen`
+
+Code generation library is responsible for reading given Protobuf files and generating corresponding implementation of `GrpcGatewayHandler`.
+
+For example following Protobuf definition:
+
+[source, protobuf]
+----
+include::media/TestServiceB.proto[]
+----
+
+will generate following implementation of `GrpcGatewayHandler` and Open API specification respectively:
+
+[source, scala]
+----
+include::media/TestServiceBGatewayHandler.scala[]
+----
+
+[source, yaml]
+----
+include::media/TestServiceB.yml[]
+----
+
+=== Run gateway server
+
+Implement your gRPC services as per your need and run gRPC server. Gateway server can be build and run as follows:
+
+[source, scala]
+----
+import com.improving.grpc_rest_gateway.runtime.server.GatewayServer
+import rest_gateway_test.api.scala_api.TestServiceB.TestServiceBGatewayHandler
+import scala.concurrent.ExecutionContext
+
+implicit val ex: ExecutionContext = ??? // provide ExecutionContext
+val server = GatewayServer(
+      serviceHost = "localhost",
+      servicePort = 8080, // assuming gRPC server is running on port 8080
+      gatewayPort = 7070, // REST end point is running at port 7070
+      toHandlers = channel =>
+        Seq(new TestServiceBGatewayHandler(channel)),
+      executor = None // Executor is useful if you want to allocate different thread pool for REST endpoint
+    )
+server.start()
+
+// stop server once done
+server.stop()
+----
+
+=== Set up your project
+
+TBD
+
+=== Run tests and sample app
+
+`e2e` module contains test code and a sample app.
+
+Tests can be run as follows:
+
+[source, shell]
+----
+sbt "e2e / test"
+----
+
+Sample app can be run as follows:
+
+[source, shell]
+----
+sbt "e2e / run"
+----
+
+Open browser and paste following URL in address bar `http://localhost:7070/docs/index.html?urls.primaryName=TestServiceB#/`, you should see Open API specification for service.
+
+image::media/swagger.png[]
+
+== Limitations
+
+. Streaming calls are not supported.
+. Get calls with parameters only are supported (no path parameters), i.e., `/my_service?my_param=abc` is supported, following call will fail `/my_servic/abc`.

@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+package rest_gateway_test.api;
+
+import "scalapb/scalapb.proto";
+import "google/api/annotations.proto";
+import "common.proto";
+
+option java_multiple_files = false;
+option java_package = "rest_gateway_test.api.java_api";
+option java_outer_classname = "TestServiceBProto";
+option objc_class_prefix = "TS2P";
+
+option (scalapb.options) = {
+  single_file: true
+  lenses: true
+  retain_source_code_info: true
+  preserve_unknown_fields: false
+  package_name: "rest_gateway_test.api.scala_api"
+};
+
+service TestServiceB {
+  rpc GetRequest (rest_gateway_test.api.model.TestRequestB) returns (rest_gateway_test.api.model.TestResponseB) {
+    option (google.api.http) = {
+      get: "/restgateway/test/testserviceb"
+    };
+  }
+
+  rpc Process (rest_gateway_test.api.model.TestRequestB) returns (rest_gateway_test.api.model.TestResponseB) {
+    option (google.api.http) = {
+      post: "/restgateway/test/testserviceb"
+      body: "*"
+    };
+  }
+}
