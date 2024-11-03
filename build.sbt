@@ -4,7 +4,7 @@ val Scala213 = "2.13.15"
 val Scala212 = "2.12.20"
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
-ThisBuild / organization := "com.improving"
+ThisBuild / organization := "com.improving.grpc_rest_gateway"
 ThisBuild / scalaVersion := Scala213
 
 lazy val runtime = (projectMatrix in file("runtime"))
