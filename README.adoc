@@ -22,19 +22,19 @@ For example following Protobuf definition:
 
 [source, protobuf]
 ----
-include::media/TestServiceB.proto[]
+include::./media/TestServiceB.proto[]
 ----
 
 will generate following implementation of `GrpcGatewayHandler` and Open API specification respectively:
 
 [source, scala]
 ----
-include::media/TestServiceBGatewayHandler.scala[]
+include::./media/TestServiceBGatewayHandler.scala[]
 ----
 
 [source, yaml]
 ----
-include::media/TestServiceB.yml[]
+include::./media/TestServiceB.yml[]
 ----
 
 === Run gateway server
