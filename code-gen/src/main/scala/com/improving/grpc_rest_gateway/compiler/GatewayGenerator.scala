@@ -198,57 +198,61 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
 
   private def generateInputFromQueryString(d: Descriptor, fullName: String, prefix: String = ""): PrinterEndo = {
     printer =>
-      val args = d.getFields.asScala.map(f => s"${f.getJsonName} = ${inputName(f, prefix)}").mkString(", ")
+      val args = d.getFields.asScala.map(f => s"${f.getJsonName} = ${f.getJsonName}").mkString(", ")
 
+      // TODO: test each case with field name defined as Protobuf format "my_field" and Java format "myField"
+      // If field name in Protobuf is defined with underscore then inputName and jsonName will be different
       printer
         .print(d.getFields.asScala) { case (p, f) =>
+          val inputName = getInputName(f, prefix)
+          val jsonName = f.getJsonName
           f.getJavaType match {
             case JavaType.MESSAGE =>
-              p.add(s"val ${inputName(f, prefix)} = {")
+              p.add(s"val $jsonName = {")
                 .indent
                 .call(
                   generateInputFromQueryString(
                     f.getMessageType,
                     ExtendedMessageDescriptor(f.getMessageType).scalaType.fullName,
-                    s"$prefix.${f.getJsonName}"
+                    s"$prefix.$inputName"
                   )
                 )
                 .outdent
                 .add("}")
             case JavaType.ENUM =>
-              p.add(s"val ${inputName(f, prefix)} = ")
+              p.add(s"val $jsonName = ")
                 .addIndented(
-                  s"""${f.getName}.valueOf(queryString.parameters().get("$prefix${f.getJsonName}").asScala.head)"""
+                  s"""${f.getName}.valueOf(queryString.parameters().get("$prefix$inputName").asScala.head)"""
                 )
             case JavaType.BOOLEAN =>
-              p.add(s"val ${inputName(f, prefix)} = ")
+              p.add(s"val $jsonName = ")
                 .addIndented(
-                  s"""queryString.parameters().get("$prefix${f.getJsonName}").asScala.head.toBoolean"""
+                  s"""queryString.parameters().get("$prefix$inputName").asScala.head.toBoolean"""
                 )
             case JavaType.DOUBLE =>
-              p.add(s"val ${inputName(f, prefix)} = ")
+              p.add(s"val $jsonName = ")
                 .addIndented(
-                  s"""queryString.parameters().get("$prefix${f.getJsonName}").asScala.head.toDouble"""
+                  s"""queryString.parameters().get("$prefix$inputName").asScala.head.toDouble"""
                 )
             case JavaType.FLOAT =>
-              p.add(s"val ${inputName(f, prefix)} = ")
+              p.add(s"val $jsonName = ")
                 .addIndented(
-                  s"""queryString.parameters().get("$prefix${f.getJsonName}").asScala.head.toFloat"""
+                  s"""queryString.parameters().get("$prefix$inputName").asScala.head.toFloat"""
                 )
             case JavaType.INT =>
-              p.add(s"val ${inputName(f, prefix)} = ")
+              p.add(s"val $jsonName = ")
                 .addIndented(
-                  s"""queryString.parameters().get("$prefix${f.getJsonName}").asScala.head.toInt"""
+                  s"""queryString.parameters().get("$prefix$inputName").asScala.head.toInt"""
                 )
             case JavaType.LONG =>
-              p.add(s"val ${inputName(f, prefix)} = ")
+              p.add(s"val $jsonName = ")
                 .addIndented(
-                  s"""queryString.parameters().get("$prefix${f.getJsonName}").asScala.head.toLong"""
+                  s"""queryString.parameters().get("$prefix$inputName").asScala.head.toLong"""
                 )
             case JavaType.STRING =>
-              p.add(s"val ${inputName(f, prefix)} = ")
+              p.add(s"val $jsonName = ")
                 .addIndented(
-                  s"""queryString.parameters().get("$prefix${f.getJsonName}").asScala.head"""
+                  s"""queryString.parameters().get("$prefix$inputName").asScala.head"""
                 )
             case jt => throw new Exception(s"Unknown java type: $jt")
           }
@@ -256,7 +260,7 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
         .add(s"$fullName($args)")
   }
 
-  private def inputName(d: FieldDescriptor, prefix: String = ""): String = {
+  private def getInputName(d: FieldDescriptor, prefix: String = ""): String = {
     val name = prefix.split(".").filter(_.nonEmpty).map(s => s.charAt(0).toUpper + s.substring(1)).mkString + d.getName
     name.charAt(0).toLower + name.substring(1)
   }
