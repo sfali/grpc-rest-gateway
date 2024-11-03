@@ -13,11 +13,11 @@ import io.netty.util.CharsetUtil
 import org.apache.commons.io.IOUtils
 
 object SwaggerHandler {
-  val SwaggerUiPath: Path = Paths.get("META-INF/resources/webjars/swagger-ui/5.17.14") // must match dependendency version
-  val SpecsPrefix: Path = Paths.get("/specs/")
-  val DocsPrefix: Path = Paths.get("/docs/")
-  val DocsLandingPage: Path = Paths.get("/docs/index.html")
-  val RootPath: Path = Paths.get("/")
+  private val SwaggerUiPath = Paths.get("META-INF/resources/webjars/swagger-ui/5.17.14") // must match dependency version
+  private val SpecsPrefix = Paths.get("/specs/")
+  private val DocsPrefix = Paths.get("/docs/")
+  private val DocsLandingPage = Paths.get("/docs/index.html")
+  private val RootPath = Paths.get("/")
 }
 
 @Sharable

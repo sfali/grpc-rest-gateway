@@ -19,10 +19,31 @@ abstract class GrpcGatewayHandler(channel: ManagedChannel)(implicit ec: Executio
 
   def name: String
 
-  def shutdown(): Unit =
-    if (!channel.isShutdown) channel.shutdown()
+  def shutdown(): Unit = if (!channel.isShutdown) channel.shutdown()
 
+  /** Determine whether current HTTP `method` and `uri` are supported. Any given operation is supported if and only if
+    * `google.api.http` option is defined and gRPC function is unary (no streaming, either client or server).
+    *
+    * @param method
+    *   HTTP method
+    * @param uri
+    *   current URI
+    * @return
+    *   true if supported, false otherwise
+    */
   def supportsCall(method: HttpMethod, uri: String): Boolean
+
+  /** Makes gRPC call.
+    *
+    * @param method
+    *   HTTP method
+    * @param uri
+    *   current URI
+    * @param body
+    *   request body
+    * @return
+    *   result of the gRPC call
+    */
   def unaryCall(method: HttpMethod, uri: String, body: String): Future[GeneratedMessage]
 
   override def channelRead(ctx: ChannelHandlerContext, msg: scala.Any): Unit =
