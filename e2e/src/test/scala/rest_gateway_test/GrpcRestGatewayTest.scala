@@ -44,23 +44,33 @@ class GrpcRestGatewayTest extends AnyWordSpec with Matchers with BeforeAndAfterA
       actual shouldBe TestResponseB(success = true, requestId = requestId, result = s"RequestId: $requestId")
     }
 
-    "make GRPC call to service A with non-existing request id" in {
+    "test status 404" should {
       val requestId = 1L
-      Try {
-        serviceAStub.getRequest(TestRequestA(requestId))
-      } match {
-        case Failure(ex: StatusRuntimeException) =>
-          val message = s"RequestId {$requestId} not found"
-          ex.getMessage shouldBe s"NOT_FOUND: $message"
+      val message = s"RequestId {$requestId} not found"
+      "make GRPC call to service A with non-existing request id" in {
+        Try(serviceAStub.getRequest(TestRequestA(requestId))) match {
+          case Failure(ex: StatusRuntimeException) =>
+            ex.getMessage shouldBe s"NOT_FOUND: $message"
+            val status = ex.getStatus
+            status.getCode.value() shouldBe Code.NOT_FOUND.getNumber
+            status.getDescription shouldBe message
 
-          val status = ex.getStatus
-          status.getCode.value() shouldBe Code.NOT_FOUND.getNumber
-          status.getDescription shouldBe message
+          case Failure(ex) => fail(ex.getMessage)
+          case Success(_)  => fail("Test failed")
+        }
+      }
 
-        case Failure(ex) => fail(ex.getMessage)
-        case Success(_)  => fail("Test failed")
+      "make REST call to service A with non-existing request id" in {
+        Try(restClient.getRequestServiceA(requestId)) match {
+          case Failure(ex: HttpResponseException) =>
+            ex.status shouldBe 404
+            ex.message shouldBe message
+          case Failure(ex) => fail(s"Test failed due to exception: \"${ex.getMessage}\".")
+          case Success(_)  => fail("Test failed")
+        }
       }
     }
+
   }
 
   private def grpcServerExecutorSvc: ExecutorService = executorSvc("grpc-server-%d")
