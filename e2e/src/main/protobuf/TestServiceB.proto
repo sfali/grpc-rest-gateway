@@ -20,6 +20,12 @@ option (scalapb.options) = {
 };
 
 service TestServiceB {
+  rpc GetRequest (rest_gateway_test.api.model.TestRequestB) returns (rest_gateway_test.api.model.TestResponseB) {
+    option (google.api.http) = {
+      get: "/restgateway/test/testserviceb"
+    };
+  }
+
   rpc Process (rest_gateway_test.api.model.TestRequestB) returns (rest_gateway_test.api.model.TestResponseB) {
     option (google.api.http) = {
       post: "/restgateway/test/testserviceb"

@@ -10,6 +10,12 @@ class TestServiceBImpl extends TestServiceBGrpc.TestServiceB {
 
   private val logger = LoggerFactory.getLogger(classOf[TestServiceBGrpc.TestServiceB])
 
+  override def getRequest(request: TestRequestB): Future[TestResponseB] = {
+    val requestId = request.requestId
+    logger.info("Serving get request: {}", requestId)
+    Future.successful(TestResponseB(success = true, requestId = requestId, result = s"RequestId: $requestId"))
+  }
+
   override def process(request: TestRequestB): Future[TestResponseB] = {
     val requestId = request.requestId
     logger.info("Serving process request: {}", requestId)

@@ -34,7 +34,7 @@ message TestResponseA {
 }
 
 message TestRequestB {
-    int64 request_id = 1;
+    int64 requestId = 1;
 }
 
 message TestResponseB {
