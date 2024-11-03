@@ -8,8 +8,18 @@ import java.util.concurrent.{ExecutorService, Executors}
 object Main {
 
   def main(args: Array[String]): Unit = {
-    GrpcServer.startGateWayServer(gatewayServerExecutorSvc)
-    GrpcServer.startGrpcServer(grpcServerExecutorSvc)
+    val gatewayServer = GrpcServer.startGateWayServer(gatewayServerExecutorSvc)
+    val grpcServer = GrpcServer.startGrpcServer(grpcServerExecutorSvc)
+
+    sys.addShutdownHook {
+      println("Stopping gateway server!")
+      gatewayServer.stop()
+      println("Gateway server stopped!")
+
+      println("Stopping gRPC server!")
+      grpcServer.stop()
+      println("gRPC server stopped!")
+    }
   }
 
   private def grpcServerExecutorSvc: ExecutorService = executorSvc("grpc-server-%d")

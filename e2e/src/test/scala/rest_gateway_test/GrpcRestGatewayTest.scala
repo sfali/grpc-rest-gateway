@@ -12,18 +12,21 @@ import rest_gateway_test.api.scala_api.TestServiceB.TestServiceBGrpc
 import rest_gateway_test.server.GrpcServer
 
 import java.util.concurrent.{ExecutorService, Executors}
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Random, Success, Try}
 
 class GrpcRestGatewayTest extends AnyWordSpec with Matchers with BeforeAndAfterAll {
 
   private val Threads = 4
-  private lazy val grpcChannel = GrpcServer.getGrpcClient
+  private val grpcPort = new Random().nextInt(1000) + 3000
+  private val gatewayPort = new Random().nextInt(1000) + 4000
+  private lazy val grpcChannel = GrpcServer.getGrpcClient(grpcPort)
   private lazy val serviceAStub = TestServiceAGrpc.blockingStub(grpcChannel)
   private lazy val serviceBStub = TestServiceBGrpc.blockingStub(grpcChannel)
-  private lazy val restClient = new RestGatewayClient
+  private lazy val restClient = new RestGatewayClient(gatewayPort)
 
-  private val gatewayServer = GrpcServer.startGateWayServer(gatewayServerExecutorSvc)
-  private val grpcServer = GrpcServer.startGrpcServer(grpcServerExecutorSvc, blockUntilShutdown = false)
+  private val gatewayServer =
+    GrpcServer.startGateWayServer(gatewayServerExecutorSvc, grpcPort = grpcPort, gatewayPort = gatewayPort)
+  private val grpcServer = GrpcServer.startGrpcServer(grpcServerExecutorSvc, port = grpcPort, blockUntilShutdown = false)
 
   override protected def afterAll(): Unit = {
     super.afterAll()

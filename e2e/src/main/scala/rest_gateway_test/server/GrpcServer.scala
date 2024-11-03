@@ -5,12 +5,13 @@ import io.grpc.{ManagedChannel, ManagedChannelBuilder, Server, ServerBuilder}
 import org.slf4j.LoggerFactory
 import rest_gateway_test.api.scala_api.TestServiceA.{TestServiceAGatewayHandler, TestServiceAGrpc}
 import rest_gateway_test.api.scala_api.TestServiceB.{TestServiceBGatewayHandler, TestServiceBGrpc}
+import rest_gateway_test.server.GrpcServer.GrpcPort
 import rest_gateway_test.service.{TestServiceAImpl, TestServiceBImpl}
 
-import java.util.concurrent.{ExecutorService, Executors}
+import java.util.concurrent.ExecutorService
 import scala.concurrent.ExecutionContext
 
-class GrpcServer {
+class GrpcServer(port: Int = GrpcPort) {
   private val logger = LoggerFactory.getLogger(classOf[GrpcServer])
   private[this] var server: Server = _
 
@@ -18,7 +19,7 @@ class GrpcServer {
 
   private def start(executionContext: ExecutionContext): Server = {
     server = ServerBuilder
-      .forPort(GrpcPort)
+      .forPort(port)
       .addService(TestServiceAGrpc.bindService(new TestServiceAImpl, executionContext))
       .asInstanceOf[ServerBuilder[_]]
       .addService(TestServiceBGrpc.bindService(new TestServiceBImpl, executionContext))
@@ -26,7 +27,7 @@ class GrpcServer {
       .build()
       .start()
 
-    logger.info("Server started, listening on {}", GrpcPort)
+    logger.info("Server started, listening on {}", port)
     server
   }
 
@@ -38,33 +39,41 @@ class GrpcServer {
 object GrpcServer {
   private val host = "0.0.0.0"
   private val GrpcPort = 8080
-  val GatewayPort = 7070
+  private val GatewayPort = 7070
 
-  def startGrpcServer(executorService: ExecutorService, blockUntilShutdown: Boolean = true): GrpcServer = {
-    val server = new GrpcServer()
+  def startGrpcServer(
+    executorService: ExecutorService,
+    port: Int = GrpcPort,
+    blockUntilShutdown: Boolean = true
+  ): GrpcServer = {
+    val server = new GrpcServer(port)
     server.start(ExecutionContext.fromExecutor(executorService))
     if (blockUntilShutdown) server.blockUntilShutdown()
     server
   }
 
-  def getGrpcClient: ManagedChannel = {
-    val channelBuilder = ManagedChannelBuilder.forAddress(host, GrpcPort)
+  def getGrpcClient(port: Int): ManagedChannel = {
+    val channelBuilder = ManagedChannelBuilder.forAddress(host, port)
     channelBuilder.usePlaintext()
     channelBuilder.build()
   }
 
-  def startGateWayServer(executorService: ExecutorService): GatewayServer = {
+  def startGateWayServer(
+    executorService: ExecutorService,
+    grpcPort: Int = GrpcPort,
+    gatewayPort: Int = GatewayPort
+  ): GatewayServer = {
     implicit val ec: ExecutionContext = ExecutionContext.fromExecutor(executorService)
     val server = GatewayServer(
       serviceHost = host,
-      servicePort = GrpcPort,
-      gatewayPort = GatewayPort,
+      servicePort = grpcPort,
+      gatewayPort = gatewayPort,
       toHandlers = channel =>
         Seq(
           new TestServiceAGatewayHandler(channel),
           new TestServiceBGatewayHandler(channel)
         ),
-      executor = Some(Executors.newFixedThreadPool(10))
+      executor = Some(executorService)
     )
     server.start()
     server
