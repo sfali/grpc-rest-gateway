@@ -44,7 +44,10 @@ class TestServiceAImpl extends TestServiceAGrpc.TestServiceA {
           cache.get(requestId) match {
             case Some(response) => response
             case None =>
-              TestResponseA(requestId = requestId, color = requestId.getColor, transactionId = requestId.toProtoUUID)
+              val r =
+                TestResponseA(requestId = requestId, color = requestId.getColor, transactionId = requestId.toProtoUUID)
+              cache.addOne(requestId -> r)
+              r
           }
         Future.successful(response)
     }
