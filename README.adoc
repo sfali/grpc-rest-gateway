@@ -22,19 +22,167 @@ For example following Protobuf definition:
 
 [source, protobuf]
 ----
-include::./media/TestServiceB.proto[]
+syntax = "proto3";
+
+package rest_gateway_test.api;
+
+import "scalapb/scalapb.proto";
+import "google/api/annotations.proto";
+import "common.proto";
+
+option java_multiple_files = false;
+option java_package = "rest_gateway_test.api.java_api";
+option java_outer_classname = "TestServiceBProto";
+option objc_class_prefix = "TS2P";
+
+option (scalapb.options) = {
+  single_file: true
+  lenses: true
+  retain_source_code_info: true
+  preserve_unknown_fields: false
+  package_name: "rest_gateway_test.api.scala_api"
+};
+
+service TestServiceB {
+  rpc GetRequest (rest_gateway_test.api.model.TestRequestB) returns (rest_gateway_test.api.model.TestResponseB) {
+    option (google.api.http) = {
+      get: "/restgateway/test/testserviceb"
+    };
+  }
+
+  rpc Process (rest_gateway_test.api.model.TestRequestB) returns (rest_gateway_test.api.model.TestResponseB) {
+    option (google.api.http) = {
+      post: "/restgateway/test/testserviceb"
+      body: "*"
+    };
+  }
+}
 ----
 
 will generate following implementation of `GrpcGatewayHandler` and Open API specification respectively:
 
 [source, scala]
 ----
-include::./media/TestServiceBGatewayHandler.scala[]
+package rest_gateway_test.api.scala_api.TestServiceB
+
+import _root_.scalapb.GeneratedMessage
+import _root_.scalapb.json4s.JsonFormat
+import _root_.com.improving.grpc_rest_gateway.runtime.handlers._
+import _root_.io.grpc._
+import _root_.io.netty.handler.codec.http.{HttpMethod, QueryStringDecoder}
+
+import scala.jdk.CollectionConverters._
+import scala.concurrent.{ExecutionContext, Future}
+import scalapb.json4s.JsonFormatException
+import scala.util._
+
+class TestServiceBGatewayHandler(channel: ManagedChannel)(implicit ec: ExecutionContext)
+  extends GrpcGatewayHandler(channel)(ec) {
+  override val name: String = "TestServiceB"
+  private val stub = TestServiceBGrpc.stub(channel)
+
+  override def supportsCall(method: HttpMethod, uri: String): Boolean = {
+    val queryString = new QueryStringDecoder(uri)
+    (method.name, queryString.path) match {
+      case ("GET", "/restgateway/test/testserviceb") => true
+      case ("POST", "/restgateway/test/testserviceb") => true
+      case _ => false
+    }
+  }
+
+  override def unaryCall(method: HttpMethod, uri: String, body: String): Future[GeneratedMessage] = {
+    val queryString = new QueryStringDecoder(uri)
+    (method.name, queryString.path) match {
+      case ("GET", "/restgateway/test/testserviceb") =>
+        val input = Try {
+          val requestId =
+            queryString.parameters().get("requestId").asScala.head.toLong
+          rest_gateway_test.api.model.common.TestRequestB(requestId = requestId)
+        }
+        Future.fromTry(input).flatMap(stub.getRequest)
+      case ("POST", "/restgateway/test/testserviceb") =>
+      for {
+        msg <- Future.fromTry(Try(JsonFormat.fromJsonString[rest_gateway_test.api.model.common.TestRequestB](body)).recoverWith(jsonException2GatewayExceptionPF))
+        res <- stub.process(msg)
+      } yield res
+      case (methodName, path) =>
+        Future.failed(InvalidArgument(s"No route defined for $methodName($path)"))
+    }
+  }
+}
 ----
 
 [source, yaml]
 ----
-include::./media/TestServiceB.yml[]
+swagger: '2.0'
+info:
+  version: 0.1.0-SNAPSHOT
+  title: 'rest_gateway_test.api.scala_api.TestServiceB.TestServiceBProto'
+  description: 'REST API generated from TestServiceB'
+schemes:
+  - http
+  - https
+consumes:
+  - 'application/json'
+produces:
+  - 'application/json'
+paths:
+  /restgateway/test/testserviceb:
+    get:
+      tags:
+        - TestServiceB
+      summary:
+        'GetRequest'
+      description:
+        'Generated from rest_gateway_test.api.TestServiceB.GetRequest'
+      produces:
+        ['application/json']
+      responses:
+        200:
+          description: 'Normal response'
+          schema:
+            $ref: "#/definitions/TestResponseB"
+      parameters:
+      - name: requestId
+        in: query
+        type: integer
+        format: int64
+    post:
+      tags:
+        - TestServiceB
+      summary:
+        'Process'
+      description:
+        'Generated from rest_gateway_test.api.TestServiceB.Process'
+      produces:
+        ['application/json']
+      responses:
+        200:
+          description: 'Normal response'
+          schema:
+            $ref: "#/definitions/TestResponseB"
+      parameters:
+        - in: 'body'
+          name: body
+          schema:
+            $ref: "#/definitions/TestRequestB"
+definitions:
+  TestRequestB:
+    type: object
+    properties:
+      requestId:
+        type: integer
+        format: int64
+  TestResponseB:
+    type: object
+    properties:
+      success:
+        type: boolean
+      request_id:
+        type: integer
+        format: int64
+      result:
+        type: string
 ----
 
 === Run gateway server
