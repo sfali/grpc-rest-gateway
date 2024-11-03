@@ -49,6 +49,8 @@ class TestServiceAImpl extends TestServiceAGrpc.TestServiceA {
         Future.successful(response)
     }
 
+  override def getRequestWithoutRest(request: TestRequestA): Future[TestResponseA] = getRequest(request)
+
   private def validateRequestId(requestId: Long) =
     if (requestId <= 0) {
       throw StatusProto.toStatusRuntimeException(
