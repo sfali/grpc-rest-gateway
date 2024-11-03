@@ -208,24 +208,24 @@ private class SwaggerMessagePrinter(service: ServiceDescriptor, implicits: Descr
     field.getJavaType match {
       case JavaType.MESSAGE =>
         printer.call(
-          generateQueryParameters(field.getMessageType, s"$prefix.${field.getJsonName}")
+          generateQueryParameters(field.getMessageType, s"$prefix.${field.getName}")
         )
       case JavaType.ENUM =>
         printer
-          .add(s"- name: $prefix${field.getJsonName}")
+          .add(s"- name: $prefix${field.getName}")
           .addIndented("in: query", s"type: string", "enum:")
           .addIndented(field.getEnumType.getValues.asScala.toSeq.map(v => s"- ${v.getName}"): _*)
       case JavaType.INT =>
         printer
-          .add(s"- name: $prefix${field.getJsonName}")
+          .add(s"- name: $prefix${field.getName}")
           .addIndented("in: query", "type: integer", "format: int32")
       case JavaType.LONG =>
         printer
-          .add(s"- name: $prefix${field.getJsonName}")
+          .add(s"- name: $prefix${field.getName}")
           .addIndented("in: query", "type: integer", "format: int64")
       case t =>
         printer
-          .add(s"- name: $prefix${field.getJsonName}")
+          .add(s"- name: $prefix${field.getName}")
           .addIndented("in: query", s"type: ${t.name.toLowerCase}")
     }
   }
@@ -240,7 +240,7 @@ private class SwaggerMessagePrinter(service: ServiceDescriptor, implicits: Descr
           .print(d.getFields.asScala) { case (printer, field) =>
             if (field.isRepeated) {
               printer
-                .add(field.getJsonName + ":")
+                .add(field.getName + ":")
                 .indent
                 .add("type: array", "items:")
                 .indent
@@ -249,7 +249,7 @@ private class SwaggerMessagePrinter(service: ServiceDescriptor, implicits: Descr
                 .outdent
             } else {
               printer
-                .add(field.getJsonName + ":")
+                .add(field.getName + ":")
                 .indent
                 .call(generateDefinitionType(field))
                 .outdent
