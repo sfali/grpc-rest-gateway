@@ -68,7 +68,7 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
       )
       .newline
       .add(
-        "import scala.collection.JavaConverters._",
+        "import scala.jdk.CollectionConverters._",
         "import scala.concurrent.{ExecutionContext, Future}",
         "import scalapb.json4s.JsonFormatException",
         "import scala.util._"
