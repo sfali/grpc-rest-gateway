@@ -24,21 +24,21 @@ message UUID {
 }
 
 message TestRequestA {
-    int64 requestId = 1;
+    int64 request_id = 1;
 }
 
 message TestResponseA {
-    int64 requestId = 1;
+    int64 request_id = 1;
     Color color = 2;
-    UUID transactionId = 3 [(scalapb.field).no_box = true];
+    UUID transaction_id = 3 [(scalapb.field).no_box = true];
 }
 
 message TestRequestB {
-    int64 requestId = 1;
+    int64 request_id = 1;
 }
 
 message TestResponseB {
     bool success = 1;
-    int64 requestId = 2;
+    int64 request_id = 2;
     string result = 3;
 }
