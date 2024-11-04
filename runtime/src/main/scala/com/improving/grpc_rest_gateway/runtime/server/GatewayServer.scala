@@ -58,11 +58,7 @@ object GatewayServer {
     executor.map(channelBuilder.executor)
     val channel = channelBuilder.build()
 
-    var builder = GrpcGatewayServerBuilder.forPort(gatewayPort)
-    for (handler <- toHandlers(channel))
-      builder = builder.addService(handler)
-
-    new GatewayServerImpl(builder.build(), gatewayPort)
+    new GatewayServerImpl(GrpcGatewayServerBuilder(gatewayPort, toHandlers(channel)).build(), gatewayPort)
   }
 
   def apply(
