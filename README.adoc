@@ -185,6 +185,60 @@ definitions:
         type: string
 ----
 
+=== Error handling and HTTP status code mapping
+
+gRPC-REST gateway has built in mapping between gRPC and HTTP status codes. Following is the mappings between two systems:
+
+[width=75%]
+|====
+|gRPC status code |HTTP status code
+
+|OK | OK (200)
+|DATA_LOSS |Partial Content (206)
+|INVALID_ARGUMENT, OUT_OF_RANGE |Bad Request (400)
+|UNAUTHENTICATED |Unauthorized(401)
+|PERMISSION_DENIED |Forbidden (403)
+|NOT_FOUND, UNKNOWN |Not Found (404)
+|UNAVAILABLE |Not Acceptable (406)
+|ALREADY_EXISTS |Conflict (409)
+|ABORTED, CANCELLED |Gone (410)
+|FAILED_PRECONDITION |Precondition Failed (412)
+|INTERNAL |Internal Server Error (500)
+|UNIMPLEMENTED |Not Implemented (501)
+|DEADLINE_EXCEEDED |Gateway Timeout (504)
+|RESOURCE_EXHAUSTED |Insufficient Storage (507)
+
+|====
+
+**Note:** Any unmapped code will be mapped to `Internal Server Error (500)`.
+
+Build `io.grpc.StatusRuntimeException` using `io.grpc.protobuf.StatusProto` to set corresponding status code and message.
+
+[source, scala]
+----
+import com.google.rpc.{Code, Status}
+import io.grpc.protobuf.StatusProto
+import scala.concurrent.Future
+
+// handle bad request
+Future.failed(StatusProto.toStatusRuntimeException(
+        Status
+          .newBuilder()
+          .setCode(Code.INVALID_ARGUMENT_VALUE)
+          .setMessage("Invalid argument")
+          .build())
+)
+
+// not found
+Future.failed(StatusProto.toStatusRuntimeException(
+        Status
+          .newBuilder()
+          .setCode(Code.NOT_FOUND_VALUE)
+          .setMessage("Not foundt")
+          .build())
+)
+----
+
 === Run gateway server
 
 Implement your gRPC services as per your need and run gRPC server. Gateway server can be build and run as follows:
