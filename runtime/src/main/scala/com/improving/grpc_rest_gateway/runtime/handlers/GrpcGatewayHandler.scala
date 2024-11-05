@@ -116,12 +116,13 @@ trait PathMatchingSupport {
   }
 
   // TODO: is there any efficient way to do this?
-  private[handlers] def replacePathParameters(configuredPath: String, runtimePath: String): String = {
-    // "{" has special meaning in regex, replacing "{" and "}" with "#" for now
-    val configuredPathElements =
-      configuredPath.replaceAll("}", "#").replaceAll("\\{", "#").split("/").filterNot(_.isBlank)
-    val runtimePathElements = runtimePath.split("/").filterNot(_.isBlank)
-    if (configuredPathElements.length == runtimePathElements.length) {
+  private[handlers] def replacePathParameters(configuredPath: String, runtimePath: String): String =
+    if (configuredPath == runtimePath) configuredPath
+    else {
+      // "{" has special meaning in regex, replacing "{" and "}" with "#" for now
+      val configuredPathElements =
+        configuredPath.replaceAll("}", "#").replaceAll("\\{", "#").split("/").filterNot(_.isBlank)
+      val runtimePathElements = runtimePath.split("/").filterNot(_.isBlank)
       val configuredToRuntimeDiff = configuredPathElements.diff(runtimePathElements)
       val runtimeToConfiguredDiff = runtimePathElements.diff(configuredPathElements)
 
@@ -137,6 +138,5 @@ trait PathMatchingSupport {
           result.replaceAll(key, value)
         }
       } else configuredPath
-    } else configuredPath
-  }
+    }
 }
