@@ -50,5 +50,16 @@ class PathMatchingSupportSpec extends AnyWordSpec with Matchers with PathMatchin
         "/v1/messages/1/users/2"
       ) shouldBe "/v1/messages/1/users/2"
     }
+
+    "keep path if no path element" in {
+      replacePathParameters("/v1/messages", "/v1/messages") shouldBe "/v1/messages"
+    }
+
+    "do not replace path if doesn't match" in {
+      replacePathParameters(
+        "/v1/messages/{message_id}/sub/{sub.subfield}",
+        "/v1/messages/1/users/1"
+      ) shouldBe "/v1/messages/{message_id}/sub/{sub.subfield}"
+    }
   }
 }

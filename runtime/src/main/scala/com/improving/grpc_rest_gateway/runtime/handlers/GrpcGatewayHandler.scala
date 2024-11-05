@@ -78,6 +78,16 @@ abstract class GrpcGatewayHandler(channel: ManagedChannel)(implicit ec: Executio
     }
 }
 
+/** Helper trait to make URI path matching. This is done to make testing easier.
+  *
+  * Our aim is to match given incoming URL and match it to configured path in the protobuf.
+  *
+  * There are two cases:
+  *
+  *   1. When there is no path element, this is easy case we can have exact match, for example, `/v1/messages`.
+  *   1. When there is path element, we can not have exact match just by comparing two strings, for example, if
+  *      configured value is `/v1/messages/{message_id}/users/{user_id}` and runtime value is `/v1/messages/1/users/1`.
+  */
 trait PathMatchingSupport {
   protected val httpMethodsToUrisMap: Map[String, Seq[String]]
 
@@ -105,17 +115,28 @@ trait PathMatchingSupport {
     }
   }
 
+  // TODO: is there any efficient way to do this?
   private[handlers] def replacePathParameters(configuredPath: String, runtimePath: String): String = {
+    // "{" has special meaning in regex, replacing "{" and "}" with "#" for now
     val configuredPathElements =
-      configuredPath.replaceAll("}", "").replaceAll("\\{", "").split("/").filterNot(_.isBlank)
+      configuredPath.replaceAll("}", "#").replaceAll("\\{", "#").split("/").filterNot(_.isBlank)
     val runtimePathElements = runtimePath.split("/").filterNot(_.isBlank)
     if (configuredPathElements.length == runtimePathElements.length) {
-      val diff1 = configuredPathElements.diff(runtimePathElements)
-      val diff2 = runtimePathElements.diff(configuredPathElements)
-      val pathParameters = diff1.zip(diff2).toMap
-      pathParameters.foldLeft(runtimePath) { case (result, (key, value)) =>
-        result.replaceAll(key, value)
-      }
+      val configuredToRuntimeDiff = configuredPathElements.diff(runtimePathElements)
+      val runtimeToConfiguredDiff = runtimePathElements.diff(configuredPathElements)
+
+      // Difference in two URIs should only be with path parameters (which are enclosed in "#"), if there is an
+      // element which doesn't have "#" then we have a mismatch
+      // For example, /v1/messages/{message_id}/sub/{sub.subfield} and runtime path is /v1/messages/1/users/1
+      // Then `configuredToRuntimeDiff` will be [#message_id#, sub, #sub.subfield#] and runtimeToConfiguredDiff
+      // will be [1, users, 1], we have a mismatch
+      val mismatchPaths = configuredToRuntimeDiff.exists(s => !s.contains("#"))
+      if (!mismatchPaths && configuredToRuntimeDiff.length == runtimeToConfiguredDiff.length) {
+        val pathParameters = configuredToRuntimeDiff.zip(runtimeToConfiguredDiff).toMap
+        pathParameters.foldLeft(runtimePath) { case (result, (key, value)) =>
+          result.replaceAll(key, value)
+        }
+      } else configuredPath
     } else configuredPath
   }
 }
