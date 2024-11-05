@@ -12,12 +12,14 @@ import io.netty.channel.{ChannelFutureListener, ChannelHandlerContext, ChannelIn
 import io.netty.handler.codec.http._
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.jdk.CollectionConverters._
 
 @Sharable
 abstract class GrpcGatewayHandler(channel: ManagedChannel)(implicit ec: ExecutionContext)
     extends ChannelInboundHandlerAdapter {
 
-  def name: String
+  val name: String
+  protected val httpMethodsToUrisMap: Map[String, Seq[String]]
 
   def shutdown(): Unit = if (!channel.isShutdown) channel.shutdown()
 
@@ -31,7 +33,19 @@ abstract class GrpcGatewayHandler(channel: ManagedChannel)(implicit ec: Executio
     * @return
     *   true if supported, false otherwise
     */
-  def supportsCall(method: HttpMethod, uri: String): Boolean
+  protected def supportsCall(method: HttpMethod, uri: String): Boolean = {
+    val queryString = new QueryStringDecoder(uri)
+    val path = queryString.path
+    httpMethodsToUrisMap.get(method.name()) match {
+      case Some(configuredUris) =>
+        val pathsWithParameters = configuredUris.filter(_.contains("}"))
+        // case 1: no path element we have an exact match
+        configuredUris.contains(path) ||
+        // case 2: we have path parameter(s),
+        pathsWithParameters.map(cp => replacePathParameters(cp, path)).contains(path)
+      case None => false
+    }
+  }
 
   /** Makes gRPC call.
     *
@@ -84,9 +98,20 @@ abstract class GrpcGatewayHandler(channel: ManagedChannel)(implicit ec: Executio
             }
             .foreach(resp => ctx.writeAndFlush(resp).addListener(ChannelFutureListener.CLOSE))
 
-        } else {
-          super.channelRead(ctx, msg)
-        }
+        } else super.channelRead(ctx, msg)
       case _ => super.channelRead(ctx, msg)
     }
+
+  private def replacePathParameters(configuredPath: String, runtimePath: String): String = {
+    val configuredPathElements = configuredPath.replaceAll("}", "").replaceAll("\\{", "").split("/")
+    val runtimePathElements = runtimePath.split("/")
+    if (configuredPathElements.length == runtimePathElements.length) {
+      val diff1 = configuredPathElements.diff(runtimePathElements)
+      val diff2 = runtimePathElements.diff(configuredPathElements)
+      val pathParameters = diff1.zip(diff2).toMap
+      pathParameters.foldLeft(runtimePath) { case (result, (key, value)) =>
+        result.replaceAll(key, value)
+      }
+    } else configuredPath
+  }
 }
