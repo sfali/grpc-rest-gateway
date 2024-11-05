@@ -7,6 +7,7 @@ import io.grpc.{ManagedChannel, StatusRuntimeException}
 import io.netty.channel.ChannelHandler.Sharable
 import io.netty.channel.{ChannelFutureListener, ChannelHandlerContext, ChannelInboundHandlerAdapter}
 import io.netty.handler.codec.http._
+import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import scalapb.json4s.JsonFormat
 
@@ -18,6 +19,8 @@ import scala.jdk.CollectionConverters._
 abstract class GrpcGatewayHandler(channel: ManagedChannel)(implicit ec: ExecutionContext)
     extends ChannelInboundHandlerAdapter
     with PathMatchingSupport {
+
+  protected val logger: Logger = LoggerFactory.getLogger(getClass)
 
   val name: String
 
@@ -62,7 +65,9 @@ abstract class GrpcGatewayHandler(channel: ManagedChannel)(implicit ec: Executio
                     grpcStatus.getCode.value(),
                     HttpResponseStatus.INTERNAL_SERVER_ERROR
                   )
-                case x => "Internal error" -> HttpResponseStatus.INTERNAL_SERVER_ERROR
+                case ex =>
+                  logger.warn("unable to generate json response", ex)
+                  "Internal error" -> HttpResponseStatus.INTERNAL_SERVER_ERROR
               }
 
               buildFullHttpResponse(
