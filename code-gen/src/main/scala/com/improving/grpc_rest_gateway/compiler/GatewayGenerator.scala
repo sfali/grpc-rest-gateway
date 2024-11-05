@@ -296,12 +296,13 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
         }
       }
 
-    // strip "{" and "}" and convert to map element
+    // generate key value pair for the map
     val mapKeys =
-      httpMethodsToUrisMap.foldLeft(Seq.empty[String]) { case (result, (methodName, uris)) =>
-        val strippedUris = uris.map(uri => "\"" + uri + "\"").mkString(", ")
-        val value = s""""$methodName" -> Seq($strippedUris),"""
-        result :+ value
+      httpMethodsToUrisMap.zipWithIndex.foldLeft(Seq.empty[String]) { case (result, ((methodName, uris), index)) =>
+        val urisSeq = s"""Seq(${uris.map(uri => "\"" + uri + "\"").mkString(", ")})"""
+        // each element of seq is separated by "," except for last element
+        val keys = if (index == httpMethodsToUrisMap.size - 1) urisSeq else s"""$urisSeq,"""
+        result :+ s""""$methodName" -> $keys"""
       }
 
     printer
