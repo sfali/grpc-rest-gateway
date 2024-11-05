@@ -62,7 +62,7 @@ abstract class GrpcGatewayHandler(channel: ManagedChannel)(implicit ec: Executio
                     grpcStatus.getCode.value(),
                     HttpResponseStatus.INTERNAL_SERVER_ERROR
                   )
-                case _ => "Internal error" -> HttpResponseStatus.INTERNAL_SERVER_ERROR
+                case x => "Internal error" -> HttpResponseStatus.INTERNAL_SERVER_ERROR
               }
 
               buildFullHttpResponse(
@@ -124,8 +124,7 @@ trait PathMatchingSupport {
   ): Boolean =
     configuredMethodName == runtimeMethodName && replacePathParameters(configuredPath, runtimePath) == runtimePath
 
-  protected def mergeParameters(configuredPath: String, runtimeUri: String): Map[String, String] = {
-    val queryString = new QueryStringDecoder(runtimeUri)
+  protected def mergeParameters(configuredPath: String, queryString: QueryStringDecoder): Map[String, String] = {
     val path = queryString.path()
     val flattenQueryParameters =
       queryString
