@@ -15,36 +15,12 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Sharable
 abstract class GrpcGatewayHandler(channel: ManagedChannel)(implicit ec: ExecutionContext)
-    extends ChannelInboundHandlerAdapter {
+    extends ChannelInboundHandlerAdapter
+    with PathMatchingSupport {
 
   val name: String
-  protected val httpMethodsToUrisMap: Map[String, Seq[String]]
 
   def shutdown(): Unit = if (!channel.isShutdown) channel.shutdown()
-
-  /** Determine whether current HTTP `method` and `uri` are supported. Any given operation is supported if and only if
-    * `google.api.http` option is defined and gRPC function is unary (no streaming, either client or server).
-    *
-    * @param method
-    *   HTTP method
-    * @param uri
-    *   current URI
-    * @return
-    *   true if supported, false otherwise
-    */
-  protected def supportsCall(method: HttpMethod, uri: String): Boolean = {
-    val queryString = new QueryStringDecoder(uri)
-    val path = queryString.path
-    httpMethodsToUrisMap.get(method.name()) match {
-      case Some(configuredUris) =>
-        val pathsWithParameters = configuredUris.filter(_.contains("}"))
-        // case 1: no path element we have an exact match
-        configuredUris.contains(path) ||
-        // case 2: we have path parameter(s),
-        pathsWithParameters.map(cp => replacePathParameters(cp, path)).contains(path)
-      case None => false
-    }
-  }
 
   /** Makes gRPC call.
     *
@@ -100,10 +76,39 @@ abstract class GrpcGatewayHandler(channel: ManagedChannel)(implicit ec: Executio
         } else super.channelRead(ctx, msg)
       case _ => super.channelRead(ctx, msg)
     }
+}
 
-  private def replacePathParameters(configuredPath: String, runtimePath: String): String = {
-    val configuredPathElements = configuredPath.replaceAll("}", "").replaceAll("\\{", "").split("/")
-    val runtimePathElements = runtimePath.split("/")
+trait PathMatchingSupport {
+  protected val httpMethodsToUrisMap: Map[String, Seq[String]]
+
+  /** Determine whether current HTTP `method` and `uri` are supported. Any given operation is supported if and only if
+    * `google.api.http` option is defined and gRPC function is unary (no streaming, either client or server).
+    *
+    * @param method
+    *   HTTP method
+    * @param uri
+    *   current URI
+    * @return
+    *   true if supported, false otherwise
+    */
+  protected def supportsCall(method: HttpMethod, uri: String): Boolean = {
+    val queryString = new QueryStringDecoder(uri)
+    val path = queryString.path
+    httpMethodsToUrisMap.get(method.name) match {
+      case Some(configuredUris) =>
+        val pathsWithParameters = configuredUris.filter(_.contains("}"))
+        // case 1: no path element we have an exact match
+        configuredUris.contains(path) ||
+        // case 2: we have path parameter(s)
+        pathsWithParameters.map(cp => replacePathParameters(cp, path)).contains(path)
+      case None => false
+    }
+  }
+
+  private[handlers] def replacePathParameters(configuredPath: String, runtimePath: String): String = {
+    val configuredPathElements =
+      configuredPath.replaceAll("}", "").replaceAll("\\{", "").split("/").filterNot(_.isBlank)
+    val runtimePathElements = runtimePath.split("/").filterNot(_.isBlank)
     if (configuredPathElements.length == runtimePathElements.length) {
       val diff1 = configuredPathElements.diff(runtimePathElements)
       val diff2 = runtimePathElements.diff(configuredPathElements)
