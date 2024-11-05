@@ -96,10 +96,15 @@ class GrpcRestGatewayTest extends AnyWordSpec with Matchers with BeforeAndAfterA
 
     "post with GRPC and get with rest" in {
       val requestId = 1L
-
       val grpcResponse = serviceAStub.process(TestRequestA(requestId))
-
       val restResponse = restClient.getRequestServiceA(requestId)
+      grpcResponse shouldBe restResponse
+    }
+
+    "get with rest with path parameter" in {
+      val requestId = 1L
+      val grpcResponse = serviceAStub.process(TestRequestA(requestId))
+      val restResponse = restClient.getRequestServiceA(requestId, useRequestParam = false)
       grpcResponse shouldBe restResponse
     }
   }

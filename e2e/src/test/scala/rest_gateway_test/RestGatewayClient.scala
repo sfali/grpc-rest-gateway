@@ -13,8 +13,9 @@ class RestGatewayClient(gatewayPort: Int) {
 
   private val client = SimpleHttpClient()
 
-  def getRequestServiceA(requestId: Long): TestResponseA = {
-    val response = client.send(basicRequest.get(uri"$serviceAUri?request_id=$requestId").response(asString))
+  def getRequestServiceA(requestId: Long, useRequestParam: Boolean = true): TestResponseA = {
+    val uri = if (useRequestParam) uri"$serviceAUri?request_id=$requestId" else uri"$serviceAUri/$requestId"
+    val response = client.send(basicRequest.get(uri).response(asString))
     response.body match {
       case Left(ex)    => throw HttpResponseException(response.code.code, ex)
       case Right(body) => JsonFormat.fromJsonString[TestResponseA](body)
