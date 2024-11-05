@@ -90,8 +90,7 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
         s"""override val name: String = "${service.getName}"""",
         s"private val stub = $grpcService.stub(channel)"
       )
-      .newline
-      .call(generateSupportsCall(service))
+      .call(generateHttpMethodToUrisMap(service))
       .newline
       .call(generateUnaryCall(service))
       .outdent
@@ -118,24 +117,6 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
       .print(methods) { case (p, m) => generateMethodHandlerCase(m)(p) }
       .add("case (methodName, path) => ")
       .addIndented("""Future.failed(InvalidArgument(s"No route defined for $methodName($path)"))""")
-      .outdent
-      .add("}")
-      .outdent
-      .add("}")
-  }
-
-  private def generateSupportsCall(service: ServiceDescriptor): PrinterEndo = { printer =>
-    val methods = getUnaryCallsWithHttpExtension(service)
-    printer
-      .add(s"override def supportsCall(method: HttpMethod, uri: String): Boolean = {")
-      .indent
-      .add(
-        "val queryString = new QueryStringDecoder(uri)",
-        "(method.name, queryString.path) match {"
-      )
-      .indent
-      .print(methods) { case (p, m) => generateMethodCase(m)(p) }
-      .add("case _ => false")
       .outdent
       .add("}")
       .outdent
@@ -265,14 +246,69 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
     name.charAt(0).toLower + name.substring(1)
   }
 
-  private def generateMethodCase(method: MethodDescriptor): PrinterEndo = { printer =>
-    val http = method.getOptions.getExtension(AnnotationsProto.http)
-    http.getPatternCase match {
-      case PatternCase.GET    => printer.add(s"""case ("GET", "${http.getGet}") => true""")
-      case PatternCase.POST   => printer.add(s"""case ("POST", "${http.getPost}") => true""")
-      case PatternCase.PUT    => printer.add(s"""case ("PUT", "${http.getPut}") => true""")
-      case PatternCase.DELETE => printer.add(s"""case ("DELETE", "${http.getDelete}") => true""")
-      case _                  => printer
-    }
+  private def generateHttpMethodToUrisMap(service: ServiceDescriptor): PrinterEndo = { printer =>
+    val methods = getUnaryCallsWithHttpExtension(service)
+
+    val httpMethodsToUrisMap =
+      methods.foldLeft(Map.empty[String, Seq[String]]) { case (result, method) =>
+        val http = method.getOptions.getExtension(AnnotationsProto.http)
+        http.getPatternCase match {
+          case PatternCase.GET =>
+            val updatedValues =
+              result.get(PatternCase.GET.name()) match {
+                case Some(values) => values :+ http.getGet
+                case None         => Seq(http.getGet)
+              }
+            result + (PatternCase.GET.name() -> updatedValues)
+
+          case PatternCase.PUT =>
+            val updatedValues =
+              result.get(PatternCase.PUT.name()) match {
+                case Some(values) => values :+ http.getGet
+                case None         => Seq(http.getPut)
+              }
+            result + (PatternCase.PUT.name() -> updatedValues)
+
+          case PatternCase.POST =>
+            val updatedValues =
+              result.get(PatternCase.POST.name()) match {
+                case Some(values) => values :+ http.getGet
+                case None         => Seq(http.getPost)
+              }
+            result + (PatternCase.POST.name() -> updatedValues)
+
+          case PatternCase.DELETE =>
+            val updatedValues =
+              result.get(PatternCase.DELETE.name()) match {
+                case Some(values) => values :+ http.getGet
+                case None         => Seq(http.getDelete)
+              }
+            result + (PatternCase.DELETE.name() -> updatedValues)
+
+          case PatternCase.PATCH =>
+            val updatedValues =
+              result.get(PatternCase.PATCH.name()) match {
+                case Some(values) => values :+ http.getGet
+                case None         => Seq(http.getPatch)
+              }
+            result + (PatternCase.PATCH.name() -> updatedValues)
+          case _ => result
+        }
+      }
+
+    // strip "{" and "}" and convert to map element
+    val mapKeys =
+      httpMethodsToUrisMap.foldLeft(Seq.empty[String]) { case (result, (methodName, uris)) =>
+        val strippedUris = uris.map(uri => "\"" + uri + "\"").mkString(", ")
+        val value = s""""$methodName" -> Seq($strippedUris),"""
+        result :+ value
+      }
+
+    printer
+      .add("override protected val httpMethodsToUrisMap: Map[String, Seq[String]] = Map(")
+      .indent
+      .seq(mapKeys)
+      .outdent
+      .add(")")
   }
 }
