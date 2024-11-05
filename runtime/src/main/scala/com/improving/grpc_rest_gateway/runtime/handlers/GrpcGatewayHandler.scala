@@ -33,7 +33,7 @@ abstract class GrpcGatewayHandler(channel: ManagedChannel)(implicit ec: Executio
     * @return
     *   result of the gRPC call
     */
-  def unaryCall(method: HttpMethod, uri: String, body: String): Future[GeneratedMessage]
+  protected def dispatchCall(method: HttpMethod, uri: String, body: String): Future[GeneratedMessage]
 
   override def channelRead(ctx: ChannelHandlerContext, msg: scala.Any): Unit =
     msg match {
@@ -41,7 +41,7 @@ abstract class GrpcGatewayHandler(channel: ManagedChannel)(implicit ec: Executio
         if (supportsCall(req.method(), req.uri())) {
           val body = req.content().toString(StandardCharsets.UTF_8)
 
-          unaryCall(req.method(), req.uri(), body)
+          dispatchCall(req.method(), req.uri(), body)
             .map(JsonFormat.toJsonString)
             .map { json =>
               buildFullHttpResponse(

@@ -92,7 +92,7 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
       )
       .call(generateHttpMethodToUrisMap(service))
       .newline
-      .call(generateUnaryCall(service))
+      .call(generateDispatchCall(service))
       .outdent
       .add("}")
       .newline
@@ -104,10 +104,12 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
       !m.isClientStreaming && !m.isServerStreaming && m.getOptions.hasExtension(AnnotationsProto.http)
     }
 
-  private def generateUnaryCall(service: ServiceDescriptor): PrinterEndo = { printer =>
+  private def generateDispatchCall(service: ServiceDescriptor): PrinterEndo = { printer =>
     val methods = getUnaryCallsWithHttpExtension(service)
     printer
-      .add(s"override def unaryCall(method: HttpMethod, uri: String, body: String): Future[GeneratedMessage] = {")
+      .add(
+        s"override protected def dispatchCall(method: HttpMethod, uri: String, body: String): Future[GeneratedMessage] = {"
+      )
       .indent
       .add(
         "val queryString = new QueryStringDecoder(uri)",
