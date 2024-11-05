@@ -35,6 +35,8 @@ class TestServiceAImpl extends TestServiceAGrpc.TestServiceA {
         }
     }
 
+  override def getRequestWithParam(request: TestRequestA): Future[TestResponseA] = ???
+
   override def process(request: TestRequestA): Future[TestResponseA] =
     Try(validateRequestId(request.requestId)) match {
       case Failure(ex) => Future.failed(ex)

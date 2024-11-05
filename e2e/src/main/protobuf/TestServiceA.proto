@@ -25,6 +25,12 @@ service TestServiceA {
     };
   }
 
+  rpc GetRequestWithParam (rest_gateway_test.api.model.TestRequestA) returns (rest_gateway_test.api.model.TestResponseA) {
+    option (google.api.http) = {
+      get: "/restgateway/test/testservicea/{request_id}"
+    };
+  }
+
   rpc Process (rest_gateway_test.api.model.TestRequestA) returns (rest_gateway_test.api.model.TestResponseA) {
     option (google.api.http) = {
       post: "/restgateway/test/testservicea"

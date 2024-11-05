@@ -27,6 +27,15 @@ message TestRequestA {
     int64 request_id = 1;
 }
 
+message GetMessageRequest {
+    message SubMessage {
+        string subfield = 1;
+    }
+    int64 request_id = 1;
+    int64 revision = 2;
+    SubMessage sub = 3;
+}
+
 message TestResponseA {
     int64 request_id = 1;
     Color color = 2;
