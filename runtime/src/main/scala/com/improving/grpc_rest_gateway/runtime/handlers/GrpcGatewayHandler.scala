@@ -3,15 +3,16 @@ package grpc_rest_gateway
 package runtime
 package handlers
 
-import java.nio.charset.StandardCharsets
-import scalapb.GeneratedMessage
-import scalapb.json4s.JsonFormat
 import io.grpc.{ManagedChannel, StatusRuntimeException}
 import io.netty.channel.ChannelHandler.Sharable
 import io.netty.channel.{ChannelFutureListener, ChannelHandlerContext, ChannelInboundHandlerAdapter}
 import io.netty.handler.codec.http._
+import scalapb.GeneratedMessage
+import scalapb.json4s.JsonFormat
 
+import java.nio.charset.StandardCharsets
 import scala.concurrent.{ExecutionContext, Future}
+import scala.jdk.CollectionConverters._
 
 @Sharable
 abstract class GrpcGatewayHandler(channel: ManagedChannel)(implicit ec: ExecutionContext)
@@ -112,6 +113,45 @@ trait PathMatchingSupport {
         // case 2: we have path parameter(s)
         pathsWithParameters.map(cp => replacePathParameters(cp, path)).contains(path)
       case None => false
+    }
+  }
+
+  protected def isSupportedCall(
+    configuredMethodName: String,
+    configuredPath: String,
+    runtimeMethodName: String,
+    runtimePath: String
+  ): Boolean =
+    configuredMethodName == runtimeMethodName && replacePathParameters(configuredPath, runtimePath) == runtimePath
+
+  protected def mergeParameters(configuredPath: String, runtimeUri: String): Map[String, String] = {
+    val queryString = new QueryStringDecoder(runtimeUri)
+    val path = queryString.path()
+    val flattenQueryParameters =
+      queryString
+        .parameters()
+        .asScala
+        .map { case (key, values) =>
+          key -> values.asScala.head
+        }
+        .toMap
+
+    if (configuredPath == path) flattenQueryParameters
+    else {
+      // "{" has special meaning in regex, replacing "{" and "}" with "#" for now
+      val configuredPathElements =
+        configuredPath.replaceAll("}", "#").replaceAll("\\{", "#").split("/").filterNot(_.isBlank)
+      val runtimePathElements = path.split("/").filterNot(_.isBlank)
+
+      // see comments in replacePathParameters
+      val configuredToRuntimeDiff = configuredPathElements.diff(runtimePathElements)
+      val runtimeToConfiguredDiff = runtimePathElements.diff(configuredPathElements)
+      val mismatchPaths = configuredToRuntimeDiff.exists(s => !s.contains("#"))
+      if (!mismatchPaths && configuredToRuntimeDiff.length == runtimeToConfiguredDiff.length) {
+        // now remove "#"
+        val pathParameters = configuredToRuntimeDiff.map(_.replaceAll("#", "")).zip(runtimeToConfiguredDiff).toMap
+        Map.empty[String, String] ++ pathParameters ++ flattenQueryParameters
+      } else flattenQueryParameters
     }
   }
 

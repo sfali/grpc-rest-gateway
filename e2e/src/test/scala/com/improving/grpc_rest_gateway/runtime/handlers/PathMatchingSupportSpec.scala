@@ -61,5 +61,22 @@ class PathMatchingSupportSpec extends AnyWordSpec with Matchers with PathMatchin
         "/v1/messages/1/users/1"
       ) shouldBe "/v1/messages/{message_id}/sub/{sub.subfield}"
     }
+
+    "get empty parameters when uri doesn't have path parameters and no request parameters" in {
+      mergeParameters("/v1/messages", "/v1/messages") shouldBe empty
+    }
+
+    "get parameters when uri have request parameters but no path parameters" in {
+      mergeParameters("/v1/messages", "/v1/messages?message_id=1") shouldBe Map("message_id" -> "1")
+    }
+
+    "get parameters when uri doesn't have path parameters but no request parameters" in {
+      mergeParameters("/v1/messages/{message_id}", "/v1/messages/1") shouldBe Map("message_id" -> "1")
+    }
+
+    "get parameters when uri have both path parameters and request parameters" in {
+      mergeParameters("/v1/messages/{message_id}", "/v1/messages/1?revision=2&date=2024-11-05") shouldBe
+        Map("message_id" -> "1", "revision" -> "2", "date" -> "2024-11-05")
+    }
   }
 }
