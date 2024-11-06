@@ -1,8 +1,15 @@
 package rest_gateway_test
 
-import rest_gateway_test.api.model.common.{TestRequestB, TestResponseA, TestResponseB}
+import rest_gateway_test.api.model.common.{
+  GetMessageRequest,
+  GetMessageResponse,
+  TestRequestB,
+  TestResponseA,
+  TestResponseB
+}
 import sttp.client3._
 import scalapb.json4s.JsonFormat
+import sttp.model.Uri
 
 class RestGatewayClient(gatewayPort: Int) {
 
@@ -42,6 +49,23 @@ class RestGatewayClient(gatewayPort: Int) {
       case Left(ex)    => throw new RuntimeException(ex)
       case Right(body) => JsonFormat.fromJsonString[TestResponseB](body)
     }
+
+  def getMessageV1(request: GetMessageRequest): GetMessageResponse =
+    getMessage(uri"$baseUrl/v1/test/messages/${request.messageId}?user_id=${request.userId}")
+
+  def getMessageV2(request: GetMessageRequest): GetMessageResponse =
+    getMessage(uri"$baseUrl/v1/test/users/${request.userId}/messages/${request.messageId}")
+
+  def getMessageV3(request: GetMessageRequest): GetMessageResponse =
+    getMessage(uri"$baseUrl/v1/test/users/${request.userId}?message_id=${request.messageId}")
+
+  private def getMessage(uri: Uri): GetMessageResponse = {
+    val response = client.send(basicRequest.get(uri).response(asString))
+    response.body match {
+      case Left(ex)    => throw HttpResponseException(response.code.code, ex)
+      case Right(body) => JsonFormat.fromJsonString[GetMessageResponse](body)
+    }
+  }
 
 }
 

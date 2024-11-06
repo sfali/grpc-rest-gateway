@@ -1,6 +1,6 @@
 package rest_gateway_test
 
-import rest_gateway_test.api.model.common.{Color, UUID => ProtoUUID}
+import rest_gateway_test.api.model.common.{Color, GetMessageRequest, GetMessageResponse, UUID => ProtoUUID}
 
 import java.util.UUID
 
@@ -14,5 +14,10 @@ package object service {
 
   implicit class UUIDOps(src: UUID) {
     def toProtoUUID: ProtoUUID = ProtoUUID(src.toString)
+  }
+
+  implicit class GetMessageRequestOps(src: GetMessageRequest) {
+    def toGetMessageResponse: GetMessageResponse =
+      GetMessageResponse(s"messageId: ${src.messageId}, userId: ${src.userId}")
   }
 }
