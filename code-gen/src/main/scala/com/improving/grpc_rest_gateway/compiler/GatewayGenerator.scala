@@ -305,7 +305,7 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
     // generate key value pair for the map
     val mapKeys =
       httpMethodsToUrisMap.zipWithIndex.foldLeft(Seq.empty[String]) { case (result, ((methodName, uris), index)) =>
-        val urisSeq = s"""Seq(${uris.map(uri => "\"" + uri + "\"").mkString(", ")})"""
+        val urisSeq = s"""Seq(${uris.map(uri => " \n" + "  \"" + uri + "\"").mkString(", ")}\n)"""
         // each element of seq is separated by "," except for last element
         val keys = if (index == httpMethodsToUrisMap.size - 1) urisSeq else s"""$urisSeq,"""
         result :+ s""""$methodName" -> $keys"""
