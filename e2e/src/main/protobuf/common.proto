@@ -42,3 +42,13 @@ message TestResponseB {
     int64 request_id = 2;
     string result = 3;
 }
+
+// in order to test different scenarios of path and request parameters
+message GetMessageRequest {
+    int32 message_id = 1;
+    string user_id = 2;
+}
+
+message GetMessageResponse {
+    string result = 1;
+}

@@ -25,6 +25,12 @@ service TestServiceA {
     };
   }
 
+  rpc GetRequestWithParam (rest_gateway_test.api.model.TestRequestA) returns (rest_gateway_test.api.model.TestResponseA) {
+    option (google.api.http) = {
+      get: "/restgateway/test/testservicea/{request_id}"
+    };
+  }
+
   rpc Process (rest_gateway_test.api.model.TestRequestA) returns (rest_gateway_test.api.model.TestResponseA) {
     option (google.api.http) = {
       post: "/restgateway/test/testservicea"
@@ -33,6 +39,24 @@ service TestServiceA {
   }
 
   rpc GetRequestWithoutRest(rest_gateway_test.api.model.TestRequestA) returns (rest_gateway_test.api.model.TestResponseA);
+
+  rpc GetMessageV1 (rest_gateway_test.api.model.GetMessageRequest) returns (rest_gateway_test.api.model.GetMessageResponse) {
+    option (google.api.http) = {
+      get: "/v1/test/messages/{message_id}"
+    };
+  }
+
+  rpc GetMessageV2 (rest_gateway_test.api.model.GetMessageRequest) returns (rest_gateway_test.api.model.GetMessageResponse) {
+    option (google.api.http) = {
+      get: "/v1/test/users/{user_id}/messages/{message_id}"
+    };
+  }
+
+  rpc GetMessageV3 (rest_gateway_test.api.model.GetMessageRequest) returns (rest_gateway_test.api.model.GetMessageResponse) {
+    option (google.api.http) = {
+      get: "/v1/test/users/{user_id}"
+    };
+  }
 }
 
 

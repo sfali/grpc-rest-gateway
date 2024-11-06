@@ -11,15 +11,7 @@ import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioServerSocketChannel
 import io.netty.handler.codec.http.{HttpObjectAggregator, HttpServerCodec}
 
-case class GrpcGatewayServerBuilder(
-  port: Int = 80,
-  services: Seq[GrpcGatewayHandler] = Nil) {
-
-  def forPort(port: Int): GrpcGatewayServerBuilder =
-    copy(port = port)
-
-  def addService(service: GrpcGatewayHandler): GrpcGatewayServerBuilder =
-    copy(services = services :+ service)
+case class GrpcGatewayServerBuilder(port: Int, services: Seq[GrpcGatewayHandler]) {
 
   def build(): GrpcGatewayServer = {
     val masterGroup = new NioEventLoopGroup()
@@ -33,9 +25,7 @@ case class GrpcGatewayServerBuilder(
           ch.pipeline().addLast("codec", new HttpServerCodec())
           ch.pipeline().addLast("aggregator", new HttpObjectAggregator(512 * 1024))
           ch.pipeline().addLast("swagger", new SwaggerHandler(services))
-          services.foreach { handler =>
-            ch.pipeline().addLast(handler.name, handler)
-          }
+          services.foreach(handler => ch.pipeline().addLast(handler.name, handler))
           ch.pipeline().addLast(new MethodNotFoundHandler())
         }
       })
@@ -43,11 +33,4 @@ case class GrpcGatewayServerBuilder(
     new GrpcGatewayServer(port, bootstrap, masterGroup, slaveGroup, services.toList)
   }
 
-}
-
-object GrpcGatewayServerBuilder {
-  def forPort(port: Int): GrpcGatewayServerBuilder =
-    new GrpcGatewayServerBuilder().forPort(port)
-  def addService(service: GrpcGatewayHandler): GrpcGatewayServerBuilder =
-    new GrpcGatewayServerBuilder().addService(service)
 }

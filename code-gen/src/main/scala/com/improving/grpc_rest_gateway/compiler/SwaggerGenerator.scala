@@ -1,6 +1,8 @@
-package com.improving.grpc_rest_gateway.compiler
+package com.improving
+package grpc_rest_gateway
+package compiler
 
-import com.google.api.AnnotationsProto
+import com.google.api.{AnnotationsProto, HttpRule}
 import com.google.api.HttpRule.PatternCase
 import com.google.protobuf.Descriptors.FieldDescriptor.JavaType
 import com.google.protobuf.Descriptors.{Descriptor, FieldDescriptor, MethodDescriptor, ServiceDescriptor}
@@ -8,7 +10,7 @@ import com.google.protobuf.ExtensionRegistry
 import com.google.protobuf.compiler.PluginProtos.CodeGeneratorResponse
 import protocgen.{CodeGenApp, CodeGenRequest, CodeGenResponse}
 import scalapb.compiler.FunctionalPrinter.PrinterEndo
-import scalapb.compiler.{DescriptorImplicits, FunctionalPrinter, ProtobufGenerator}
+import scalapb.compiler.{DescriptorImplicits, FunctionalPrinter, NameUtils, ProtobufGenerator}
 import scalapb.options.Scalapb
 
 import scala.collection.mutable
@@ -92,18 +94,6 @@ private class SwaggerMessagePrinter(service: ServiceDescriptor, implicits: Descr
       .result()
   }
 
-  private def extractPath(m: MethodDescriptor): String = {
-    val http = m.getOptions.getExtension(AnnotationsProto.http)
-    http.getPatternCase match {
-      case PatternCase.GET    => http.getGet
-      case PatternCase.POST   => http.getPost
-      case PatternCase.PUT    => http.getPut
-      case PatternCase.DELETE => http.getDelete
-      case PatternCase.PATCH  => http.getPatch
-      case _                  => ""
-    }
-  }
-
   private def extractDefs(d: Descriptor): Set[Descriptor] = {
     val explored = mutable.Set.empty[Descriptor]
     def extractDefsRec(d: Descriptor): Set[Descriptor] =
@@ -120,6 +110,19 @@ private class SwaggerMessagePrinter(service: ServiceDescriptor, implicits: Descr
     extractDefsRec(d)
   }
 
+  private def extractPathElements(http: HttpRule) = {
+    val path = extractPath(http)
+    if (path.isBlank) Seq.empty[String]
+    else {
+      path
+        .split("/")
+        .filter(_.startsWith("{"))
+        .map(_.replaceAll("\\{", "").replaceAll("}", ""))
+        .map(name => NameUtils.snakeCaseToCamelCase(name = name, upperInitial = true))
+        .toSeq
+    }
+  }
+
   private def generatePath(pathMethods: (String, Seq[MethodDescriptor])): PrinterEndo = { printer =>
     pathMethods match {
       case (path, methods) =>
@@ -133,13 +136,14 @@ private class SwaggerMessagePrinter(service: ServiceDescriptor, implicits: Descr
 
   private def generateMethod(m: MethodDescriptor): PrinterEndo = { printer =>
     val http = m.getOptions.getExtension(AnnotationsProto.http)
+    val pathElements = extractPathElements(http)
     http.getPatternCase match {
       case PatternCase.GET =>
         printer
           .add("get:")
           .indent
           .call(generateMethodInfo(m))
-          .call(generateQueryParameters(m.getInputType))
+          .call(generateParameters(m.getInputType, pathElements))
           .outdent
       case PatternCase.POST =>
         printer
@@ -160,7 +164,7 @@ private class SwaggerMessagePrinter(service: ServiceDescriptor, implicits: Descr
           .add("delete:")
           .indent
           .call(generateMethodInfo(m))
-          .call(generateQueryParameters(m.getInputType))
+          .call(generateParameters(m.getInputType, pathElements))
           .outdent
       case _ => printer
     }
@@ -196,38 +200,44 @@ private class SwaggerMessagePrinter(service: ServiceDescriptor, implicits: Descr
       .outdent
       .outdent
 
-  private def generateQueryParameters(inputType: Descriptor, prefix: String = ""): PrinterEndo =
+  private def generateParameters(inputType: Descriptor, pathElements: Seq[String], prefix: String = ""): PrinterEndo =
     _.when(inputType.getFields.asScala.nonEmpty)(
       _.add("parameters:")
         .print(inputType.getFields.asScala) { case (p, f) =>
-          p.call(generateQueryParameter(f))
+          p.call(generateParameter(f, pathElements))
         }
     )
 
-  private def generateQueryParameter(field: FieldDescriptor, prefix: String = ""): PrinterEndo = { printer =>
-    field.getJavaType match {
-      case JavaType.MESSAGE =>
-        printer.call(
-          generateQueryParameters(field.getMessageType, s"$prefix.${field.getName}")
-        )
-      case JavaType.ENUM =>
-        printer
-          .add(s"- name: $prefix${field.getName}")
-          .addIndented("in: query", s"type: string", "enum:")
-          .addIndented(field.getEnumType.getValues.asScala.toSeq.map(v => s"- ${v.getName}"): _*)
-      case JavaType.INT =>
-        printer
-          .add(s"- name: $prefix${field.getName}")
-          .addIndented("in: query", "type: integer", "format: int32")
-      case JavaType.LONG =>
-        printer
-          .add(s"- name: $prefix${field.getName}")
-          .addIndented("in: query", "type: integer", "format: int64")
-      case t =>
-        printer
-          .add(s"- name: $prefix${field.getName}")
-          .addIndented("in: query", s"type: ${t.name.toLowerCase}")
-    }
+  private def generateParameter(field: FieldDescriptor, pathElements: Seq[String], prefix: String = ""): PrinterEndo = {
+    printer =>
+      val inPath = pathElements.contains(field.upperScalaName)
+      field.getJavaType match {
+        case JavaType.MESSAGE =>
+          printer.call(
+            generateParameters(field.getMessageType, pathElements, s"$prefix.${field.getName}")
+          )
+        case JavaType.ENUM =>
+          printer
+            .add(s"- name: $prefix${field.getName}")
+            .when(inPath)(_.addIndented("in: query", "required: true", "type: string", "enum:"))
+            .when(!inPath)(_.addIndented("in: query", "type: string", "enum:"))
+            .addIndented(field.getEnumType.getValues.asScala.toSeq.map(v => s"- ${v.getName}"): _*)
+        case JavaType.INT =>
+          printer
+            .add(s"- name: $prefix${field.getName}")
+            .when(inPath)(_.addIndented("in: path", "required: true", "type: integer", "format: int32"))
+            .when(!inPath)(_.addIndented("in: query", "type: integer", "format: int32"))
+        case JavaType.LONG =>
+          printer
+            .add(s"- name: $prefix${field.getName}")
+            .when(inPath)(_.addIndented("in: path", "required: true", "type: integer", "format: int64"))
+            .when(!inPath)(_.addIndented("in: query", "type: integer", "format: int64"))
+        case t =>
+          printer
+            .add(s"- name: $prefix${field.getName}")
+            .when(inPath)(_.addIndented("in: path", "required: true", s"type: ${t.name.toLowerCase}"))
+            .when(!inPath)(_.addIndented("in: query", s"type: ${t.name.toLowerCase}"))
+      }
   }
 
   private def generateDefinition(d: Descriptor): PrinterEndo =

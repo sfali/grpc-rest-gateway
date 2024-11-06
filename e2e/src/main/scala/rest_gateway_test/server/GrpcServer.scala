@@ -15,8 +15,6 @@ class GrpcServer(port: Int = GrpcPort) {
   private val logger = LoggerFactory.getLogger(classOf[GrpcServer])
   private[this] var server: Server = _
 
-  import GrpcServer._
-
   private def start(executionContext: ExecutionContext): Server = {
     server = ServerBuilder
       .forPort(port)

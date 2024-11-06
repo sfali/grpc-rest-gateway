@@ -6,7 +6,7 @@ import io.grpc.StatusRuntimeException
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
-import rest_gateway_test.api.model.common.{TestRequestA, TestRequestB}
+import rest_gateway_test.api.model.common.{GetMessageRequest, TestRequestA, TestRequestB}
 import rest_gateway_test.api.scala_api.TestServiceA.TestServiceAGrpc
 import rest_gateway_test.api.scala_api.TestServiceB.TestServiceBGrpc
 import rest_gateway_test.server.GrpcServer
@@ -96,11 +96,31 @@ class GrpcRestGatewayTest extends AnyWordSpec with Matchers with BeforeAndAfterA
 
     "post with GRPC and get with rest" in {
       val requestId = 1L
-
       val grpcResponse = serviceAStub.process(TestRequestA(requestId))
-
       val restResponse = restClient.getRequestServiceA(requestId)
       grpcResponse shouldBe restResponse
+    }
+
+    "get with rest with path parameter" in {
+      val requestId = 1L
+      val grpcResponse = serviceAStub.process(TestRequestA(requestId))
+      val restResponse = restClient.getRequestServiceA(requestId, useRequestParam = false)
+      grpcResponse shouldBe restResponse
+    }
+
+    "getMessageV1" in {
+      val request = GetMessageRequest(messageId = 1, userId = "abc123")
+      serviceAStub.getMessageV1(request) shouldBe restClient.getMessageV1(request)
+    }
+
+    "getMessageV2" in {
+      val request = GetMessageRequest(messageId = 2, userId = "123abc")
+      serviceAStub.getMessageV2(request) shouldBe restClient.getMessageV2(request)
+    }
+
+    "getMessageV3" in {
+      val request = GetMessageRequest(messageId = 3, userId = "a1b2c3")
+      serviceAStub.getMessageV3(request) shouldBe restClient.getMessageV3(request)
     }
   }
 

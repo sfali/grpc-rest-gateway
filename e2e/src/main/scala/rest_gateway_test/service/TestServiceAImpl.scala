@@ -3,7 +3,7 @@ package rest_gateway_test.service
 import com.google.rpc.{Code, Status}
 import io.grpc.protobuf.StatusProto
 import org.slf4j.LoggerFactory
-import rest_gateway_test.api.model.common.{TestRequestA, TestResponseA}
+import rest_gateway_test.api.model.common.{GetMessageRequest, GetMessageResponse, TestRequestA, TestResponseA}
 import rest_gateway_test.api.scala_api.TestServiceA.TestServiceAGrpc
 
 import scala.collection.mutable
@@ -35,6 +35,8 @@ class TestServiceAImpl extends TestServiceAGrpc.TestServiceA {
         }
     }
 
+  override def getRequestWithParam(request: TestRequestA): Future[TestResponseA] = getRequest(request)
+
   override def process(request: TestRequestA): Future[TestResponseA] =
     Try(validateRequestId(request.requestId)) match {
       case Failure(ex) => Future.failed(ex)
@@ -53,6 +55,15 @@ class TestServiceAImpl extends TestServiceAGrpc.TestServiceA {
     }
 
   override def getRequestWithoutRest(request: TestRequestA): Future[TestResponseA] = getRequest(request)
+
+  override def getMessageV1(request: GetMessageRequest): Future[GetMessageResponse] =
+    Future.successful(request.toGetMessageResponse)
+
+  override def getMessageV2(request: GetMessageRequest): Future[GetMessageResponse] =
+    Future.successful(request.toGetMessageResponse)
+
+  override def getMessageV3(request: GetMessageRequest): Future[GetMessageResponse] =
+    Future.successful(request.toGetMessageResponse)
 
   private def validateRequestId(requestId: Long) =
     if (requestId <= 0) {

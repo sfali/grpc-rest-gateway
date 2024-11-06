@@ -68,7 +68,6 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
       )
       .newline
       .add(
-        "import scala.jdk.CollectionConverters._",
         "import scala.concurrent.{ExecutionContext, Future}",
         "import scalapb.json4s.JsonFormatException",
         "import scala.util._"
@@ -90,10 +89,9 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
         s"""override val name: String = "${service.getName}"""",
         s"private val stub = $grpcService.stub(channel)"
       )
+      .call(generateHttpMethodToUrisMap(service))
       .newline
-      .call(generateSupportsCall(service))
-      .newline
-      .call(generateUnaryCall(service))
+      .call(generateDispatchCall(service))
       .outdent
       .add("}")
       .newline
@@ -105,95 +103,110 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
       !m.isClientStreaming && !m.isServerStreaming && m.getOptions.hasExtension(AnnotationsProto.http)
     }
 
-  private def generateUnaryCall(service: ServiceDescriptor): PrinterEndo = { printer =>
+  private def generateDispatchCall(service: ServiceDescriptor): PrinterEndo = { printer =>
     val methods = getUnaryCallsWithHttpExtension(service)
+
     printer
-      .add(s"override def unaryCall(method: HttpMethod, uri: String, body: String): Future[GeneratedMessage] = {")
+      .add(
+        s"override protected def dispatchCall(method: HttpMethod, uri: String, body: String): Future[GeneratedMessage] = {"
+      )
       .indent
       .add(
         "val queryString = new QueryStringDecoder(uri)",
-        "(method.name, queryString.path) match {"
+        "val path = queryString.path",
+        "val methodName = method.name"
       )
-      .indent
-      .print(methods) { case (p, m) => generateMethodHandlerCase(m)(p) }
-      .add("case (methodName, path) => ")
-      .addIndented("""Future.failed(InvalidArgument(s"No route defined for $methodName($path)"))""")
-      .outdent
-      .add("}")
+      .call(generateMethodHandlers(methods))
       .outdent
       .add("}")
   }
 
-  private def generateSupportsCall(service: ServiceDescriptor): PrinterEndo = { printer =>
-    val methods = getUnaryCallsWithHttpExtension(service)
-    printer
-      .add(s"override def supportsCall(method: HttpMethod, uri: String): Boolean = {")
-      .indent
-      .add(
-        "val queryString = new QueryStringDecoder(uri)",
-        "(method.name, queryString.path) match {"
-      )
-      .indent
-      .print(methods) { case (p, m) => generateMethodCase(m)(p) }
-      .add("case _ => false")
-      .outdent
-      .add("}")
-      .outdent
-      .add("}")
-  }
+  private def generateMethodHandlers(methods: Seq[MethodDescriptor]): PrinterEndo = { printer =>
+    var started = false
 
-  private def generateMethodHandlerCase(method: MethodDescriptor): PrinterEndo = { printer =>
-    val methodDescriptor = ExtendedMethodDescriptor(method)
+    val p =
+      methods.foldLeft(printer) { case (p, method) =>
+        val methodDescriptor = ExtendedMethodDescriptor(method)
+        // FQN of the input type, this done on the assumption that input types can be in the different package
+        val fullInputName = methodDescriptor.inputType.scalaType
+        val methodName = method.getName.charAt(0).toLower + method.getName.substring(1)
+        val http = method.getOptions.getExtension(AnnotationsProto.http)
+        http.getPatternCase match {
+          case PatternCase.GET =>
+            val p1 =
+              if (started) p.add(s"""} else if (isSupportedCall("GET", "${http.getGet}", methodName, path)) {""")
+              else {
+                started = true
+                p.add(s"""if (isSupportedCall("GET", "${http.getGet}", methodName, path)) {""")
+              }
+            p1.indent
+              .add(s"""val parameters = mergeParameters("${http.getGet}", queryString)""")
+              .add("val input = Try {")
+              .indent
+              .call(generateInputFromQueryString(method.getInputType, fullInputName))
+              .outdent
+              .add("}")
+              .add(s"Future.fromTry(input).flatMap(stub.$methodName)")
+              .outdent
 
-    // FQN of the input type, this done on the assumption that input types can be in the different package
-    val fullInputName = methodDescriptor.inputType.scalaType
-    val http = method.getOptions.getExtension(AnnotationsProto.http)
-    val methodName = method.getName.charAt(0).toLower + method.getName.substring(1)
-    http.getPatternCase match {
-      case PatternCase.GET =>
-        printer
-          .add(s"""case ("GET", "${http.getGet}") => """)
-          .indent
-          .add("val input = Try {")
-          .indent
-          .call(generateInputFromQueryString(method.getInputType, fullInputName))
-          .outdent
-          .add("}")
-          .add(s"Future.fromTry(input).flatMap(stub.$methodName)")
-          .outdent
-      case PatternCase.POST =>
-        printer
-          .add(s"""case ("POST", "${http.getPost}") => """)
-          .add("for {")
-          .addIndented(
-            s"""msg <- Future.fromTry(Try(JsonFormat.fromJsonString[$fullInputName](body)).recoverWith(jsonException2GatewayExceptionPF))""",
-            s"res <- stub.$methodName(msg)"
-          )
-          .add("} yield res")
-      case PatternCase.PUT =>
-        printer
-          .add(s"""case ("PUT", "${http.getPut}") => """)
-          .add("for {")
-          .addIndented(
-            s"""msg <- Future.fromTry(Try(JsonFormat.fromJsonString[${method
-              .getInputType
-              .getName}](body)).recoverWith(jsonException2GatewayExceptionPF))""",
-            s"res <- stub.$methodName(msg)"
-          )
-          .add("} yield res")
-      case PatternCase.DELETE =>
-        printer
-          .add(s"""case ("DELETE", "${http.getDelete}") => """)
-          .indent
-          .add("val input = Try {")
-          .indent
-          .call(generateInputFromQueryString(method.getInputType, fullInputName))
-          .outdent
-          .add("}")
-          .add(s"Future.fromTry(input).flatMap(stub.$methodName)")
-          .outdent
-      case _ => printer
-    }
+          case PatternCase.PUT =>
+            val p1 =
+              if (started) p.add(s"""} else if (isSupportedCall("PUT", "${http.getPut}", methodName, path)) {""")
+              else {
+                started = true
+                p.add(s"""if (isSupportedCall("PUT", "${http.getPut}", methodName, path)) {""")
+              }
+            p1.indent
+              .add(s"""val parameters = mergeParameters("${http.getPut}", queryString)""")
+              .call(generateInputFromQueryString(method.getInputType, fullInputName))
+              .outdent
+
+          case PatternCase.POST =>
+            val p1 =
+              if (started) p.add(s"""} else if (isSupportedCall("POST", "${http.getPost}", methodName, path)) {""")
+              else {
+                started = true
+                p.add(s"""if (isSupportedCall("POST", "${http.getPost}", methodName, path)) {""")
+              }
+            p1.indent
+              .add("for {")
+              .addIndented(
+                s"""msg <- Future.fromTry(Try(JsonFormat.fromJsonString[$fullInputName](body)).recoverWith(jsonException2GatewayExceptionPF))""",
+                s"res <- stub.$methodName(msg)"
+              )
+              .add("} yield res")
+              .outdent
+
+          case PatternCase.DELETE =>
+            val p1 =
+              if (started) p.add(s"""} else if (isSupportedCall("DELETE", "${http.getDelete}", methodName, path)) {""")
+              else {
+                started = true
+                p.add(s"""if (isSupportedCall("DELETE", "${http.getDelete}", methodName, path)) {""")
+              }
+            p1.indent
+              .add(s"""val parameters = mergeParameters("${http.getDelete}", queryString)""")
+              .call(generateInputFromQueryString(method.getInputType, fullInputName))
+              .outdent
+
+          case PatternCase.PATCH =>
+            val p1 =
+              if (started) p.add(s"""} else if (isSupportedCall("PATCH", "${http.getPatch}", methodName, path)) {""")
+              else {
+                started = true
+                p.add(s"""if (isSupportedCall("PATCH", "${http.getPatch}", methodName, path)) {""")
+              }
+            p1.indent
+              .add(s"""val parameters = mergeParameters("${http.getPatch}", queryString)""")
+              .call(generateInputFromQueryString(method.getInputType, fullInputName))
+              .outdent
+
+          case _ => p
+        }
+      }
+
+    if (started) p.add(s"""} else Future.failed(InvalidArgument(s"No route defined for $$methodName($$path)"))""")
+    else p
   }
 
   private def generateInputFromQueryString(d: Descriptor, fullName: String, prefix: String = ""): PrinterEndo = {
@@ -220,41 +233,15 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
                 .outdent
                 .add("}")
             case JavaType.ENUM =>
-              p.add(s"val $jsonName = ")
-                .addIndented(
-                  s"""${f.getName}.valueOf(queryString.parameters().get("$prefix$inputName").asScala.head)"""
-                )
+              p.add(s"""val $jsonName = ${f.getName}.valueOf(parameters.getOrElse("$prefix$inputName", ""))""")
             case JavaType.BOOLEAN =>
-              p.add(s"val $jsonName = ")
-                .addIndented(
-                  s"""queryString.parameters().get("$prefix$inputName").asScala.head.toBoolean"""
-                )
-            case JavaType.DOUBLE =>
-              p.add(s"val $jsonName = ")
-                .addIndented(
-                  s"""queryString.parameters().get("$prefix$inputName").asScala.head.toDouble"""
-                )
-            case JavaType.FLOAT =>
-              p.add(s"val $jsonName = ")
-                .addIndented(
-                  s"""queryString.parameters().get("$prefix$inputName").asScala.head.toFloat"""
-                )
-            case JavaType.INT =>
-              p.add(s"val $jsonName = ")
-                .addIndented(
-                  s"""queryString.parameters().get("$prefix$inputName").asScala.head.toInt"""
-                )
-            case JavaType.LONG =>
-              p.add(s"val $jsonName = ")
-                .addIndented(
-                  s"""queryString.parameters().get("$prefix$inputName").asScala.head.toLong"""
-                )
-            case JavaType.STRING =>
-              p.add(s"val $jsonName = ")
-                .addIndented(
-                  s"""queryString.parameters().get("$prefix$inputName").asScala.head"""
-                )
-            case jt => throw new Exception(s"Unknown java type: $jt")
+              p.add(s"""val $jsonName = parameters.getOrElse("$prefix$inputName", "").toBoolean""")
+            case JavaType.DOUBLE => p.add(s"""val $jsonName = parameters.getOrElse("$prefix$inputName", "").toDouble""")
+            case JavaType.FLOAT  => p.add(s"""val $jsonName = parameters.getOrElse("$prefix$inputName", "").toFloat""")
+            case JavaType.INT    => p.add(s"""val $jsonName = parameters.getOrElse("$prefix$inputName", "").toInt""")
+            case JavaType.LONG   => p.add(s"""val $jsonName = parameters.getOrElse("$prefix$inputName", "").toLong""")
+            case JavaType.STRING => p.add(s"""val $jsonName = parameters.getOrElse("$prefix$inputName", "")""")
+            case jt              => throw new Exception(s"Unknown java type: $jt")
           }
         }
         .add(s"$fullName($args)")
@@ -265,14 +252,70 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
     name.charAt(0).toLower + name.substring(1)
   }
 
-  private def generateMethodCase(method: MethodDescriptor): PrinterEndo = { printer =>
-    val http = method.getOptions.getExtension(AnnotationsProto.http)
-    http.getPatternCase match {
-      case PatternCase.GET    => printer.add(s"""case ("GET", "${http.getGet}") => true""")
-      case PatternCase.POST   => printer.add(s"""case ("POST", "${http.getPost}") => true""")
-      case PatternCase.PUT    => printer.add(s"""case ("PUT", "${http.getPut}") => true""")
-      case PatternCase.DELETE => printer.add(s"""case ("DELETE", "${http.getDelete}") => true""")
-      case _                  => printer
-    }
+  private def generateHttpMethodToUrisMap(service: ServiceDescriptor): PrinterEndo = { printer =>
+    val methods = getUnaryCallsWithHttpExtension(service)
+
+    val httpMethodsToUrisMap =
+      methods.foldLeft(Map.empty[String, Seq[String]]) { case (result, method) =>
+        val http = method.getOptions.getExtension(AnnotationsProto.http)
+        http.getPatternCase match {
+          case PatternCase.GET =>
+            val updatedValues =
+              result.get(PatternCase.GET.name()) match {
+                case Some(values) => values :+ http.getGet
+                case None         => Seq(http.getGet)
+              }
+            result + (PatternCase.GET.name() -> updatedValues)
+
+          case PatternCase.PUT =>
+            val updatedValues =
+              result.get(PatternCase.PUT.name()) match {
+                case Some(values) => values :+ http.getGet
+                case None         => Seq(http.getPut)
+              }
+            result + (PatternCase.PUT.name() -> updatedValues)
+
+          case PatternCase.POST =>
+            val updatedValues =
+              result.get(PatternCase.POST.name()) match {
+                case Some(values) => values :+ http.getGet
+                case None         => Seq(http.getPost)
+              }
+            result + (PatternCase.POST.name() -> updatedValues)
+
+          case PatternCase.DELETE =>
+            val updatedValues =
+              result.get(PatternCase.DELETE.name()) match {
+                case Some(values) => values :+ http.getGet
+                case None         => Seq(http.getDelete)
+              }
+            result + (PatternCase.DELETE.name() -> updatedValues)
+
+          case PatternCase.PATCH =>
+            val updatedValues =
+              result.get(PatternCase.PATCH.name()) match {
+                case Some(values) => values :+ http.getGet
+                case None         => Seq(http.getPatch)
+              }
+            result + (PatternCase.PATCH.name() -> updatedValues)
+          case _ => result
+        }
+      }
+
+    // generate key value pair for the map
+    val mapKeys =
+      httpMethodsToUrisMap.zipWithIndex.foldLeft(Seq.empty[String]) { case (result, ((methodName, uris), index)) =>
+        val urisSeq = s"""Seq(${uris.map(uri => " \n" + "  \"" + uri + "\"").mkString(", ")}\n)"""
+        // each element of seq is separated by "," except for last element
+        val keys = if (index == httpMethodsToUrisMap.size - 1) urisSeq else s"""$urisSeq,"""
+        result :+ s""""$methodName" -> $keys"""
+      }
+
+    printer
+      .add("override protected val httpMethodsToUrisMap: Map[String, Seq[String]] = Map(")
+      .indent
+      .seq(mapKeys)
+      .outdent
+      .add(")")
   }
 }

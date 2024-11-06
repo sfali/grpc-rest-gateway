@@ -293,4 +293,4 @@ image::media/swagger.png[]
 == Limitations
 
 . Streaming calls are not supported.
-. Get calls with parameters only are supported (no path parameters), i.e., `/my_service?my_param=abc` is supported, following call will fail `/my_servic/abc`.
+. Body elements with "*" are only currently supported, that means `PUT` or `POST` request with path elements will not work.
