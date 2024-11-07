@@ -15,7 +15,9 @@ class PathMatchingSupportSpec extends AnyWordSpec with Matchers with PathMatchin
         "/v1/messages/{message_id}",
         "/v1/users/{user_id}",
         "/v1/messages/{message_id}/sub/{sub.subfield}",
-        "/v1/messages/{message_id}/users/{user_id}"
+        "/v1/messages/{message_id}/users/{user_id}",
+        "/v1/test/users/{user_id}/messages/{message_id}",
+        "/v1/test/messages/{message_id}/users/{user_id}"
       ),
       "POST" -> Seq("/v1/messages")
     )
@@ -44,22 +46,34 @@ class PathMatchingSupportSpec extends AnyWordSpec with Matchers with PathMatchin
       supportsCall(HttpMethod.GET, "/v1/users/1") shouldBe true
     }
 
-    "replace path parameters" in {
-      replacePathParameters(
-        "/v1/messages/{message_id}/users/{user_id}",
-        "/v1/messages/1/users/2"
-      ) shouldBe "/v1/messages/1/users/2"
-    }
-
-    "keep path if no path element" in {
-      replacePathParameters("/v1/messages", "/v1/messages") shouldBe "/v1/messages"
-    }
-
-    "do not replace path if doesn't match" in {
-      replacePathParameters(
+    "supported call different scenarios" in {
+      isSupportedCall("GET", "/v1/messages/{message_id}/users/{user_id}", "GET", "/v1/messages/1/users/2") shouldBe true
+      isSupportedCall("POST", "/v1/messages", "POST", "/v1/messages") shouldBe true
+      isSupportedCall(
+        "GET",
         "/v1/messages/{message_id}/sub/{sub.subfield}",
+        "GET",
         "/v1/messages/1/users/1"
-      ) shouldBe "/v1/messages/{message_id}/sub/{sub.subfield}"
+      ) shouldBe false
+      isSupportedCall(
+        "GET",
+        "/v1/test/users/{user_id}/messages/{message_id}",
+        "GET",
+        "/v1/test/users/abc/messages/16"
+      ) shouldBe true
+      isSupportedCall(
+        "GET",
+        "/v1/test/messages/{message_id}/users/{user_id}",
+        "GET",
+        "/v1/test/messages/16/users/xyz"
+      ) shouldBe true
+      isSupportedCall(
+        "GET",
+        "/v1/test/messages/{message_id}/users/{user_id}",
+        "GET",
+        "/v1/test/users/abc/messages/16"
+      ) shouldBe false
+      isSupportedCall("POST", "/v1/messages", "GET", "/v1/messages") shouldBe false
     }
 
     "get empty parameters when uri doesn't have path parameters and no request parameters" in {

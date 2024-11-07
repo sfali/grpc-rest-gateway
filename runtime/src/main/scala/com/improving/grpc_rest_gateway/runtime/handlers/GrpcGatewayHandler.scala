@@ -111,13 +111,8 @@ trait PathMatchingSupport {
     val queryString = new QueryStringDecoder(uri)
     val path = queryString.path
     httpMethodsToUrisMap.get(method.name) match {
-      case Some(configuredUris) =>
-        val pathsWithParameters = configuredUris.filter(_.contains("}"))
-        // case 1: no path element we have an exact match
-        configuredUris.contains(path) ||
-        // case 2: we have path parameter(s)
-        pathsWithParameters.map(cp => replacePathParameters(cp, path)).contains(path)
-      case None => false
+      case Some(configuredUris) => configuredUris.exists(configuredUri => isMatchingPaths(configuredUri, path))
+      case None                 => false
     }
   }
 
@@ -126,8 +121,7 @@ trait PathMatchingSupport {
     configuredPath: String,
     runtimeMethodName: String,
     runtimePath: String
-  ): Boolean =
-    configuredMethodName == runtimeMethodName && replacePathParameters(configuredPath, runtimePath) == runtimePath
+  ): Boolean = configuredMethodName == runtimeMethodName && isMatchingPaths(configuredPath, runtimePath)
 
   protected def mergeParameters(configuredPath: String, queryString: QueryStringDecoder): Map[String, String] = {
     val path = queryString.path()
@@ -144,7 +138,7 @@ trait PathMatchingSupport {
     else {
       // "{" has special meaning in regex, replacing "{" and "}" with "#" for now
       val configuredPathElements =
-        configuredPath.replaceAll("}", "#").replaceAll("\\{", "#").split("/").filterNot(_.isBlank)
+        configuredPath.replaceAll("}", "").replaceAll("\\{", "#").split("/").filterNot(_.isBlank)
       val runtimePathElements = path.split("/").filterNot(_.isBlank)
 
       // see comments in replacePathParameters
@@ -159,28 +153,22 @@ trait PathMatchingSupport {
     }
   }
 
-  // TODO: is there any efficient way to do this?
-  private[handlers] def replacePathParameters(configuredPath: String, runtimePath: String): String =
-    if (configuredPath == runtimePath) configuredPath
+  private def isMatchingPaths(configuredPath: String, runtimePath: String): Boolean =
+    if (configuredPath == runtimePath) true
     else {
       // "{" has special meaning in regex, replacing "{" and "}" with "#" for now
       val configuredPathElements =
-        configuredPath.replaceAll("}", "#").replaceAll("\\{", "#").split("/").filterNot(_.isBlank)
+        configuredPath.replaceAll("}", "").replaceAll("\\{", "#").split("/").filterNot(_.isBlank)
       val runtimePathElements = runtimePath.split("/").filterNot(_.isBlank)
-      val configuredToRuntimeDiff = configuredPathElements.diff(runtimePathElements)
-      val runtimeToConfiguredDiff = runtimePathElements.diff(configuredPathElements)
 
-      // Difference in two URIs should only be with path parameters (which are enclosed in "#"), if there is an
-      // element which doesn't have "#" then we have a mismatch
-      // For example, /v1/messages/{message_id}/sub/{sub.subfield} and runtime path is /v1/messages/1/users/1
-      // Then `configuredToRuntimeDiff` will be [#message_id#, sub, #sub.subfield#] and runtimeToConfiguredDiff
-      // will be [1, users, 1], we have a mismatch
-      val mismatchPaths = configuredToRuntimeDiff.exists(s => !s.contains("#"))
-      if (!mismatchPaths && configuredToRuntimeDiff.length == runtimeToConfiguredDiff.length) {
-        val pathParameters = configuredToRuntimeDiff.zip(runtimeToConfiguredDiff).toMap
-        pathParameters.foldLeft(runtimePath) { case (result, (key, value)) =>
-          result.replaceAll(key, value)
-        }
-      } else configuredPath
+      // length of both paths must be equal
+      if (configuredPathElements.length == runtimePathElements.length) {
+        // scan both arrays other than path variables rest of the path elements must be matching
+        val mismatchPath =
+          configuredPathElements.zip(runtimePathElements).exists { case (src, target) =>
+            !src.startsWith("#") && src != target
+          }
+        !mismatchPath
+      } else false
     }
 }
