@@ -8,7 +8,7 @@ import com.google.protobuf.ExtensionRegistry
 import com.google.protobuf.compiler.PluginProtos.CodeGeneratorResponse
 import protocgen.{CodeGenApp, CodeGenRequest, CodeGenResponse}
 import scalapb.compiler.FunctionalPrinter.PrinterEndo
-import scalapb.compiler.{DescriptorImplicits, FunctionalPrinter, ProtobufGenerator}
+import scalapb.compiler.{DescriptorImplicits, FunctionalPrinter, NameUtils, ProtobufGenerator}
 import scalapb.options.Scalapb
 
 import scala.jdk.CollectionConverters._
@@ -41,11 +41,10 @@ object GatewayGenerator extends CodeGenApp {
 private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: DescriptorImplicits) {
   import implicits._
 
+  private var pathsToConstantMap: Map[String, String] = Map.empty
   private val extendedFileDescriptor = ExtendedFileDescriptor(service.getFile)
   private val serviceName = service.getName
-
   private val scalaPackageName = extendedFileDescriptor.scalaPackage.fullName
-
   private val outputFileName = scalaPackageName.replace('.', '/') + "/" + serviceName + "GatewayHandler.scala"
 
   lazy val result: CodeGeneratorResponse.File = {
@@ -73,19 +72,43 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
         "import scala.util._"
       )
       .newline
+      .call(generateCompanionObject(service))
+      .newline
       .print(Seq(service)) { case (p, s) => generateService(s)(p) }
       .result()
+
+  private def generateCompanionObject(service: ServiceDescriptor): PrinterEndo = { printer =>
+    val paths =
+      service.getMethods.asScala.filter(_.getOptions.hasExtension(AnnotationsProto.http)).flatMap { method =>
+        val uppercaseMethodName = NameUtils.toAllCaps(method.getName)
+        val paths = extractPaths(method)
+        if (paths.size == 1) {
+          val (name, path) = paths.head
+          val constantName = s"${name}_${uppercaseMethodName}_PATH"
+          pathsToConstantMap = pathsToConstantMap + (s"${name}_$path" -> constantName)
+          Seq(s"""private val $constantName = "$path"""")
+        } else
+          paths.zipWithIndex.map { case ((name, path), index) =>
+            val constantName = s"${name}_${uppercaseMethodName}_PATH_${index + 1}"
+            pathsToConstantMap = pathsToConstantMap + (s"$name)_$path" -> constantName)
+            s"""private val $constantName = "$path""""
+          }
+      }
+    printer.add(s"object ${service.getName}GatewayHandler {").indent.seq(paths).outdent.add("}")
+  }
 
   private def generateService(service: ServiceDescriptor): PrinterEndo = { printer =>
     val descriptor = ExtendedServiceDescriptor(service)
 
     // this is NOT the FQN of the service, we are generating gateway handler in the same package as GRPC service
     val grpcService = descriptor.companionObject.name
+    val implName = s"${service.getName}GatewayHandler"
     printer
-      .add(s"class ${service.getName}GatewayHandler(channel: ManagedChannel)(implicit ec: ExecutionContext)")
+      .add(s"class $implName(channel: ManagedChannel)(implicit ec: ExecutionContext)")
       .indent
       .add(
         "extends GrpcGatewayHandler(channel)(ec) {",
+        s"import $implName._",
         s"""override val name: String = "${service.getName}"""",
         s"private val stub = $grpcService.stub(channel)"
       )
@@ -133,14 +156,16 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
         val http = method.getOptions.getExtension(AnnotationsProto.http)
         http.getPatternCase match {
           case PatternCase.GET =>
+            val constantName = pathsToConstantMap(s"GET_${http.getGet}")
             val p1 =
-              if (started) p.add(s"""} else if (isSupportedCall("GET", "${http.getGet}", methodName, path)) {""")
+              if (started)
+                p.add(s"""} else if (isSupportedCall(HttpMethod.GET.name, $constantName, methodName, path)) {""")
               else {
                 started = true
-                p.add(s"""if (isSupportedCall("GET", "${http.getGet}", methodName, path)) {""")
+                p.add(s"""if (isSupportedCall(HttpMethod.GET.name, $constantName, methodName, path)) {""")
               }
             p1.indent
-              .add(s"""val parameters = mergeParameters("${http.getGet}", queryString)""")
+              .add(s"""val parameters = mergeParameters($constantName, queryString)""")
               .add("val input = Try {")
               .indent
               .call(generateInputFromQueryString(method.getInputType, fullInputName, required = true))
@@ -150,11 +175,13 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
               .outdent
 
           case PatternCase.PUT =>
+            val constantName = pathsToConstantMap(s"PUT_${http.getPut}")
             val p1 =
-              if (started) p.add(s"""} else if (isSupportedCall("PUT", "${http.getPut}", methodName, path)) {""")
+              if (started)
+                p.add(s"""} else if (isSupportedCall(HttpMethod.PUT.name, $constantName, methodName, path)) {""")
               else {
                 started = true
-                p.add(s"""if (isSupportedCall("PUT", "${http.getPut}", methodName, path)) {""")
+                p.add(s"""if (isSupportedCall(HttpMethod.PUT.name, $constantName, methodName, path)) {""")
               }
             p1.indent
               .add(s"""val parameters = mergeParameters("${http.getPut}", queryString)""")
@@ -162,11 +189,13 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
               .outdent
 
           case PatternCase.POST =>
+            val constantName = pathsToConstantMap(s"POST_${http.getPost}")
             val p1 =
-              if (started) p.add(s"""} else if (isSupportedCall("POST", "${http.getPost}", methodName, path)) {""")
+              if (started)
+                p.add(s"""} else if (isSupportedCall(HttpMethod.POST.name, $constantName, methodName, path)) {""")
               else {
                 started = true
-                p.add(s"""if (isSupportedCall("POST", "${http.getPost}", methodName, path)) {""")
+                p.add(s"""if (isSupportedCall(HttpMethod.POST.name, $constantName, methodName, path)) {""")
               }
             p1.indent
               .add("for {")
@@ -178,26 +207,30 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
               .outdent
 
           case PatternCase.DELETE =>
+            val constantName = pathsToConstantMap(s"DELETE_${http.getDelete}")
             val p1 =
-              if (started) p.add(s"""} else if (isSupportedCall("DELETE", "${http.getDelete}", methodName, path)) {""")
+              if (started)
+                p.add(s"""} else if (isSupportedCall(HttpMethod.DELETE.name, $constantName, methodName, path)) {""")
               else {
                 started = true
-                p.add(s"""if (isSupportedCall("DELETE", "${http.getDelete}", methodName, path)) {""")
+                p.add(s"""if (isSupportedCall(HttpMethod.DELETE.name, $constantName", methodName, path)) {""")
               }
             p1.indent
-              .add(s"""val parameters = mergeParameters("${http.getDelete}", queryString)""")
+              .add(s"""val parameters = mergeParameters($constantName", queryString)""")
               .call(generateInputFromQueryString(method.getInputType, fullInputName, required = true))
               .outdent
 
           case PatternCase.PATCH =>
+            val constantName = pathsToConstantMap(s"PATCH_${http.getPatch}")
             val p1 =
-              if (started) p.add(s"""} else if (isSupportedCall("PATCH", "${http.getPatch}", methodName, path)) {""")
+              if (started)
+                p.add(s"""} else if (isSupportedCall(HttpMethod.PATCH.name, $constantName, methodName, path)) {""")
               else {
                 started = true
-                p.add(s"""if (isSupportedCall("PATCH", "${http.getPatch}", methodName, path)) {""")
+                p.add(s"""if (isSupportedCall(HttpMethod.PATCH.name, $constantName, methodName, path)) {""")
               }
             p1.indent
-              .add(s"""val parameters = mergeParameters("${http.getPatch}", queryString)""")
+              .add(s"""val parameters = mergeParameters($constantName, queryString)""")
               .call(generateInputFromQueryString(method.getInputType, fullInputName, required = true))
               .outdent
 
@@ -282,61 +315,24 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
   }
 
   private def generateHttpMethodToUrisMap(service: ServiceDescriptor): PrinterEndo = { printer =>
-    val methods = getUnaryCallsWithHttpExtension(service)
-
     val httpMethodsToUrisMap =
-      methods.foldLeft(Map.empty[String, Seq[String]]) { case (result, method) =>
-        val http = method.getOptions.getExtension(AnnotationsProto.http)
-        http.getPatternCase match {
-          case PatternCase.GET =>
-            val updatedValues =
-              result.get(PatternCase.GET.name()) match {
-                case Some(values) => values :+ http.getGet
-                case None         => Seq(http.getGet)
-              }
-            result + (PatternCase.GET.name() -> updatedValues)
-
-          case PatternCase.PUT =>
-            val updatedValues =
-              result.get(PatternCase.PUT.name()) match {
-                case Some(values) => values :+ http.getGet
-                case None         => Seq(http.getPut)
-              }
-            result + (PatternCase.PUT.name() -> updatedValues)
-
-          case PatternCase.POST =>
-            val updatedValues =
-              result.get(PatternCase.POST.name()) match {
-                case Some(values) => values :+ http.getGet
-                case None         => Seq(http.getPost)
-              }
-            result + (PatternCase.POST.name() -> updatedValues)
-
-          case PatternCase.DELETE =>
-            val updatedValues =
-              result.get(PatternCase.DELETE.name()) match {
-                case Some(values) => values :+ http.getGet
-                case None         => Seq(http.getDelete)
-              }
-            result + (PatternCase.DELETE.name() -> updatedValues)
-
-          case PatternCase.PATCH =>
-            val updatedValues =
-              result.get(PatternCase.PATCH.name()) match {
-                case Some(values) => values :+ http.getGet
-                case None         => Seq(http.getPatch)
-              }
-            result + (PatternCase.PATCH.name() -> updatedValues)
-          case _ => result
-        }
+      pathsToConstantMap.foldLeft(Map.empty[String, Seq[String]]) { case (result, (key, value)) =>
+        val index = key.indexOf("_")
+        val methodName = key.substring(0, index)
+        val updatedValues =
+          result.get(methodName) match {
+            case Some(values) => values :+ value
+            case None         => Seq(value)
+          }
+        result + (methodName -> updatedValues)
       }
 
     // generate key value pair for the map
     val mapKeys =
-      httpMethodsToUrisMap.zipWithIndex.foldLeft(Seq.empty[String]) { case (result, ((methodName, uris), index)) =>
-        val urisSeq = s"""Seq(${uris.map(uri => " \n" + "  \"" + uri + "\"").mkString(", ")}\n)"""
+      httpMethodsToUrisMap.zipWithIndex.foldLeft(Seq.empty[String]) { case (result, ((methodName, cons), index)) =>
+        val pathConstantsSeq = s"""Seq(${cons.sorted.map(uri => " \n" + "  " + uri).mkString(", ")}\n)"""
         // each element of seq is separated by "," except for last element
-        val keys = if (index == httpMethodsToUrisMap.size - 1) urisSeq else s"""$urisSeq,"""
+        val keys = if (index == httpMethodsToUrisMap.size - 1) pathConstantsSeq else s"""$pathConstantsSeq,"""
         result :+ s""""$methodName" -> $keys"""
       }
 
