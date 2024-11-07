@@ -23,15 +23,15 @@ package object compiler {
 
   private def extractPathInternal(http: HttpRule) =
     http.getPatternCase match {
-      case PatternCase.GET    => ("GET", http.getGet)
-      case PatternCase.PUT    => ("PUT", http.getPut)
-      case PatternCase.POST   => ("POST", http.getPost)
-      case PatternCase.DELETE => ("DELETE", http.getDelete)
-      case PatternCase.PATCH  => ("PATCH", http.getPatch)
-      case _                  => ("", "")
+      case PatternCase.GET    => (PatternCase.GET, http.getGet)
+      case PatternCase.PUT    => (PatternCase.PUT, http.getPut)
+      case PatternCase.POST   => (PatternCase.POST, http.getPost)
+      case PatternCase.DELETE => (PatternCase.DELETE, http.getDelete)
+      case PatternCase.PATCH  => (PatternCase.PATCH, http.getPatch)
+      case _                  => (PatternCase.PATTERN_NOT_SET, "")
     }
 
-  def extractPaths(m: MethodDescriptor): Seq[(String, String)] = {
+  def extractPaths(m: MethodDescriptor): Seq[(PatternCase, String)] = {
     val http = m.getOptions.getExtension(AnnotationsProto.http)
     extractPathInternal(http) +: http.getAdditionalBindingsList.asScala.map(extractPathInternal)
   }

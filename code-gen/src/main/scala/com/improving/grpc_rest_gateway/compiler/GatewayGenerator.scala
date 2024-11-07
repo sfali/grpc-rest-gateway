@@ -41,7 +41,7 @@ object GatewayGenerator extends CodeGenApp {
 private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: DescriptorImplicits) {
   import implicits._
 
-  private var pathsToConstantMap: Map[String, String] = Map.empty
+  private var pathsToConstantMap: Map[(PatternCase, String), String] = Map.empty
   private val extendedFileDescriptor = ExtendedFileDescriptor(service.getFile)
   private val serviceName = service.getName
   private val scalaPackageName = extendedFileDescriptor.scalaPackage.fullName
@@ -80,17 +80,19 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
   private def generateCompanionObject(service: ServiceDescriptor): PrinterEndo = { printer =>
     val paths =
       service.getMethods.asScala.filter(_.getOptions.hasExtension(AnnotationsProto.http)).flatMap { method =>
-        val uppercaseMethodName = NameUtils.toAllCaps(method.getName)
+        val uppercaseMethodName = NameUtils.snakeCaseToCamelCase(method.getName, upperInitial = true)
         val paths = extractPaths(method)
         if (paths.size == 1) {
-          val (name, path) = paths.head
-          val constantName = s"${name}_${uppercaseMethodName}_PATH"
-          pathsToConstantMap = pathsToConstantMap + (s"${name}_$path" -> constantName)
+          val (patternCase, path) = paths.head
+          val constantName =
+            s"${NameUtils.snakeCaseToCamelCase(patternCase.name().toLowerCase, upperInitial = true)}${uppercaseMethodName}Path"
+          pathsToConstantMap = pathsToConstantMap + ((patternCase, path) -> constantName)
           Seq(s"""private val $constantName = "$path"""")
         } else
-          paths.zipWithIndex.map { case ((name, path), index) =>
-            val constantName = s"${name}_${uppercaseMethodName}_PATH_${index + 1}"
-            pathsToConstantMap = pathsToConstantMap + (s"$name)_$path" -> constantName)
+          paths.zipWithIndex.map { case ((patternCase, path), index) =>
+            val constantName =
+              s"${NameUtils.snakeCaseToCamelCase(patternCase.name().toLowerCase, upperInitial = true)}${uppercaseMethodName}Path${index + 1}"
+            pathsToConstantMap = pathsToConstantMap + ((patternCase, path) -> constantName)
             s"""private val $constantName = "$path""""
           }
       }
@@ -99,7 +101,6 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
 
   private def generateService(service: ServiceDescriptor): PrinterEndo = { printer =>
     val descriptor = ExtendedServiceDescriptor(service)
-
     // this is NOT the FQN of the service, we are generating gateway handler in the same package as GRPC service
     val grpcService = descriptor.companionObject.name
     val implName = s"${service.getName}GatewayHandler"
@@ -156,7 +157,7 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
         val http = method.getOptions.getExtension(AnnotationsProto.http)
         http.getPatternCase match {
           case PatternCase.GET =>
-            val constantName = pathsToConstantMap(s"GET_${http.getGet}")
+            val constantName = pathsToConstantMap((PatternCase.GET, http.getGet))
             val p1 =
               if (started)
                 p.add(s"""} else if (isSupportedCall(HttpMethod.GET.name, $constantName, methodName, path)) {""")
@@ -175,7 +176,7 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
               .outdent
 
           case PatternCase.PUT =>
-            val constantName = pathsToConstantMap(s"PUT_${http.getPut}")
+            val constantName = pathsToConstantMap((PatternCase.PUT, http.getPut))
             val p1 =
               if (started)
                 p.add(s"""} else if (isSupportedCall(HttpMethod.PUT.name, $constantName, methodName, path)) {""")
@@ -189,7 +190,7 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
               .outdent
 
           case PatternCase.POST =>
-            val constantName = pathsToConstantMap(s"POST_${http.getPost}")
+            val constantName = pathsToConstantMap((PatternCase.POST, http.getPost))
             val p1 =
               if (started)
                 p.add(s"""} else if (isSupportedCall(HttpMethod.POST.name, $constantName, methodName, path)) {""")
@@ -207,7 +208,7 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
               .outdent
 
           case PatternCase.DELETE =>
-            val constantName = pathsToConstantMap(s"DELETE_${http.getDelete}")
+            val constantName = pathsToConstantMap((PatternCase.DELETE, http.getDelete))
             val p1 =
               if (started)
                 p.add(s"""} else if (isSupportedCall(HttpMethod.DELETE.name, $constantName, methodName, path)) {""")
@@ -221,7 +222,7 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
               .outdent
 
           case PatternCase.PATCH =>
-            val constantName = pathsToConstantMap(s"PATCH_${http.getPatch}")
+            val constantName = pathsToConstantMap((PatternCase.PATCH, http.getPatch))
             val p1 =
               if (started)
                 p.add(s"""} else if (isSupportedCall(HttpMethod.PATCH.name, $constantName, methodName, path)) {""")
@@ -316,15 +317,13 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
 
   private def generateHttpMethodToUrisMap(service: ServiceDescriptor): PrinterEndo = { printer =>
     val httpMethodsToUrisMap =
-      pathsToConstantMap.foldLeft(Map.empty[String, Seq[String]]) { case (result, (key, value)) =>
-        val index = key.indexOf("_")
-        val methodName = key.substring(0, index)
+      pathsToConstantMap.foldLeft(Map.empty[PatternCase, Seq[String]]) { case (result, ((patternCase, path), value)) =>
         val updatedValues =
-          result.get(methodName) match {
+          result.get(patternCase) match {
             case Some(values) => values :+ value
             case None         => Seq(value)
           }
-        result + (methodName -> updatedValues)
+        result + (patternCase -> updatedValues)
       }
 
     // generate key value pair for the map
