@@ -118,23 +118,23 @@ class GrpcRestGatewayTest extends AnyWordSpec with Matchers with BeforeAndAfterA
       serviceAStub.getMessageV2(request) shouldBe restClient.getMessageV2(request)
     }
 
-    "getMessageV3" in {
+    "getMessageV2AdditionalBinding" in {
       val request = GetMessageRequest(messageId = 3, userId = "a1b2c3")
+      serviceAStub.getMessageV2(request) shouldBe restClient.getMessageV2AdditionalBinding(request)
+    }
+
+    "getMessageV3 with no sub field" in {
+      val request = GetMessageRequestV2(messageId = 3, userId = "a1b2c3", sub = None)
       serviceAStub.getMessageV3(request) shouldBe restClient.getMessageV3(request)
     }
 
-    "getMessageV4 with no sub field" in {
-      val request = GetMessageRequestV2(messageId = 3, userId = "a1b2c3", sub = None)
-      serviceAStub.getMessageV4(request) shouldBe restClient.getMessageV4(request)
-    }
-
-    "getMessageV4 with sub field" in {
+    "getMessageV3 with sub field" in {
       val request = GetMessageRequestV2(
         messageId = 16,
         userId = "super_user",
         sub = Some(GetMessageRequestV2.SubMessage(subField1 = 5.3, subField2 = 2.9f))
       )
-      serviceAStub.getMessageV4(request) shouldBe restClient.getMessageV4(request)
+      serviceAStub.getMessageV3(request) shouldBe restClient.getMessageV3(request)
     }
   }
 

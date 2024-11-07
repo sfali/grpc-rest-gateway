@@ -55,12 +55,12 @@ class RestGatewayClient(gatewayPort: Int) {
     getMessage(uri"$baseUrl/v1/test/messages/${request.messageId}?user_id=${request.userId}")
 
   def getMessageV2(request: GetMessageRequest): GetMessageResponse =
-    getMessage(uri"$baseUrl/v1/test/users/${request.userId}/messages/${request.messageId}")
-
-  def getMessageV3(request: GetMessageRequest): GetMessageResponse =
     getMessage(uri"$baseUrl/v1/test/users/${request.userId}?message_id=${request.messageId}")
 
-  def getMessageV4(request: GetMessageRequestV2): GetMessageResponse = {
+  def getMessageV2AdditionalBinding(request: GetMessageRequest): GetMessageResponse =
+    getMessage(uri"$baseUrl/v1/test/users/${request.userId}/messages/${request.messageId}")
+
+  def getMessageV3(request: GetMessageRequestV2): GetMessageResponse = {
     var uri = uri"$baseUrl/v1/test/messages/${request.messageId}/users/${request.userId}"
     uri = request
       .sub

@@ -1,6 +1,6 @@
 package com.improving.grpc_rest_gateway.compiler
 
-import com.google.api.AnnotationsProto
+import com.google.api.{AnnotationsProto, HttpRule}
 import com.google.api.HttpRule.PatternCase
 import com.google.protobuf.Descriptors.FieldDescriptor.JavaType
 import com.google.protobuf.Descriptors.{Descriptor, FieldDescriptor, MethodDescriptor, ServiceDescriptor}
@@ -41,6 +41,7 @@ object GatewayGenerator extends CodeGenApp {
 private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: DescriptorImplicits) {
   import implicits._
 
+  private var ifStatementStarted = false
   private var pathsToConstantMap: Map[(PatternCase, String), String] = Map.empty
   private val extendedFileDescriptor = ExtendedFileDescriptor(service.getFile)
   private val serviceName = service.getName
@@ -146,101 +147,112 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
   }
 
   private def generateMethodHandlers(methods: Seq[MethodDescriptor]): PrinterEndo = { printer =>
-    var started = false
-
     val p =
-      methods.foldLeft(printer) { case (p, method) =>
+      methods.foldLeft(printer) { case (printer, method) =>
         val methodDescriptor = ExtendedMethodDescriptor(method)
         // FQN of the input type, this done on the assumption that input types can be in the different package
         val fullInputName = methodDescriptor.inputType.scalaType
         val methodName = method.getName.charAt(0).toLower + method.getName.substring(1)
         val http = method.getOptions.getExtension(AnnotationsProto.http)
-        http.getPatternCase match {
-          case PatternCase.GET =>
-            val constantName = pathsToConstantMap((PatternCase.GET, http.getGet))
-            val p1 =
-              if (started)
-                p.add(s"""} else if (isSupportedCall(HttpMethod.GET.name, $constantName, methodName, path)) {""")
-              else {
-                started = true
-                p.add(s"""if (isSupportedCall(HttpMethod.GET.name, $constantName, methodName, path)) {""")
-              }
-            p1.indent
-              .add(s"""val parameters = mergeParameters($constantName, queryString)""")
-              .add("val input = Try {")
-              .indent
-              .call(generateInputFromQueryString(method.getInputType, fullInputName, required = true))
-              .outdent
-              .add("}")
-              .add(s"Future.fromTry(input).flatMap(stub.$methodName)")
-              .outdent
-
-          case PatternCase.PUT =>
-            val constantName = pathsToConstantMap((PatternCase.PUT, http.getPut))
-            val p1 =
-              if (started)
-                p.add(s"""} else if (isSupportedCall(HttpMethod.PUT.name, $constantName, methodName, path)) {""")
-              else {
-                started = true
-                p.add(s"""if (isSupportedCall(HttpMethod.PUT.name, $constantName, methodName, path)) {""")
-              }
-            p1.indent
-              .add(s"""val parameters = mergeParameters("${http.getPut}", queryString)""")
-              .call(generateInputFromQueryString(method.getInputType, fullInputName, required = true))
-              .outdent
-
-          case PatternCase.POST =>
-            val constantName = pathsToConstantMap((PatternCase.POST, http.getPost))
-            val p1 =
-              if (started)
-                p.add(s"""} else if (isSupportedCall(HttpMethod.POST.name, $constantName, methodName, path)) {""")
-              else {
-                started = true
-                p.add(s"""if (isSupportedCall(HttpMethod.POST.name, $constantName, methodName, path)) {""")
-              }
-            p1.indent
-              .add("for {")
-              .addIndented(
-                s"""msg <- Future.fromTry(Try(JsonFormat.fromJsonString[$fullInputName](body)).recoverWith(jsonException2GatewayExceptionPF))""",
-                s"res <- stub.$methodName(msg)"
-              )
-              .add("} yield res")
-              .outdent
-
-          case PatternCase.DELETE =>
-            val constantName = pathsToConstantMap((PatternCase.DELETE, http.getDelete))
-            val p1 =
-              if (started)
-                p.add(s"""} else if (isSupportedCall(HttpMethod.DELETE.name, $constantName, methodName, path)) {""")
-              else {
-                started = true
-                p.add(s"""if (isSupportedCall(HttpMethod.DELETE.name, $constantName", methodName, path)) {""")
-              }
-            p1.indent
-              .add(s"""val parameters = mergeParameters($constantName", queryString)""")
-              .call(generateInputFromQueryString(method.getInputType, fullInputName, required = true))
-              .outdent
-
-          case PatternCase.PATCH =>
-            val constantName = pathsToConstantMap((PatternCase.PATCH, http.getPatch))
-            val p1 =
-              if (started)
-                p.add(s"""} else if (isSupportedCall(HttpMethod.PATCH.name, $constantName, methodName, path)) {""")
-              else {
-                started = true
-                p.add(s"""if (isSupportedCall(HttpMethod.PATCH.name, $constantName, methodName, path)) {""")
-              }
-            p1.indent
-              .add(s"""val parameters = mergeParameters($constantName, queryString)""")
-              .call(generateInputFromQueryString(method.getInputType, fullInputName, required = true))
-              .outdent
-
-          case _ => p
+        val bindings = http +: http.getAdditionalBindingsList.asScala
+        bindings.foldLeft(printer) { case (printer, httpRule) =>
+          generateMethodHandler(method, httpRule, methodName, fullInputName)(printer)
         }
       }
 
-    if (started) p.add(s"""} else Future.failed(InvalidArgument(s"No route defined for $$methodName($$path)"))""")
+    if (ifStatementStarted)
+      p.add(s"""} else Future.failed(InvalidArgument(s"No route defined for $$methodName($$path)"))""")
     else p
+  }
+
+  private def generateMethodHandler(
+    method: MethodDescriptor,
+    http: HttpRule,
+    methodName: String,
+    fullInputName: String
+  ): PrinterEndo = { p =>
+    http.getPatternCase match {
+      case PatternCase.GET =>
+        val constantName = pathsToConstantMap((PatternCase.GET, http.getGet))
+        val p1 =
+          if (ifStatementStarted)
+            p.add(s"""} else if (isSupportedCall(HttpMethod.GET.name, $constantName, methodName, path)) {""")
+          else {
+            ifStatementStarted = true
+            p.add(s"""if (isSupportedCall(HttpMethod.GET.name, $constantName, methodName, path)) {""")
+          }
+        p1.indent
+          .add(s"""val parameters = mergeParameters($constantName, queryString)""")
+          .add("val input = Try {")
+          .indent
+          .call(generateInputFromQueryString(method.getInputType, fullInputName, required = true))
+          .outdent
+          .add("}")
+          .add(s"Future.fromTry(input).flatMap(stub.$methodName)")
+          .outdent
+
+      case PatternCase.PUT =>
+        val constantName = pathsToConstantMap((PatternCase.PUT, http.getPut))
+        val p1 =
+          if (ifStatementStarted)
+            p.add(s"""} else if (isSupportedCall(HttpMethod.PUT.name, $constantName, methodName, path)) {""")
+          else {
+            ifStatementStarted = true
+            p.add(s"""if (isSupportedCall(HttpMethod.PUT.name, $constantName, methodName, path)) {""")
+          }
+        p1.indent
+          .add(s"""val parameters = mergeParameters("${http.getPut}", queryString)""")
+          .call(generateInputFromQueryString(method.getInputType, fullInputName, required = true))
+          .outdent
+
+      case PatternCase.POST =>
+        val constantName = pathsToConstantMap((PatternCase.POST, http.getPost))
+        val p1 =
+          if (ifStatementStarted)
+            p.add(s"""} else if (isSupportedCall(HttpMethod.POST.name, $constantName, methodName, path)) {""")
+          else {
+            ifStatementStarted = true
+            p.add(s"""if (isSupportedCall(HttpMethod.POST.name, $constantName, methodName, path)) {""")
+          }
+        p1.indent
+          .add("for {")
+          .addIndented(
+            s"""msg <- Future.fromTry(Try(JsonFormat.fromJsonString[$fullInputName](body)).recoverWith(jsonException2GatewayExceptionPF))""",
+            s"res <- stub.$methodName(msg)"
+          )
+          .add("} yield res")
+          .outdent
+
+      case PatternCase.DELETE =>
+        val constantName = pathsToConstantMap((PatternCase.DELETE, http.getDelete))
+        val p1 =
+          if (ifStatementStarted)
+            p.add(s"""} else if (isSupportedCall(HttpMethod.DELETE.name, $constantName, methodName, path)) {""")
+          else {
+            ifStatementStarted = true
+            p.add(s"""if (isSupportedCall(HttpMethod.DELETE.name, $constantName", methodName, path)) {""")
+          }
+        p1.indent
+          .add(s"""val parameters = mergeParameters($constantName", queryString)""")
+          .call(generateInputFromQueryString(method.getInputType, fullInputName, required = true))
+          .outdent
+
+      case PatternCase.PATCH =>
+        val constantName = pathsToConstantMap((PatternCase.PATCH, http.getPatch))
+        val p1 =
+          if (ifStatementStarted)
+            p.add(s"""} else if (isSupportedCall(HttpMethod.PATCH.name, $constantName, methodName, path)) {""")
+          else {
+            ifStatementStarted = true
+            p.add(s"""if (isSupportedCall(HttpMethod.PATCH.name, $constantName, methodName, path)) {""")
+          }
+        p1.indent
+          .add(s"""val parameters = mergeParameters($constantName, queryString)""")
+          .call(generateInputFromQueryString(method.getInputType, fullInputName, required = true))
+          .outdent
+
+      case _ => p
+    }
   }
 
   /** Generates inputs.
