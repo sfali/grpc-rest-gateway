@@ -57,11 +57,9 @@ private class SwaggerMessagePrinter(service: ServiceDescriptor, implicits: Descr
     b.build()
   }
 
-  private val extendedServiceDescriptor = ExtendedServiceDescriptor(service)
-
   lazy val content: String = {
     val methods =
-      extendedServiceDescriptor.methods.filter { m =>
+      service.getMethods.asScala.filter { m =>
         val options = m.toProto.getOptions
         // only unary calls with http method specified
         !m.isClientStreaming && !m.isServerStreaming && options.hasExtension(AnnotationsProto.http)
@@ -201,20 +199,25 @@ private class SwaggerMessagePrinter(service: ServiceDescriptor, implicits: Descr
       .outdent
 
   private def generateParameters(inputType: Descriptor, pathElements: Seq[String], prefix: String = ""): PrinterEndo =
-    _.when(inputType.getFields.asScala.nonEmpty)(
+    _.when(inputType.getFields.asScala.nonEmpty && prefix.isBlank)(
       _.add("parameters:")
         .print(inputType.getFields.asScala) { case (p, f) =>
-          p.call(generateParameter(f, pathElements))
+          p.call(generateParameter(f, pathElements, prefix))
         }
     )
+      .when(inputType.getFields.asScala.nonEmpty && prefix.nonEmpty)(_.print(inputType.getFields.asScala) {
+        case (p, f) =>
+          p.call(generateParameter(f, pathElements, prefix))
+      })
 
   private def generateParameter(field: FieldDescriptor, pathElements: Seq[String], prefix: String = ""): PrinterEndo = {
     printer =>
       val inPath = pathElements.contains(field.upperScalaName)
       field.getJavaType match {
         case JavaType.MESSAGE =>
+          val p = if (prefix.isEmpty) s"${field.getName}." else s"$prefix.${field.getName}."
           printer.call(
-            generateParameters(field.getMessageType, pathElements, s"$prefix.${field.getName}")
+            generateParameters(field.getMessageType, pathElements, p)
           )
         case JavaType.ENUM =>
           printer
