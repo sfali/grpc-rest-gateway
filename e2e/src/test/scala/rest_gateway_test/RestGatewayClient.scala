@@ -2,6 +2,7 @@ package rest_gateway_test
 
 import rest_gateway_test.api.model.common.{
   GetMessageRequest,
+  GetMessageRequestV2,
   GetMessageResponse,
   TestRequestB,
   TestResponseA,
@@ -58,6 +59,15 @@ class RestGatewayClient(gatewayPort: Int) {
 
   def getMessageV3(request: GetMessageRequest): GetMessageResponse =
     getMessage(uri"$baseUrl/v1/test/users/${request.userId}?message_id=${request.messageId}")
+
+  def getMessageV4(request: GetMessageRequestV2): GetMessageResponse = {
+    var uri = uri"$baseUrl/v1/test/messages/${request.messageId}/users/${request.userId}"
+    uri = request
+      .sub
+      .map(sub => uri.withParams(("sub.sub_field1", sub.subField1.toString), ("sub.sub_field2", sub.subField2.toString)))
+      .getOrElse(uri)
+    getMessage(uri)
+  }
 
   private def getMessage(uri: Uri): GetMessageResponse = {
     val response = client.send(basicRequest.get(uri).response(asString))
