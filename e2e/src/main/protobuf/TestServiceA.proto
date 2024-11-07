@@ -48,13 +48,16 @@ service TestServiceA {
 
   rpc GetMessageV2 (rest_gateway_test.api.model.GetMessageRequest) returns (rest_gateway_test.api.model.GetMessageResponse) {
     option (google.api.http) = {
-      get: "/v1/test/users/{user_id}/messages/{message_id}"
+      get: "/v1/test/users/{user_id}"
+      additional_bindings {
+        get: "/v1/test/users/{user_id}/messages/{message_id}"
+      }
     };
   }
 
-  rpc GetMessageV3 (rest_gateway_test.api.model.GetMessageRequest) returns (rest_gateway_test.api.model.GetMessageResponse) {
+  rpc GetMessageV3 (rest_gateway_test.api.model.GetMessageRequestV2) returns (rest_gateway_test.api.model.GetMessageResponse) {
     option (google.api.http) = {
-      get: "/v1/test/users/{user_id}"
+      get: "/v1/test/messages/{message_id}/users/{user_id}"
     };
   }
 }

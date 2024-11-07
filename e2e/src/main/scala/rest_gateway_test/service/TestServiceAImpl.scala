@@ -3,7 +3,13 @@ package rest_gateway_test.service
 import com.google.rpc.{Code, Status}
 import io.grpc.protobuf.StatusProto
 import org.slf4j.LoggerFactory
-import rest_gateway_test.api.model.common.{GetMessageRequest, GetMessageResponse, TestRequestA, TestResponseA}
+import rest_gateway_test.api.model.common.{
+  GetMessageRequest,
+  GetMessageRequestV2,
+  GetMessageResponse,
+  TestRequestA,
+  TestResponseA
+}
 import rest_gateway_test.api.scala_api.TestServiceA.TestServiceAGrpc
 
 import scala.collection.mutable
@@ -62,8 +68,10 @@ class TestServiceAImpl extends TestServiceAGrpc.TestServiceA {
   override def getMessageV2(request: GetMessageRequest): Future[GetMessageResponse] =
     Future.successful(request.toGetMessageResponse)
 
-  override def getMessageV3(request: GetMessageRequest): Future[GetMessageResponse] =
-    Future.successful(request.toGetMessageResponse)
+  override def getMessageV3(request: GetMessageRequestV2): Future[GetMessageResponse] = {
+    val sub = request.sub.map(s => s", subField1: ${s.subField1}, subField2: ${s.subField2}").getOrElse("")
+    Future.successful(GetMessageResponse(s"messageId: ${request.messageId}, userId: ${request.userId}$sub"))
+  }
 
   private def validateRequestId(requestId: Long) =
     if (requestId <= 0) {

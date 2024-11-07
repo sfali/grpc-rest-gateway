@@ -52,3 +52,13 @@ message GetMessageRequest {
 message GetMessageResponse {
     string result = 1;
 }
+
+message GetMessageRequestV2 {
+    message SubMessage {
+      double sub_field1 = 1;
+      float sub_field2 = 2;
+    };
+    int32 message_id = 1;
+    string user_id = 2;
+    SubMessage sub = 3;
+}

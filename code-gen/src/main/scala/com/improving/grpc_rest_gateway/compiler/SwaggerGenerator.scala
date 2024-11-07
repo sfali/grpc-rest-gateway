@@ -57,23 +57,38 @@ private class SwaggerMessagePrinter(service: ServiceDescriptor, implicits: Descr
     b.build()
   }
 
-  private val extendedServiceDescriptor = ExtendedServiceDescriptor(service)
-
   lazy val content: String = {
     val methods =
-      extendedServiceDescriptor.methods.filter { m =>
+      service.getMethods.asScala.filter { m =>
         val options = m.toProto.getOptions
         // only unary calls with http method specified
         !m.isClientStreaming && !m.isServerStreaming && options.hasExtension(AnnotationsProto.http)
       }
 
-    val paths = methods.groupBy(extractPath)
+    val paths: mutable.Map[String, Seq[(PatternCase, MethodDescriptor)]] =
+      methods
+        .flatMap { method =>
+          val paths = extractPaths(method)
+          paths.map { tuple =>
+            tuple -> method
+          }
+        }
+        .foldLeft(mutable.Map.empty[String, Seq[(PatternCase, MethodDescriptor)]]) {
+          case (result, ((patternCase, path), method)) =>
+            val updatedValues =
+              result.get(path) match {
+                case Some(values) => values :+ ((patternCase, method))
+                case None         => Seq.empty[(PatternCase, MethodDescriptor)] :+ ((patternCase, method))
+              }
+            result + (path -> updatedValues)
+        }
+
     val definitions = methods.flatMap(m => extractDefs(m.getInputType) ++ extractDefs(m.getOutputType)).toSet
 
     new FunctionalPrinter()
       .add("swagger: '2.0'", "info:")
       .addIndented(
-        s"version: ${BuildInfo.version}",
+        s"version: 3.1.0",
         s"title: '${extendedFileDescriptor.fileDescriptorObject.fullName}'",
         s"description: 'REST API generated from $serviceName'"
       )
@@ -85,7 +100,7 @@ private class SwaggerMessagePrinter(service: ServiceDescriptor, implicits: Descr
       .addIndented("- 'application/json'")
       .add("paths:")
       .indent
-      .print(paths) { case (p, m) => generatePath(m)(p) }
+      .print(paths) { case (p, (path, pathMethods)) => generatePath(path, pathMethods)(p) }
       .outdent
       .add("definitions:")
       .indent
@@ -110,8 +125,7 @@ private class SwaggerMessagePrinter(service: ServiceDescriptor, implicits: Descr
     extractDefsRec(d)
   }
 
-  private def extractPathElements(http: HttpRule) = {
-    val path = extractPath(http)
+  private def extractPathElements(path: String) =
     if (path.isBlank) Seq.empty[String]
     else {
       path
@@ -121,23 +135,19 @@ private class SwaggerMessagePrinter(service: ServiceDescriptor, implicits: Descr
         .map(name => NameUtils.snakeCaseToCamelCase(name = name, upperInitial = true))
         .toSeq
     }
+
+  private def generatePath(path: String, pathMethods: Seq[(PatternCase, MethodDescriptor)]): PrinterEndo = { printer =>
+    val p1 = printer.add(s"$path:").indent
+    pathMethods
+      .foldLeft(p1) { case (printer, (patternCase, method)) =>
+        printer.call(generateMethod(method, path, patternCase))
+      }
+      .outdent
   }
 
-  private def generatePath(pathMethods: (String, Seq[MethodDescriptor])): PrinterEndo = { printer =>
-    pathMethods match {
-      case (path, methods) =>
-        printer
-          .add(s"$path:")
-          .indent
-          .print(methods) { case (p, m) => generateMethod(m)(p) }
-          .outdent
-    }
-  }
-
-  private def generateMethod(m: MethodDescriptor): PrinterEndo = { printer =>
-    val http = m.getOptions.getExtension(AnnotationsProto.http)
-    val pathElements = extractPathElements(http)
-    http.getPatternCase match {
+  private def generateMethod(m: MethodDescriptor, path: String, patternCase: PatternCase): PrinterEndo = { printer =>
+    val pathElements = extractPathElements(path)
+    patternCase match {
       case PatternCase.GET =>
         printer
           .add("get:")
@@ -201,20 +211,25 @@ private class SwaggerMessagePrinter(service: ServiceDescriptor, implicits: Descr
       .outdent
 
   private def generateParameters(inputType: Descriptor, pathElements: Seq[String], prefix: String = ""): PrinterEndo =
-    _.when(inputType.getFields.asScala.nonEmpty)(
+    _.when(inputType.getFields.asScala.nonEmpty && prefix.isBlank)(
       _.add("parameters:")
         .print(inputType.getFields.asScala) { case (p, f) =>
-          p.call(generateParameter(f, pathElements))
+          p.call(generateParameter(f, pathElements, prefix))
         }
     )
+      .when(inputType.getFields.asScala.nonEmpty && prefix.nonEmpty)(_.print(inputType.getFields.asScala) {
+        case (p, f) =>
+          p.call(generateParameter(f, pathElements, prefix))
+      })
 
   private def generateParameter(field: FieldDescriptor, pathElements: Seq[String], prefix: String = ""): PrinterEndo = {
     printer =>
       val inPath = pathElements.contains(field.upperScalaName)
       field.getJavaType match {
         case JavaType.MESSAGE =>
+          val p = if (prefix.isEmpty) s"${field.getName}." else s"$prefix.${field.getName}."
           printer.call(
-            generateParameters(field.getMessageType, pathElements, s"$prefix.${field.getName}")
+            generateParameters(field.getMessageType, pathElements, p)
           )
         case JavaType.ENUM =>
           printer
@@ -232,6 +247,16 @@ private class SwaggerMessagePrinter(service: ServiceDescriptor, implicits: Descr
             .add(s"- name: $prefix${field.getName}")
             .when(inPath)(_.addIndented("in: path", "required: true", "type: integer", "format: int64"))
             .when(!inPath)(_.addIndented("in: query", "type: integer", "format: int64"))
+        case JavaType.DOUBLE =>
+          printer
+            .add(s"- name: $prefix${field.getName}")
+            .when(inPath)(_.addIndented("in: path", "required: true", "type: number", "format: double"))
+            .when(!inPath)(_.addIndented("in: query", "type: number", "format: double"))
+        case JavaType.FLOAT =>
+          printer
+            .add(s"- name: $prefix${field.getName}")
+            .when(inPath)(_.addIndented("in: path", "required: true", "type: number", "format: float"))
+            .when(!inPath)(_.addIndented("in: query", "type: number", "format: float"))
         case t =>
           printer
             .add(s"- name: $prefix${field.getName}")

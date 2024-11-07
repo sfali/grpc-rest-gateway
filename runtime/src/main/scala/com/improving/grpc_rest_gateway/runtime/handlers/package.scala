@@ -66,4 +66,13 @@ package object handlers {
     case err: JsonFormatException  => Failure(InvalidArgument("Wrong json syntax: " + err.msg))
     case err => Failure(InvalidArgument("Wrong json input. Check proto file. Details: " + err.getMessage))
   }
+
+  implicit class ParametersOps(src: Map[String, String]) {
+
+    def toInt(key: String, defaultValue: String = "0"): Int = src.getOrElse(key, defaultValue).toInt
+    def toLong(key: String, defaultValue: String = "0"): Long = src.getOrElse(key, defaultValue).toLong
+    def toDouble(key: String, defaultValue: String = "0"): Double = src.getOrElse(key, defaultValue).toDouble
+    def toFloat(key: String, defaultValue: String = "0"): Float = src.getOrElse(key, defaultValue).toFloat
+    def toStringValue(key: String): String = src.getOrElse(key, "")
+  }
 }
