@@ -60,11 +60,11 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
       .add(s"package $scalaPackageName")
       .newline
       .add(
-        "import _root_.scalapb.GeneratedMessage",
-        "import _root_.scalapb.json4s.JsonFormat",
-        "import _root_.com.improving.grpc_rest_gateway.runtime.handlers._",
-        "import _root_.io.grpc._",
-        "import _root_.io.netty.handler.codec.http.{HttpMethod, QueryStringDecoder}"
+        "import scalapb.GeneratedMessage",
+        "import scalapb.json4s.JsonFormat",
+        "import com.improving.grpc_rest_gateway.runtime.handlers._",
+        "import io.grpc._",
+        "import io.netty.handler.codec.http.{HttpMethod, QueryStringDecoder}"
       )
       .newline
       .add(
