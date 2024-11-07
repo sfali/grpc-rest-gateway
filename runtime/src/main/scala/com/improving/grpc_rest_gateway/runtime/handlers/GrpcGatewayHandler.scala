@@ -67,7 +67,7 @@ abstract class GrpcGatewayHandler(channel: ManagedChannel)(implicit ec: Executio
                   )
                 case ex =>
                   logger.warn("unable to generate json response", ex)
-                  "Internal error" -> HttpResponseStatus.INTERNAL_SERVER_ERROR
+                  s"Internal error: ${ex.getMessage}" -> HttpResponseStatus.INTERNAL_SERVER_ERROR
               }
 
               buildFullHttpResponse(
