@@ -73,7 +73,7 @@ private class SwaggerMessagePrinter(service: ServiceDescriptor, implicits: Descr
     new FunctionalPrinter()
       .add("swagger: '2.0'", "info:")
       .addIndented(
-        s"version: ${BuildInfo.version}",
+        s"version: 3.1.0",
         s"title: '${extendedFileDescriptor.fileDescriptorObject.fullName}'",
         s"description: 'REST API generated from $serviceName'"
       )
@@ -232,6 +232,16 @@ private class SwaggerMessagePrinter(service: ServiceDescriptor, implicits: Descr
             .add(s"- name: $prefix${field.getName}")
             .when(inPath)(_.addIndented("in: path", "required: true", "type: integer", "format: int64"))
             .when(!inPath)(_.addIndented("in: query", "type: integer", "format: int64"))
+        case JavaType.DOUBLE =>
+          printer
+            .add(s"- name: $prefix${field.getName}")
+            .when(inPath)(_.addIndented("in: path", "required: true", "type: number", "format: double"))
+            .when(!inPath)(_.addIndented("in: query", "type: number", "format: double"))
+        case JavaType.FLOAT =>
+          printer
+            .add(s"- name: $prefix${field.getName}")
+            .when(inPath)(_.addIndented("in: path", "required: true", "type: number", "format: float"))
+            .when(!inPath)(_.addIndented("in: query", "type: number", "format: float"))
         case t =>
           printer
             .add(s"- name: $prefix${field.getName}")
