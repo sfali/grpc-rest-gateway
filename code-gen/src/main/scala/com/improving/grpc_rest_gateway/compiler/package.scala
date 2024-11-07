@@ -9,8 +9,6 @@ import scala.jdk.CollectionConverters._
 
 package object compiler {
 
-  def extractPath(m: MethodDescriptor): String = extractPath(m.getOptions.getExtension(AnnotationsProto.http))
-
   def extractPath(http: HttpRule): String =
     http.getPatternCase match {
       case PatternCase.GET    => http.getGet

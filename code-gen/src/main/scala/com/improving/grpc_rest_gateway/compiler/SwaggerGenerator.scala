@@ -65,7 +65,16 @@ private class SwaggerMessagePrinter(service: ServiceDescriptor, implicits: Descr
         !m.isClientStreaming && !m.isServerStreaming && options.hasExtension(AnnotationsProto.http)
       }
 
-    val paths = methods.groupBy(extractPath)
+    val paths = methods
+      .flatMap { method =>
+        val paths = extractPaths(method).map(_._2)
+        paths.map(path => path -> method)
+      }
+      .groupBy(_._1)
+      .map { case (path, seq) =>
+        path -> seq.map(_._2)
+      }
+
     val definitions = methods.flatMap(m => extractDefs(m.getInputType) ++ extractDefs(m.getOutputType)).toSet
 
     new FunctionalPrinter()
