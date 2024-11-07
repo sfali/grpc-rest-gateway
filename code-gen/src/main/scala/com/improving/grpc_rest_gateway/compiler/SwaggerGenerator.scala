@@ -65,15 +65,23 @@ private class SwaggerMessagePrinter(service: ServiceDescriptor, implicits: Descr
         !m.isClientStreaming && !m.isServerStreaming && options.hasExtension(AnnotationsProto.http)
       }
 
-    val paths = methods
-      .flatMap { method =>
-        val paths = extractPaths(method).map(_._2)
-        paths.map(path => path -> method)
-      }
-      .groupBy(_._1)
-      .map { case (path, seq) =>
-        path -> seq.map(_._2)
-      }
+    val paths: mutable.Map[String, Seq[(PatternCase, MethodDescriptor)]] =
+      methods
+        .flatMap { method =>
+          val paths = extractPaths(method)
+          paths.map { tuple =>
+            tuple -> method
+          }
+        }
+        .foldLeft(mutable.Map.empty[String, Seq[(PatternCase, MethodDescriptor)]]) {
+          case (result, ((patternCase, path), method)) =>
+            val updatedValues =
+              result.get(path) match {
+                case Some(values) => values :+ ((patternCase, method))
+                case None         => Seq.empty[(PatternCase, MethodDescriptor)] :+ ((patternCase, method))
+              }
+            result + (path -> updatedValues)
+        }
 
     val definitions = methods.flatMap(m => extractDefs(m.getInputType) ++ extractDefs(m.getOutputType)).toSet
 
@@ -92,7 +100,7 @@ private class SwaggerMessagePrinter(service: ServiceDescriptor, implicits: Descr
       .addIndented("- 'application/json'")
       .add("paths:")
       .indent
-      .print(paths) { case (p, m) => generatePath(m)(p) }
+      .print(paths) { case (p, (path, pathMethods)) => generatePath(path, pathMethods)(p) }
       .outdent
       .add("definitions:")
       .indent
@@ -117,8 +125,7 @@ private class SwaggerMessagePrinter(service: ServiceDescriptor, implicits: Descr
     extractDefsRec(d)
   }
 
-  private def extractPathElements(http: HttpRule) = {
-    val path = extractPath(http)
+  private def extractPathElements(path: String) =
     if (path.isBlank) Seq.empty[String]
     else {
       path
@@ -128,23 +135,19 @@ private class SwaggerMessagePrinter(service: ServiceDescriptor, implicits: Descr
         .map(name => NameUtils.snakeCaseToCamelCase(name = name, upperInitial = true))
         .toSeq
     }
+
+  private def generatePath(path: String, pathMethods: Seq[(PatternCase, MethodDescriptor)]): PrinterEndo = { printer =>
+    val p1 = printer.add(s"$path:").indent
+    pathMethods
+      .foldLeft(p1) { case (printer, (patternCase, method)) =>
+        printer.call(generateMethod(method, path, patternCase))
+      }
+      .outdent
   }
 
-  private def generatePath(pathMethods: (String, Seq[MethodDescriptor])): PrinterEndo = { printer =>
-    pathMethods match {
-      case (path, methods) =>
-        printer
-          .add(s"$path:")
-          .indent
-          .print(methods) { case (p, m) => generateMethod(m)(p) }
-          .outdent
-    }
-  }
-
-  private def generateMethod(m: MethodDescriptor): PrinterEndo = { printer =>
-    val http = m.getOptions.getExtension(AnnotationsProto.http)
-    val pathElements = extractPathElements(http)
-    http.getPatternCase match {
+  private def generateMethod(m: MethodDescriptor, path: String, patternCase: PatternCase): PrinterEndo = { printer =>
+    val pathElements = extractPathElements(path)
+    patternCase match {
       case PatternCase.GET =>
         printer
           .add("get:")
