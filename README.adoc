@@ -65,49 +65,54 @@ will generate following implementation of `GrpcGatewayHandler` and Open API spec
 ----
 package rest_gateway_test.api.scala_api.TestServiceB
 
-import _root_.scalapb.GeneratedMessage
-import _root_.scalapb.json4s.JsonFormat
-import _root_.com.improving.grpc_rest_gateway.runtime.handlers._
-import _root_.io.grpc._
-import _root_.io.netty.handler.codec.http.{HttpMethod, QueryStringDecoder}
+import scalapb.GeneratedMessage
+import scalapb.json4s.JsonFormat
+import com.improving.grpc_rest_gateway.runtime.handlers._
+import io.grpc._
+import io.netty.handler.codec.http.{HttpMethod, QueryStringDecoder}
 
-import scala.jdk.CollectionConverters._
 import scala.concurrent.{ExecutionContext, Future}
 import scalapb.json4s.JsonFormatException
 import scala.util._
 
+object TestServiceBGatewayHandler {
+  private val GetGetRequestPath = "/restgateway/test/testserviceb"
+  private val PostProcessPath = "/restgateway/test/testserviceb"
+}
+
 class TestServiceBGatewayHandler(channel: ManagedChannel)(implicit ec: ExecutionContext)
   extends GrpcGatewayHandler(channel)(ec) {
+  import TestServiceBGatewayHandler._
   override val name: String = "TestServiceB"
   private val stub = TestServiceBGrpc.stub(channel)
+  override protected val httpMethodsToUrisMap: Map[String, Seq[String]] = Map(
+    "GET" -> Seq(
+      GetGetRequestPath
+    ),
+    "POST" -> Seq(
+      PostProcessPath
+    )
+  )
 
-  override def supportsCall(method: HttpMethod, uri: String): Boolean = {
+  override protected def dispatchCall(method: HttpMethod, uri: String, body: String): Future[GeneratedMessage] = {
     val queryString = new QueryStringDecoder(uri)
-    (method.name, queryString.path) match {
-      case ("GET", "/restgateway/test/testserviceb") => true
-      case ("POST", "/restgateway/test/testserviceb") => true
-      case _ => false
-    }
-  }
-
-  override def unaryCall(method: HttpMethod, uri: String, body: String): Future[GeneratedMessage] = {
-    val queryString = new QueryStringDecoder(uri)
-    (method.name, queryString.path) match {
-      case ("GET", "/restgateway/test/testserviceb") =>
-        val input = Try {
-          val requestId =
-            queryString.parameters().get("requestId").asScala.head.toLong
-          rest_gateway_test.api.model.common.TestRequestB(requestId = requestId)
-        }
-        Future.fromTry(input).flatMap(stub.getRequest)
-      case ("POST", "/restgateway/test/testserviceb") =>
+    val path = queryString.path
+    val methodName = method.name
+    if (isSupportedCall(HttpMethod.GET.name, GetGetRequestPath, methodName, path)) {
+      val parameters = mergeParameters(GetGetRequestPath, queryString)
+      val input = Try {
+        val requestId = parameters.toLong("requestId")
+        rest_gateway_test.api.model.common.TestRequestB(requestId = requestId)
+      }
+      Future.fromTry(input).flatMap(stub.getRequest)
+    } else if (isSupportedCall(HttpMethod.POST.name, PostProcessPath, methodName, path)) {
+      val input = Try(JsonFormat.fromJsonString[rest_gateway_test.api.model.common.TestRequestB](body))
+        .recoverWith(jsonException2GatewayExceptionPF)
       for {
-        msg <- Future.fromTry(Try(JsonFormat.fromJsonString[rest_gateway_test.api.model.common.TestRequestB](body)).recoverWith(jsonException2GatewayExceptionPF))
+        msg <- Future.fromTry(input)
         res <- stub.process(msg)
       } yield res
-      case (methodName, path) =>
-        Future.failed(InvalidArgument(s"No route defined for $methodName($path)"))
-    }
+    } else Future.failed(InvalidArgument(s"No route defined for $methodName($path)"))
   }
 }
 ----
@@ -116,7 +121,7 @@ class TestServiceBGatewayHandler(channel: ManagedChannel)(implicit ec: Execution
 ----
 swagger: '2.0'
 info:
-  version: 0.1.0-SNAPSHOT
+  version: 3.1.0
   title: 'rest_gateway_test.api.scala_api.TestServiceB.TestServiceBProto'
   description: 'REST API generated from TestServiceB'
 schemes:
@@ -239,6 +244,83 @@ Future.failed(StatusProto.toStatusRuntimeException(
 )
 ----
 
+=== Protobuf to REST mapping
+
+Following is how Protobuf to REST mapping will work as described in the https://github.com/googleapis/api-common-protos/blob/main/google/api/http.proto[documentation].
+
+Given following Protobuf definition:
+
+[source,protobuf]
+----
+ service Messaging {
+       rpc GetMessage(GetMessageRequest) returns (Message) {
+         option (google.api.http) = {
+           get: "/v1/messages/{message_id}/{sub.subfield}"
+           additional_bindings {
+              get: "/v1/messages/{message_id}"
+           }
+         };
+       }
+
+       rpc PostMessage(GetMessageRequest) returns (Message) {
+         option (google.api.http) = {
+           put: "/v1/messages/{message_id}"
+           body: "sub"
+         };
+       }
+
+       rpc PostMessage(GetMessageRequest) returns (Message) {
+         option (google.api.http) = {
+           post: "/v1/messages"
+           body: "*"
+         };
+       }
+}
+
+message GetMessageRequest {
+  message SubMessage {
+    string subfield = 1;
+  }
+  string message_id = 1;
+  SubMessage sub = 2;
+}
+
+message Message {
+  string text = 1;
+}
+----
+
+Following table defines how HTTP request supposed to be constructed.
+
+[cols="1,3,3,3"]
+|===
+| HTTP Method | Path | HTTP request | Mapping
+
+|GET
+|/v1/messages/{message_id}/{sub.subfield}
+|http://localhost:7070/v1/messages/xyz/abc
+|Both `message_id` and `sub.subfield` are mapped as path variables
+
+|GET
+|/v1/messages/{message_id}
+|http://localhost:7070/v1/messages/xyz?sub.subfield=abc
+|`message_id` is mapped as path variable while `sub.subfield` is mapped as query parameter
+
+|PUT
+|/v1/messages/{message_id}
+|http://localhost:7070/v1/messages/xyz
+`body`: `{"subfield": "sub"}`
+|`message_id` is mapped as path variable while `sub` is mapped as body payload
+
+|POST
+|/v1/messages
+|http://localhost:7070/v1/messages
+`body`: `{"message_id": "abc", "sub": {"subfield": "sub"}}`
+|`message_id` is mapped as path variable while `sub` is mapped as body payload
+
+|===
+
+
 === Run gateway server
 
 Implement your gRPC services as per your need and run gRPC server. Gateway server can be build and run as follows:
@@ -293,4 +375,4 @@ image::media/swagger.png[]
 == Limitations
 
 . Streaming calls are not supported.
-. Body elements with "*" are only currently supported, that means `PUT` or `POST` request with path elements will not work.
+

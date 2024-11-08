@@ -69,6 +69,32 @@ class RestGatewayClient(gatewayPort: Int) {
     getMessage(uri)
   }
 
+  def postMessage(request: GetMessageRequestV2): GetMessageResponse =
+    client
+      .send(
+        basicRequest
+          .post(uri"$baseUrl/v1/test/users/${request.userId}/messages/${request.messageId}")
+          .body(JsonFormat.toJsonString(request.sub.get))
+          .response(asString)
+      )
+      .body match {
+      case Left(ex)    => throw new RuntimeException(ex)
+      case Right(body) => JsonFormat.fromJsonString[GetMessageResponse](body)
+    }
+
+  def putMessage(request: GetMessageRequestV2): GetMessageResponse =
+    client
+      .send(
+        basicRequest
+          .put(uri"$baseUrl/v1/test/users/${request.userId}/messages/${request.messageId}")
+          .body(JsonFormat.toJsonString(request.sub.get))
+          .response(asString)
+      )
+      .body match {
+      case Left(ex)    => throw new RuntimeException(ex)
+      case Right(body) => JsonFormat.fromJsonString[GetMessageResponse](body)
+    }
+
   private def getMessage(uri: Uri): GetMessageResponse = {
     val response = client.send(basicRequest.get(uri).response(asString))
     response.body match {

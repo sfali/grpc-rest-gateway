@@ -60,6 +60,20 @@ service TestServiceA {
       get: "/v1/test/messages/{message_id}/users/{user_id}"
     };
   }
+
+  rpc PostMessage (rest_gateway_test.api.model.GetMessageRequestV2) returns (rest_gateway_test.api.model.GetMessageResponse) {
+    option (google.api.http) = {
+      post: "/v1/test/users/{user_id}/messages/{message_id}"
+      body: "sub"
+    };
+  };
+
+  rpc PutMessage (rest_gateway_test.api.model.GetMessageRequestV2) returns (rest_gateway_test.api.model.GetMessageResponse) {
+    option (google.api.http) = {
+      put: "/v1/test/users/{user_id}/messages/{message_id}"
+      body: "sub"
+    };
+  };
 }
 
 

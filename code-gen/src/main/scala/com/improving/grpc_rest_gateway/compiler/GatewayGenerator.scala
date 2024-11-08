@@ -114,7 +114,7 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
         s"""override val name: String = "${service.getName}"""",
         s"private val stub = $grpcService.stub(channel)"
       )
-      .call(generateHttpMethodToUrisMap(service))
+      .call(generateHttpMethodToUrisMap)
       .newline
       .call(generateDispatchCall(service))
       .outdent
@@ -200,13 +200,21 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
             ifStatementStarted = true
             p.add(s"""if (isSupportedCall(HttpMethod.PUT.name, $constantName, methodName, path)) {""")
           }
-        p1.indent
-          .add(s"""val parameters = mergeParameters("${http.getPut}", queryString)""")
-          .call(generateInputFromQueryString(method.getInputType, fullInputName, required = true))
-          .outdent
+
+        p1.call(
+          generateBodyParam(
+            method = method,
+            fullInputName = fullInputName,
+            methodName = methodName,
+            body = http.getBody,
+            path = http.getPost,
+            constantName = constantName
+          )
+        )
 
       case PatternCase.POST =>
         val constantName = pathsToConstantMap((PatternCase.POST, http.getPost))
+
         val p1 =
           if (ifStatementStarted)
             p.add(s"""} else if (isSupportedCall(HttpMethod.POST.name, $constantName, methodName, path)) {""")
@@ -214,14 +222,16 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
             ifStatementStarted = true
             p.add(s"""if (isSupportedCall(HttpMethod.POST.name, $constantName, methodName, path)) {""")
           }
-        p1.indent
-          .add("for {")
-          .addIndented(
-            s"""msg <- Future.fromTry(Try(JsonFormat.fromJsonString[$fullInputName](body)).recoverWith(jsonException2GatewayExceptionPF))""",
-            s"res <- stub.$methodName(msg)"
+        p1.call(
+          generateBodyParam(
+            method = method,
+            fullInputName = fullInputName,
+            methodName = methodName,
+            body = http.getBody,
+            path = http.getPost,
+            constantName = constantName
           )
-          .add("} yield res")
-          .outdent
+        )
 
       case PatternCase.DELETE =>
         val constantName = pathsToConstantMap((PatternCase.DELETE, http.getDelete))
@@ -255,6 +265,75 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
     }
   }
 
+  private def generateBodyParam(
+    method: MethodDescriptor,
+    fullInputName: String,
+    methodName: String,
+    body: String,
+    path: String,
+    constantName: String
+  ): PrinterEndo = { printer =>
+    if (body.nonEmpty) {
+      if (body == "*") {
+        printer
+          .indent
+          .add(
+            s"val input = Try(JsonFormat.fromJsonString[$fullInputName](body))"
+          )
+          .addIndented(".recoverWith(jsonException2GatewayExceptionPF)")
+          .add("for {")
+          .addIndented(
+            s"""msg <- Future.fromTry(input)""",
+            s"res <- stub.$methodName(msg)"
+          )
+          .add("} yield res")
+          .outdent
+      } else {
+        val inputTypeDescriptor = method.getInputType
+        val maybeDescriptor = inputTypeDescriptor.getFields.asScala.find(_.getName == body)
+        maybeDescriptor match {
+          case Some(descriptor) =>
+            val fd = ExtendedFieldDescriptor(descriptor)
+            val bodyFullType = fd.singleScalaTypeName
+            val optional = !fd.noBox // this is an Option in parent type
+            val args =
+              inputTypeDescriptor.getFields.asScala.map(f => s"${f.getJsonName} = ${f.getJsonName}").mkString(", ")
+            printer
+              .indent
+              .add("val parsedBody = ")
+              .when(optional)(
+                _.addIndented(s"Try(Option(JsonFormat.fromJsonString[$bodyFullType](body)))")
+              )
+              .when(!optional)(_.addIndented(s"Try(JsonFormat.fromJsonString[$bodyFullType](body))"))
+              .addIndented(".recoverWith(jsonException2GatewayExceptionPF)")
+              .add(s"""val parameters = mergeParameters($constantName, queryString)""")
+              .add("val input = Try {")
+              .indent
+              .call(generateInputFromQueryStringSingle(inputTypeDescriptor, required = true, ignoreFieldName = body))
+              .add(s"""val $body = parsedBody.get""")
+              .add(s"$fullInputName($args)")
+              .outdent
+              .add("}")
+              .add("for {")
+              .addIndented(
+                s"""msg <- Future.fromTry(input)""",
+                s"res <- stub.$methodName(msg)"
+              )
+              .add("} yield res")
+              .outdent
+          case None =>
+            throw new RuntimeException(
+              s"Unable to determine body type for input: $fullInputName, path: $path,body: $body, method: $methodName"
+            )
+        }
+
+      }
+    } else
+      throw new RuntimeException(
+        s"Body parameter is empty for input: $fullInputName, path: $path, method: $methodName"
+      )
+  }
+
   /** Generates inputs.
     *
     * @param d
@@ -278,56 +357,66 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
 
     // If field name in Protobuf is defined with underscore then inputName and jsonName will be different
     printer
-      .print(d.getFields.asScala) { case (p, f) =>
-        val inputName = getInputName(f, prefix)
-        val jsonName = f.getJsonName
-        f.getJavaType match {
-          case JavaType.MESSAGE =>
-            val required = f.noBox
-            val optional = !required
-            p.when(required)(_.add(s"""val $jsonName = {"""))
-              .when(optional)(_.add(s"""val $jsonName = Try {"""))
-              .indent
-              .call(
-                generateInputFromQueryString(
-                  d = f.getMessageType,
-                  fullName = f.singleScalaTypeName,
-                  required = required,
-                  prefix = if (prefix.isBlank) s"$inputName." else s"$prefix.$inputName."
-                )
-              )
-              .outdent
-              .when(required)(_.add("}"))
-              .when(optional)(_.add("}.toOption"))
-          case JavaType.ENUM =>
-            p.add(s"""val $jsonName = ${f.getName}.valueOf(parameters.getOrElse("$prefix$inputName", ""))""")
-          case JavaType.BOOLEAN =>
-            p.add(s"""val $jsonName = parameters.getOrElse("$prefix$inputName", "").toBoolean""")
-          case JavaType.DOUBLE =>
-            p.when(required)(_.add(s"""val $jsonName = parameters.toDouble("$prefix$inputName")"""))
-              .when(!required)(_.add(s"""val $jsonName = parameters.toDouble("$prefix$inputName", "")"""))
-          case JavaType.FLOAT =>
-            p.when(required)(_.add(s"""val $jsonName = parameters.toFloat("$prefix$inputName")"""))
-              .when(!required)(_.add(s"""val $jsonName = parameters.toFloat("$prefix$inputName", "")"""))
-          case JavaType.INT =>
-            p.when(required)(_.add(s"""val $jsonName = parameters.toInt("$prefix$inputName")"""))
-              .when(!required)(_.add(s"""val $jsonName = parameters.toInt("$prefix$inputName", "")"""))
-          case JavaType.LONG =>
-            p.when(required)(_.add(s"""val $jsonName = parameters.toLong("$prefix$inputName")"""))
-              .when(!required)(_.add(s"""val $jsonName = parameters.toLong("$prefix$inputName", "")"""))
-          case JavaType.STRING => p.add(s"""val $jsonName = parameters.toStringValue("$prefix$inputName")""")
-          case jt              => throw new Exception(s"Unknown java type: $jt")
-        }
-      }
+      .call(generateInputFromQueryStringSingle(d, required, prefix))
       .add(s"$fullName($args)")
   }
+
+  private def generateInputFromQueryStringSingle(
+    d: Descriptor,
+    required: Boolean,
+    prefix: String = "",
+    ignoreFieldName: String = ""
+  ): PrinterEndo =
+    // If field name in Protobuf is defined with underscore then inputName and jsonName will be different
+    _.print(d.getFields.asScala) { case (p, f) =>
+      val inputName = getInputName(f, prefix)
+      val jsonName = f.getJsonName
+      f.getJavaType match {
+        case JavaType.MESSAGE if ignoreFieldName == inputName => p
+        case JavaType.MESSAGE =>
+          val required = f.noBox
+          val optional = !required
+          p.when(required)(_.add(s"""val $jsonName = {"""))
+            .when(optional)(_.add(s"""val $jsonName = Try {"""))
+            .indent
+            .call(
+              generateInputFromQueryString(
+                d = f.getMessageType,
+                fullName = f.singleScalaTypeName,
+                required = required,
+                prefix = if (prefix.isBlank) s"$inputName." else s"$prefix.$inputName."
+              )
+            )
+            .outdent
+            .when(required)(_.add("}"))
+            .when(optional)(_.add("}.toOption"))
+        case JavaType.ENUM =>
+          p.add(s"""val $jsonName = ${f.getName}.valueOf(parameters.getOrElse("$prefix$inputName", ""))""")
+        case JavaType.BOOLEAN =>
+          p.add(s"""val $jsonName = parameters.getOrElse("$prefix$inputName", "").toBoolean""")
+        case JavaType.DOUBLE =>
+          p.when(required)(_.add(s"""val $jsonName = parameters.toDouble("$prefix$inputName")"""))
+            .when(!required)(_.add(s"""val $jsonName = parameters.toDouble("$prefix$inputName", "")"""))
+        case JavaType.FLOAT =>
+          p.when(required)(_.add(s"""val $jsonName = parameters.toFloat("$prefix$inputName")"""))
+            .when(!required)(_.add(s"""val $jsonName = parameters.toFloat("$prefix$inputName", "")"""))
+        case JavaType.INT =>
+          p.when(required)(_.add(s"""val $jsonName = parameters.toInt("$prefix$inputName")"""))
+            .when(!required)(_.add(s"""val $jsonName = parameters.toInt("$prefix$inputName", "")"""))
+        case JavaType.LONG =>
+          p.when(required)(_.add(s"""val $jsonName = parameters.toLong("$prefix$inputName")"""))
+            .when(!required)(_.add(s"""val $jsonName = parameters.toLong("$prefix$inputName", "")"""))
+        case JavaType.STRING => p.add(s"""val $jsonName = parameters.toStringValue("$prefix$inputName")""")
+        case jt              => throw new Exception(s"Unknown java type: $jt")
+      }
+    }
 
   private def getInputName(d: FieldDescriptor, prefix: String = ""): String = {
     val name = prefix.split(".").filter(_.nonEmpty).map(s => s.charAt(0).toUpper + s.substring(1)).mkString + d.getName
     name.charAt(0).toLower + name.substring(1)
   }
 
-  private def generateHttpMethodToUrisMap(service: ServiceDescriptor): PrinterEndo = { printer =>
+  private def generateHttpMethodToUrisMap: PrinterEndo = { printer =>
     val httpMethodsToUrisMap =
       pathsToConstantMap.foldLeft(Map.empty[PatternCase, Seq[String]]) { case (result, ((patternCase, path), value)) =>
         val updatedValues =
