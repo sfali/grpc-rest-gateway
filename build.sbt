@@ -17,19 +17,27 @@ ThisBuild / sonatypeProjectHosting := Some(
   GitHubHosting(
     "sfali",
     "grpc-rest-gateway",
-    "syed.f.ali@improving.com"
+    "f.syed.ali@gmail.com"
   )
 )
 ThisBuild / developers := List(
   Developer(
-    id = "sfali23",
+    id = "sfali",
     name = "Syed Farhan Ali",
-    email = "f.syed.ali@gmail.com",
+    email = "syed.f.ali@improving.com",
     url = url("https://github.com/sfali/grpc-rest-gateway")
   )
 )
 ThisBuild / licenses := Seq(
   "APL2" -> url("http://www.apache.org/licenses/LICENSE-2.0.txt")
+)
+ThisBuild / homepage := Some(url("https://github.com/sfali/grpc-rest-gateway"))
+
+ThisBuild / scmInfo := Some(
+  ScmInfo(
+    url("https://github.com/sfali/grpc-rest-gateway"),
+    "scm:git@github.com:sfali/grpc-rest-gateway.git"
+  )
 )
 
 lazy val runtime = (projectMatrix in file("runtime"))
