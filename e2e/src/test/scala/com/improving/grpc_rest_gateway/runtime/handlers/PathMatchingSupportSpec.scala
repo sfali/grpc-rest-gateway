@@ -19,7 +19,8 @@ class PathMatchingSupportSpec extends AnyWordSpec with Matchers with PathMatchin
         "/v1/test/users/{user_id}/messages/{message_id}",
         "/v1/test/messages/{message_id}/users/{user_id}"
       ),
-      "POST" -> Seq("/v1/messages")
+      "POST" -> Seq("/v1/messages", "/v1/test/users/{user_id}/messages/{message_id}"),
+      "PUT" -> Seq("/v1/test/users/{user_id}/messages/{message_id}")
     )
 
   "PathMatchingSupport" should {
@@ -44,6 +45,11 @@ class PathMatchingSupportSpec extends AnyWordSpec with Matchers with PathMatchin
     "match path with parameters" in {
       supportsCall(HttpMethod.GET, "/v1/messages/1") shouldBe true
       supportsCall(HttpMethod.GET, "/v1/users/1") shouldBe true
+    }
+
+    "supports call for same path for different methods" in {
+      supportsCall(HttpMethod.POST, "/v1/test/users/{user_id}/messages/{message_id}") shouldBe true
+      supportsCall(HttpMethod.PUT, "/v1/test/users/{user_id}/messages/{message_id}") shouldBe true
     }
 
     "supported call different scenarios" in {
@@ -74,6 +80,18 @@ class PathMatchingSupportSpec extends AnyWordSpec with Matchers with PathMatchin
         "/v1/test/users/abc/messages/16"
       ) shouldBe false
       isSupportedCall("POST", "/v1/messages", "GET", "/v1/messages") shouldBe false
+      isSupportedCall(
+        "POST",
+        "/v1/test/users/{user_id}/messages/{message_id}",
+        "POST",
+        "/v1/test/users/asdf/messages/3"
+      )
+      isSupportedCall(
+        "PUT",
+        "/v1/test/users/{user_id}/messages/{message_id}",
+        "PUT",
+        "/v1/test/users/asdf/messages/3"
+      )
     }
 
     "get empty parameters when uri doesn't have path parameters and no request parameters" in {

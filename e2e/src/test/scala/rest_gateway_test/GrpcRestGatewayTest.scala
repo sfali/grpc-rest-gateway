@@ -136,6 +136,24 @@ class GrpcRestGatewayTest extends AnyWordSpec with Matchers with BeforeAndAfterA
       )
       serviceAStub.getMessageV3(request) shouldBe restClient.getMessageV3(request)
     }
+
+    "post message" in {
+      val request = GetMessageRequestV2(
+        messageId = 23,
+        userId = "admin",
+        sub = Some(GetMessageRequestV2.SubMessage(subField1 = 19.0, subField2 = 2.14f))
+      )
+      serviceAStub.postMessage(request) shouldBe restClient.postMessage(request)
+    }
+
+    "put message" in {
+      val request = GetMessageRequestV2(
+        messageId = 30,
+        userId = "admin",
+        sub = Some(GetMessageRequestV2.SubMessage(subField1 = 2.0, subField2 = 2.14f))
+      )
+      serviceAStub.putMessage(request) shouldBe restClient.putMessage(request)
+    }
   }
 
   private def grpcServerExecutorSvc: ExecutorService = executorSvc("grpc-server-%d")

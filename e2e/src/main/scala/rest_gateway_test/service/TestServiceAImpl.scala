@@ -73,6 +73,10 @@ class TestServiceAImpl extends TestServiceAGrpc.TestServiceA {
     Future.successful(GetMessageResponse(s"messageId: ${request.messageId}, userId: ${request.userId}$sub"))
   }
 
+  override def postMessage(request: GetMessageRequestV2): Future[GetMessageResponse] = getMessageV3(request)
+
+  override def putMessage(request: GetMessageRequestV2): Future[GetMessageResponse] = getMessageV3(request)
+
   private def validateRequestId(requestId: Long) =
     if (requestId <= 0) {
       throw StatusProto.toStatusRuntimeException(
