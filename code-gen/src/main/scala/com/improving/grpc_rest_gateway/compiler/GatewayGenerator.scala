@@ -97,7 +97,7 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
             s"""private val $constantName = "$path""""
           }
       }
-    printer.add(s"object ${service.getName}GatewayHandler {").indent.seq(paths).outdent.add("}")
+    printer.add(s"object ${service.getName}GatewayHandler {").indent.seq(paths.toSeq).outdent.add("}")
   }
 
   private def generateService(service: ServiceDescriptor): PrinterEndo = { printer =>
@@ -141,7 +141,7 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
         "val path = queryString.path",
         "val methodName = method.name"
       )
-      .call(generateMethodHandlers(methods))
+      .call(generateMethodHandlers(methods.toSeq))
       .outdent
       .add("}")
   }

@@ -1,10 +1,12 @@
 import Dependencies.*
+import ReleaseTransformations.*
+import xerial.sbt.Sonatype.*
 
 val Scala213 = "2.13.15"
 val Scala212 = "2.12.20"
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
-ThisBuild / organization := "com.improving.grpc_rest_gateway"
+ThisBuild / organization := "io.github.sfali23"
 ThisBuild / scalaVersion := Scala213
 
 lazy val runtime = (projectMatrix in file("runtime"))
@@ -57,10 +59,36 @@ lazy val e2e = (project in file("e2e"))
 lazy val `grpc-rest-gateway` =
   project
     .in(file("."))
+    .enablePlugins(DependencyUpdaterPlugin)
     .settings(
+      startingVersion := "0.2.0",
+      publishMavenStyle := true,
       publishArtifact := false,
       publish := {},
-      publishLocal := {}
+      publishLocal := {},
+      releaseProcess := Seq[ReleaseStep](
+        checkSnapshotDependencies,
+        inquireVersions,
+        runClean,
+        releaseStepCommand("e2e / test"),
+        setReleaseVersion,
+        tagRelease,
+        publishArtifacts,
+        releaseStepCommand("publishSigned"),
+        releaseStepCommand("sonatypeBundleRelease"),
+        pushChanges
+      ),
+      sonatypeRepository := "https://s01.oss.sonatype.org/service/local",
+      sonatypeCredentialHost := "s01.oss.sonatype.org",
+      credentials += Credentials(Path.userHome / ".sbt" / "sonatype-credentials"),
+      publishTo := sonatypePublishToBundle.value,
+      sonatypeProjectHosting := Some(
+        GitHubHosting(
+          "sfali",
+          "grpc-rest-gateway",
+          "syed.f.ali@improving.com"
+        )
+      )
     )
     .aggregate(protocGenGrpcRestGatewayPlugin.agg)
     .aggregate(
