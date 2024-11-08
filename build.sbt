@@ -97,6 +97,9 @@ lazy val `grpc-rest-gateway` =
           email = "f.syed.ali@improving.com",
           url = url("https://github.com/sfali/grpc-rest-gateway")
         )
+      ),
+      licenses := Seq(
+        "APL2" -> url("http://www.apache.org/licenses/LICENSE-2.0.txt")
       )
     )
     .aggregate(protocGenGrpcRestGatewayPlugin.agg)
