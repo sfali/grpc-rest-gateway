@@ -8,6 +8,18 @@ val Scala212 = "2.12.20"
 Global / onChangedBuildSource := ReloadOnSourceChanges
 ThisBuild / organization := "io.github.sfali23"
 ThisBuild / scalaVersion := Scala213
+ThisBuild / versionScheme := Some("semver-spec")
+ThisBuild / sonatypeRepository := "https://s01.oss.sonatype.org/service/local"
+ThisBuild / sonatypeCredentialHost := "s01.oss.sonatype.org"
+ThisBuild / credentials += Credentials(Path.userHome / ".sbt" / "sonatype-credentials")
+ThisBuild / publishTo := sonatypePublishToBundle.value
+ThisBuild / sonatypeProjectHosting := Some(
+  GitHubHosting(
+    "sfali",
+    "grpc-rest-gateway",
+    "syed.f.ali@improving.com"
+  )
+)
 
 lazy val runtime = (projectMatrix in file("runtime"))
   .defaultAxes()
@@ -77,17 +89,6 @@ lazy val `grpc-rest-gateway` =
         releaseStepCommand("publishSigned"),
         releaseStepCommand("sonatypeBundleRelease"),
         pushChanges
-      ),
-      sonatypeRepository := "https://s01.oss.sonatype.org/service/local",
-      sonatypeCredentialHost := "s01.oss.sonatype.org",
-      credentials += Credentials(Path.userHome / ".sbt" / "sonatype-credentials"),
-      publishTo := sonatypePublishToBundle.value,
-      sonatypeProjectHosting := Some(
-        GitHubHosting(
-          "sfali",
-          "grpc-rest-gateway",
-          "syed.f.ali@improving.com"
-        )
       )
     )
     .aggregate(protocGenGrpcRestGatewayPlugin.agg)
