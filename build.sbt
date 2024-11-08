@@ -20,6 +20,17 @@ ThisBuild / sonatypeProjectHosting := Some(
     "syed.f.ali@improving.com"
   )
 )
+ThisBuild / developers := List(
+  Developer(
+    id = "sfali23",
+    name = "Syed Farhan Ali",
+    email = "f.syed.ali@gmail.com",
+    url = url("https://github.com/sfali/grpc-rest-gateway")
+  )
+)
+ThisBuild / licenses := Seq(
+  "APL2" -> url("http://www.apache.org/licenses/LICENSE-2.0.txt")
+)
 
 lazy val runtime = (projectMatrix in file("runtime"))
   .defaultAxes()
@@ -89,17 +100,6 @@ lazy val `grpc-rest-gateway` =
         releaseStepCommand("publishSigned"),
         releaseStepCommand("sonatypeBundleRelease"),
         pushChanges
-      ),
-      developers := List(
-        Developer(
-          id = "sfali",
-          name = "Syed Farhan Ali",
-          email = "f.syed.ali@improving.com",
-          url = url("https://github.com/sfali/grpc-rest-gateway")
-        )
-      ),
-      licenses := Seq(
-        "APL2" -> url("http://www.apache.org/licenses/LICENSE-2.0.txt")
       )
     )
     .aggregate(protocGenGrpcRestGatewayPlugin.agg)
