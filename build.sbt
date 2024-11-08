@@ -89,6 +89,14 @@ lazy val `grpc-rest-gateway` =
         releaseStepCommand("publishSigned"),
         releaseStepCommand("sonatypeBundleRelease"),
         pushChanges
+      ),
+      developers := List(
+        Developer(
+          id = "sfali",
+          name = "Syed Farhan Ali",
+          email = "f.syed.ali@improving.com",
+          url = url("https://github.com/sfali/grpc-rest-gateway")
+        )
       )
     )
     .aggregate(protocGenGrpcRestGatewayPlugin.agg)
