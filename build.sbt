@@ -8,7 +8,6 @@ val Scala212 = "2.12.20"
 Global / onChangedBuildSource := ReloadOnSourceChanges
 ThisBuild / organization := "io.github.sfali23"
 ThisBuild / scalaVersion := Scala213
-ThisBuild / versionScheme := Some("semver-spec")
 ThisBuild / sonatypeRepository := "https://s01.oss.sonatype.org/service/local"
 ThisBuild / sonatypeCredentialHost := "s01.oss.sonatype.org"
 ThisBuild / credentials += Credentials(Path.userHome / ".sbt" / "sonatype-credentials")
@@ -17,7 +16,7 @@ ThisBuild / sonatypeProjectHosting := Some(
   GitHubHosting(
     "sfali",
     "grpc-rest-gateway",
-    "f.syed.ali@gmail.com"
+    "syed.f.ali@improving.com"
   )
 )
 ThisBuild / developers := List(
