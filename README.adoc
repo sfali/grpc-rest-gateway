@@ -353,6 +353,7 @@ To generate Scala classes for gateway handler and Swagger documentation add foll
 [source, sbt]
 ----
 addSbtPlugin("com.thesamet" % "sbt-protoc" % "1.0.7")
+addSbtPlugin("io.github.sfali23" % "grpc-rest-gateway-code-gen" % "0.3.0")
 
 libraryDependencies += "com.thesamet.scalapb" %% "compilerplugin" % "0.11.15"
 resolvers += "Sonatype OSS" at "https://s01.oss.sonatype.org/content/groups/public/"
@@ -367,6 +368,8 @@ Compile / PB.targets := Seq(
   com.improving.grpc_rest_gateway.gatewayGen -> -> (Compile / sourceManaged).value / "scalapb",
   com.improving.grpc_rest_gateway.swaggerGen -> -> (Compile / resourceManaged).value / "scalapb"
 )
+
+libraryDependencies += "io.github.sfali23" %% "grpc-rest-gateway-runtime" % "0.3.0"
 ----
 
 === Run tests and sample app
