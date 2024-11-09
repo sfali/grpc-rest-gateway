@@ -31,6 +31,6 @@ package object compiler {
 
   def extractPaths(m: MethodDescriptor): Seq[(PatternCase, String)] = {
     val http = m.getOptions.getExtension(AnnotationsProto.http)
-    extractPathInternal(http) +: http.getAdditionalBindingsList.asScala.map(extractPathInternal)
+    extractPathInternal(http) +: http.getAdditionalBindingsList.asScala.map(extractPathInternal).toSeq
   }
 }

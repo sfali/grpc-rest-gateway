@@ -1,11 +1,44 @@
 import Dependencies.*
+import ReleaseTransformations.*
+import xerial.sbt.Sonatype.*
 
 val Scala213 = "2.13.15"
 val Scala212 = "2.12.20"
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
-ThisBuild / organization := "com.improving.grpc_rest_gateway"
+ThisBuild / organization := "io.github.sfali23"
 ThisBuild / scalaVersion := Scala213
+ThisBuild / versionScheme := Some("semver-spec")
+ThisBuild / sonatypeRepository := "https://s01.oss.sonatype.org/service/local"
+ThisBuild / sonatypeCredentialHost := "s01.oss.sonatype.org"
+ThisBuild / credentials += Credentials(Path.userHome / ".sbt" / "sonatype-credentials")
+ThisBuild / publishTo := sonatypePublishToBundle.value
+ThisBuild / sonatypeProjectHosting := Some(
+  GitHubHosting(
+    "sfali",
+    "grpc-rest-gateway",
+    "f.syed.ali@gmail.com"
+  )
+)
+ThisBuild / developers := List(
+  Developer(
+    id = "sfali",
+    name = "Syed Farhan Ali",
+    email = "syed.f.ali@improving.com",
+    url = url("https://github.com/sfali/grpc-rest-gateway")
+  )
+)
+ThisBuild / licenses := Seq(
+  "APL2" -> url("http://www.apache.org/licenses/LICENSE-2.0.txt")
+)
+ThisBuild / homepage := Some(url("https://github.com/sfali/grpc-rest-gateway"))
+
+ThisBuild / scmInfo := Some(
+  ScmInfo(
+    url("https://github.com/sfali/grpc-rest-gateway"),
+    "scm:git@github.com:sfali/grpc-rest-gateway.git"
+  )
+)
 
 lazy val runtime = (projectMatrix in file("runtime"))
   .defaultAxes()
@@ -49,7 +82,7 @@ lazy val e2e = (project in file("e2e"))
       ) -> (Compile / sourceManaged).value / "scalapb",
       genModule(
         "com.improving.grpc_rest_gateway.compiler.SwaggerGenerator$"
-      ) -> (Compile / resourceDirectory).value / "specs"
+      ) -> (Compile / resourceManaged).value / "specs"
     )
   )
 //.jvmPlatform(scalaVersions = Seq(Scala212, Scala213))
@@ -57,10 +90,25 @@ lazy val e2e = (project in file("e2e"))
 lazy val `grpc-rest-gateway` =
   project
     .in(file("."))
+    .enablePlugins(DependencyUpdaterPlugin)
     .settings(
+      startingVersion := "0.2.0",
+      publishMavenStyle := true,
       publishArtifact := false,
       publish := {},
-      publishLocal := {}
+      publishLocal := {},
+      releaseProcess := Seq[ReleaseStep](
+        checkSnapshotDependencies,
+        inquireVersions,
+        runClean,
+        releaseStepCommand("e2e / test"),
+        setReleaseVersion,
+        tagRelease,
+        publishArtifacts,
+        releaseStepCommand("publishSigned"),
+        releaseStepCommand("sonatypeBundleRelease"),
+        pushChanges
+      )
     )
     .aggregate(protocGenGrpcRestGatewayPlugin.agg)
     .aggregate(
