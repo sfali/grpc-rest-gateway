@@ -82,7 +82,7 @@ lazy val e2e = (project in file("e2e"))
       ) -> (Compile / sourceManaged).value / "scalapb",
       genModule(
         "com.improving.grpc_rest_gateway.compiler.SwaggerGenerator$"
-      ) -> (Compile / resourceDirectory).value / "specs"
+      ) -> (Compile / resourceManaged).value / "specs"
     )
   )
 //.jvmPlatform(scalaVersions = Seq(Scala212, Scala213))
