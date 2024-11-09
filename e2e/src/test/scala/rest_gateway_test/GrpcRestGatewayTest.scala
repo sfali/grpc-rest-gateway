@@ -54,7 +54,7 @@ class GrpcRestGatewayTest extends AnyWordSpec with Matchers with BeforeAndAfterA
           status.getCode.value() shouldBe Code.NOT_FOUND.getNumber
           status.getDescription shouldBe message
 
-        case Failure(ex) => fail(s"Test failed due to exception: \"${ex.getMessage}\".")
+        case Failure(ex) => fail(s"""Test failed due to exception: "${ex.getMessage}".""")
         case Success(_)  => fail("Test failed")
       }
 
@@ -63,7 +63,7 @@ class GrpcRestGatewayTest extends AnyWordSpec with Matchers with BeforeAndAfterA
         case Failure(ex: HttpResponseException) =>
           ex.status shouldBe 404
           ex.message shouldBe message
-        case Failure(ex) => fail(s"Test failed due to exception: \"${ex.getMessage}\".")
+        case Failure(ex) => fail(s""""Test failed due to exception: "${ex.getMessage}".""")
         case Success(_)  => fail("Test failed")
       }
     }
@@ -80,7 +80,7 @@ class GrpcRestGatewayTest extends AnyWordSpec with Matchers with BeforeAndAfterA
           status.getCode.value() shouldBe Code.INVALID_ARGUMENT.getNumber
           status.getDescription shouldBe message
 
-        case Failure(ex) => fail(s"Test failed due to exception: \"${ex.getMessage}\".")
+        case Failure(ex) => fail(s"""Test failed due to exception: "${ex.getMessage}".""")
         case Success(_)  => fail("Test failed")
       }
 
@@ -89,7 +89,7 @@ class GrpcRestGatewayTest extends AnyWordSpec with Matchers with BeforeAndAfterA
         case Failure(ex: HttpResponseException) =>
           ex.status shouldBe 400
           ex.message shouldBe message
-        case Failure(ex) => fail(s"Test failed due to exception: \"${ex.getMessage}\".")
+        case Failure(ex) => fail(s"""Test failed due to exception: "${ex.getMessage}".""")
         case Success(_)  => fail("Test failed")
       }
     }

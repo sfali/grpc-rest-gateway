@@ -19,7 +19,7 @@ import scala.util.{Failure, Success, Try}
 class TestServiceAImpl extends TestServiceAGrpc.TestServiceA {
 
   private val logger = LoggerFactory.getLogger(classOf[TestServiceAGrpc.TestServiceA])
-  private val cache = mutable.Map.empty[Long, TestResponseA]
+  private var cache = Map.empty[Long, TestResponseA]
 
   override def getRequest(request: TestRequestA): Future[TestResponseA] =
     Try(validateRequestId(request.requestId)) match {
@@ -54,7 +54,7 @@ class TestServiceAImpl extends TestServiceAGrpc.TestServiceA {
             case None =>
               val r =
                 TestResponseA(requestId = requestId, color = requestId.getColor, transactionId = requestId.toProtoUUID)
-              cache.addOne(requestId -> r)
+              cache = cache + (requestId -> r)
               r
           }
         Future.successful(response)
