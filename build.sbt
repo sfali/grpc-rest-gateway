@@ -4,6 +4,7 @@ import xerial.sbt.Sonatype.*
 
 val Scala213 = "2.13.15"
 val Scala212 = "2.12.20"
+val Scala3 = "3.5.2"
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
 ThisBuild / organization := "io.github.sfali23"
@@ -45,7 +46,7 @@ lazy val runtime = (projectMatrix in file("runtime"))
     name := "grpc-rest-gateway-runtime",
     libraryDependencies ++= RuntimeDependencies
   )
-  .jvmPlatform(scalaVersions = Seq(Scala212, Scala213))
+  .jvmPlatform(scalaVersions = Seq(Scala212, Scala213, Scala3))
 
 lazy val codeGen = (projectMatrix in file("code-gen"))
   .enablePlugins(BuildInfoPlugin)
@@ -56,7 +57,7 @@ lazy val codeGen = (projectMatrix in file("code-gen"))
     buildInfoPackage := "com.improving.grpc_rest_gateway.compiler",
     libraryDependencies ++= CodegenDependencies
   )
-  .jvmPlatform(scalaVersions = Seq(Scala212, Scala213))
+  .jvmPlatform(scalaVersions = Seq(Scala212, Scala213, Scala3))
 
 lazy val codeGenJVM212 = codeGen.jvm(Scala212)
 
@@ -84,7 +85,7 @@ lazy val e2e = (projectMatrix in file("e2e"))
       ) -> (Compile / resourceManaged).value / "specs"
     )
   )
-  .jvmPlatform(scalaVersions = Seq(Scala212, Scala213))
+  .jvmPlatform(scalaVersions = Seq(Scala212, Scala213, Scala3))
 
 lazy val `grpc-rest-gateway` =
   project
@@ -100,8 +101,9 @@ lazy val `grpc-rest-gateway` =
         checkSnapshotDependencies,
         inquireVersions,
         runClean,
-        releaseStepCommand("e2eJVM2_13 / test"),
         releaseStepCommand("e2eJVM2_12 / test"),
+        releaseStepCommand("e2eJVM2_13 / test"),
+        releaseStepCommand("e2eJVM3 / test"),
         setReleaseVersion,
         tagRelease,
         publishArtifacts,
