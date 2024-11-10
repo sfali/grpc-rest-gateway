@@ -99,21 +99,26 @@ class TestServiceBGatewayHandler(channel: ManagedChannel)(implicit ec: Execution
     val path = queryString.path
     val methodName = method.name
     if (isSupportedCall(HttpMethod.GET.name, GetGetRequestPath, methodName, path)) {
-      val parameters = mergeParameters(GetGetRequestPath, queryString)
-      val input = Try {
-        val requestId = parameters.toLong("requestId")
-        rest_gateway_test.api.model.common.TestRequestB(requestId = requestId)
-      }
-      Future.fromTry(input).flatMap(stub.getRequest)
+      get_GetRequest(mergeParameters(GetGetRequestPath, queryString))
     } else if (isSupportedCall(HttpMethod.POST.name, PostProcessPath, methodName, path)) {
-      val input = Try(JsonFormat.fromJsonString[rest_gateway_test.api.model.common.TestRequestB](body))
-        .recoverWith(jsonException2GatewayExceptionPF)
-      for {
-        msg <- Future.fromTry(input)
-        res <- stub.process(msg)
-      } yield res
+      post_Process(body)
     } else Future.failed(InvalidArgument(s"No route defined for $methodName($path)"))
   }
+
+  private def get_GetRequest(parameters: Map[String, String]) = {
+    val input = Try {
+      val requestId = parameters.toLong("requestId")
+      rest_gateway_test.api.model.common.TestRequestB(requestId = requestId)
+    }
+    Future.fromTry(input).flatMap(stub.getRequest)
+  }
+
+  private def post_Process(body: String) = {
+    val input = Try(JsonFormat.fromJsonString[rest_gateway_test.api.model.common.TestRequestB](body))
+      .recoverWith(jsonException2GatewayExceptionPF)
+    Future.fromTry(input).flatMap(stub.process)
+  }
+
 }
 ----
 
@@ -290,36 +295,27 @@ message Message {
 }
 ----
 
-Following table defines how HTTP request supposed to be constructed.
+Following mapping defines how HTTP request supposed to be constructed.
 
-[cols="1,3,3,3"]
-|===
-| HTTP Method | Path | HTTP request | Mapping
+*HTTP method:* GET +
+*Path:* /v1/messages/{message_id}/{sub.subfield} +
+*HTTP request:* http://localhost:7070/v1/messages/xyz/abc +
+*Mapping:* Both `message_id` and `sub.subfield` are mapped as path variables
 
-|GET
-|/v1/messages/{message_id}/{sub.subfield}
-|http://localhost:7070/v1/messages/xyz/abc
-|Both `message_id` and `sub.subfield` are mapped as path variables
+*HTTP method:* GET +
+*Path:* /v1/messages/{message_id} +
+*HTTP request:* http://localhost:7070/v1/messages/xyz?sub.subfield=abc +
+*Mapping:* `message_id` is mapped as path variable while `sub.subfield` is mapped as query parameter
 
-|GET
-|/v1/messages/{message_id}
-|http://localhost:7070/v1/messages/xyz?sub.subfield=abc
-|`message_id` is mapped as path variable while `sub.subfield` is mapped as query parameter
+*HTTP method:* PUT +
+*Path:* |http://localhost:7070/v1/messages/xyz +
+*HTTP request:* http://localhost:7070/v1/messages/xyz?sub.subfield=abc [`body`: `{"subfield": "sub"}]` +
+*Mapping:* `message_id` is mapped as path variable while `sub` is mapped as body payload
 
-|PUT
-|/v1/messages/{message_id}
-|http://localhost:7070/v1/messages/xyz
-`body`: `{"subfield": "sub"}`
-|`message_id` is mapped as path variable while `sub` is mapped as body payload
-
-|POST
-|/v1/messages
-|http://localhost:7070/v1/messages
-`body`: `{"message_id": "abc", "sub": {"subfield": "sub"}}`
-|entire message is mapped as body payload
-
-|===
-
+*HTTP method:* POST +
+*Path:* /v1/messages +
+*HTTP request:* http://localhost:7070/v1/messages +
+*Mapping:* entire message is mapped as body payloadr
 
 === Run gateway server
 
@@ -365,8 +361,8 @@ And following in the `build.sbt`:
 ----
 Compile / PB.targets := Seq(
   scalapb.gen() -> (Compile / sourceManaged).value / "scalapb",
-  com.improving.grpc_rest_gateway.gatewayGen -> -> (Compile / sourceManaged).value / "scalapb",
-  com.improving.grpc_rest_gateway.swaggerGen -> -> (Compile / resourceManaged).value / "scalapb"
+  grpc_rest_gateway.gatewayGen() -> -> (Compile / sourceManaged).value / "scalapb",
+  grpc_rest_gateway.swaggerGen() -> -> (Compile / resourceManaged).value / "scalapb"
 )
 
 libraryDependencies += "io.github.sfali23" %% "grpc-rest-gateway-runtime" % "0.3.0"
@@ -380,14 +376,15 @@ Tests can be run as follows:
 
 [source, shell]
 ----
-sbt "e2e / test"
+sbt "e2eJVM2_13 / test"
+sbt "e2eJVM2_12 / test"
 ----
 
 Sample app can be run as follows:
 
 [source, shell]
 ----
-sbt "e2e / run"
+sbt "e2e / run" // TODO: move test main to different module
 ----
 
 Open browser and paste following URL in address bar `http://localhost:7070/docs/index.html?urls.primaryName=TestServiceB#/`, you should see Open API specification for service.
