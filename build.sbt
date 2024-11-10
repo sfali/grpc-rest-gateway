@@ -41,6 +41,7 @@ ThisBuild / scmInfo := Some(
 )
 
 lazy val runtime = (projectMatrix in file("runtime"))
+  .enablePlugins(ScalafmtPlugin)
   .defaultAxes()
   .settings(
     name := "grpc-rest-gateway-runtime",
@@ -49,7 +50,7 @@ lazy val runtime = (projectMatrix in file("runtime"))
   .jvmPlatform(scalaVersions = Seq(Scala212, Scala213, Scala3))
 
 lazy val codeGen = (projectMatrix in file("code-gen"))
-  .enablePlugins(BuildInfoPlugin)
+  .enablePlugins(BuildInfoPlugin, ScalafmtPlugin)
   .defaultAxes()
   .settings(
     name := "grpc-rest-gateway-code-gen",
@@ -69,7 +70,7 @@ lazy val protocGenGrpcRestGatewayPlugin = protocGenProject("protoc-gen-grpc-rest
 
 lazy val e2e = (projectMatrix in file("e2e"))
   .dependsOn(runtime)
-  .enablePlugins(LocalCodeGenPlugin)
+  .enablePlugins(LocalCodeGenPlugin, ScalafmtPlugin)
   .defaultAxes()
   .settings(
     publish / skip := true,
