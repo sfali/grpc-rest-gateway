@@ -11,7 +11,7 @@ object swaggerGen {
         "scala",
         Artifact(
           BuildInfo.organization,
-          "codegen_2.12",
+          "grpc-rest-gateway-code-gen_2.12",
           BuildInfo.version
         ),
         "com.improving.grpc_rest_gateway.compiler.SwaggerGenerator$",
