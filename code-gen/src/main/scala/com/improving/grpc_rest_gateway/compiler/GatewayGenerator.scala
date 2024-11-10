@@ -84,13 +84,13 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
         val uppercaseMethodName = NameUtils.snakeCaseToCamelCase(method.getName, upperInitial = true)
         val paths = extractPaths(method)
         if (paths.size == 1) {
-          val (patternCase, path) = paths.head
+          val (patternCase, path, _) = paths.head
           val constantName =
             s"${NameUtils.snakeCaseToCamelCase(patternCase.name().toLowerCase, upperInitial = true)}${uppercaseMethodName}Path"
           pathsToConstantMap = pathsToConstantMap + ((patternCase, path) -> constantName)
           Seq(s"""private val $constantName = "$path"""")
         } else
-          paths.zipWithIndex.map { case ((patternCase, path), index) =>
+          paths.zipWithIndex.map { case ((patternCase, path, _), index) =>
             val constantName =
               s"${NameUtils.snakeCaseToCamelCase(patternCase.name().toLowerCase, upperInitial = true)}${uppercaseMethodName}Path${index + 1}"
             pathsToConstantMap = pathsToConstantMap + ((patternCase, path) -> constantName)
@@ -105,6 +105,7 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
     // this is NOT the FQN of the service, we are generating gateway handler in the same package as GRPC service
     val grpcService = descriptor.companionObject.name
     val implName = s"${service.getName}GatewayHandler"
+    val methods: Seq[MethodDescriptor] = getUnaryCallsWithHttpExtension(service).toSeq
     printer
       .add(s"class $implName(channel: ManagedChannel)(implicit ec: ExecutionContext)")
       .indent
@@ -116,10 +117,11 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
       )
       .call(generateHttpMethodToUrisMap)
       .newline
-      .call(generateDispatchCall(service))
+      .call(generateDispatchCall(methods))
       .outdent
-      .add("}")
       .newline
+      .call(generateMethodHandlerDelegates(methods))
+      .add("}")
   }
 
   private def getUnaryCallsWithHttpExtension(service: ServiceDescriptor) =
@@ -128,13 +130,10 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
       !m.isClientStreaming && !m.isServerStreaming && m.getOptions.hasExtension(AnnotationsProto.http)
     }
 
-  private def generateDispatchCall(service: ServiceDescriptor): PrinterEndo = { printer =>
-    val methods = getUnaryCallsWithHttpExtension(service)
-
-    printer
-      .add(
-        s"override protected def dispatchCall(method: HttpMethod, uri: String, body: String): Future[GeneratedMessage] = {"
-      )
+  private def generateDispatchCall(methods: Seq[MethodDescriptor]): PrinterEndo =
+    _.add(
+      s"override protected def dispatchCall(method: HttpMethod, uri: String, body: String): Future[GeneratedMessage] = {"
+    )
       .indent
       .add(
         "val queryString = new QueryStringDecoder(uri)",
@@ -144,19 +143,14 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
       .call(generateMethodHandlers(methods.toSeq))
       .outdent
       .add("}")
-  }
 
   private def generateMethodHandlers(methods: Seq[MethodDescriptor]): PrinterEndo = { printer =>
     val p =
       methods.foldLeft(printer) { case (printer, method) =>
-        val methodDescriptor = ExtendedMethodDescriptor(method)
-        // FQN of the input type, this done on the assumption that input types can be in the different package
-        val fullInputName = methodDescriptor.inputType.scalaType
-        val methodName = method.getName.charAt(0).toLower + method.getName.substring(1)
         val http = method.getOptions.getExtension(AnnotationsProto.http)
         val bindings = http +: http.getAdditionalBindingsList.asScala
         bindings.foldLeft(printer) { case (printer, httpRule) =>
-          generateMethodHandler(method, httpRule, methodName, fullInputName)(printer)
+          generateMethodHandler(method, httpRule)(printer)
         }
       }
 
@@ -165,129 +159,103 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
     else p
   }
 
-  private def generateMethodHandler(
-    method: MethodDescriptor,
-    http: HttpRule,
-    methodName: String,
-    fullInputName: String
-  ): PrinterEndo = { p =>
+  private def generateMethodHandler(method: MethodDescriptor, http: HttpRule): PrinterEndo = { printer =>
     http.getPatternCase match {
       case PatternCase.GET =>
         val constantName = pathsToConstantMap((PatternCase.GET, http.getGet))
         val p1 =
           if (ifStatementStarted)
-            p.add(s"""} else if (isSupportedCall(HttpMethod.GET.name, $constantName, methodName, path)) {""")
+            printer.add(s"""} else if (isSupportedCall(HttpMethod.GET.name, $constantName, methodName, path)) {""")
           else {
             ifStatementStarted = true
-            p.add(s"""if (isSupportedCall(HttpMethod.GET.name, $constantName, methodName, path)) {""")
+            printer.add(s"""if (isSupportedCall(HttpMethod.GET.name, $constantName, methodName, path)) {""")
           }
-        p1.indent
-          .add(s"""val parameters = mergeParameters($constantName, queryString)""")
-          .add("val input = Try {")
-          .indent
-          .call(generateInputFromQueryString(method.getInputType, fullInputName, required = true))
-          .outdent
-          .add("}")
-          .add(s"Future.fromTry(input).flatMap(stub.$methodName)")
-          .outdent
+        val delegateFunctionName = generateDelegateFunctionName(PatternCase.GET, method.getName)
+        p1.indent.add(s"$delegateFunctionName(mergeParameters($constantName, queryString))").outdent
 
       case PatternCase.PUT =>
         val constantName = pathsToConstantMap((PatternCase.PUT, http.getPut))
         val p1 =
           if (ifStatementStarted)
-            p.add(s"""} else if (isSupportedCall(HttpMethod.PUT.name, $constantName, methodName, path)) {""")
+            printer.add(s"""} else if (isSupportedCall(HttpMethod.PUT.name, $constantName, methodName, path)) {""")
           else {
             ifStatementStarted = true
-            p.add(s"""if (isSupportedCall(HttpMethod.PUT.name, $constantName, methodName, path)) {""")
+            printer.add(s"""if (isSupportedCall(HttpMethod.PUT.name, $constantName, methodName, path)) {""")
           }
-
-        p1.call(
-          generateBodyParam(
-            method = method,
-            fullInputName = fullInputName,
-            methodName = methodName,
-            body = http.getBody,
-            path = http.getPost,
-            constantName = constantName
-          )
-        )
+        val body = http.getBody
+        val delegateFunctionName = generateDelegateFunctionName(PatternCase.PUT, method.getName)
+        p1.indent
+          .when(body == "*")(_.add(s"$delegateFunctionName(body)"))
+          .when(body != "*")(_.add(s"$delegateFunctionName(body, mergeParameters($constantName, queryString))"))
+          .outdent
 
       case PatternCase.POST =>
         val constantName = pathsToConstantMap((PatternCase.POST, http.getPost))
 
         val p1 =
           if (ifStatementStarted)
-            p.add(s"""} else if (isSupportedCall(HttpMethod.POST.name, $constantName, methodName, path)) {""")
+            printer.add(s"""} else if (isSupportedCall(HttpMethod.POST.name, $constantName, methodName, path)) {""")
           else {
             ifStatementStarted = true
-            p.add(s"""if (isSupportedCall(HttpMethod.POST.name, $constantName, methodName, path)) {""")
+            printer.add(s"""if (isSupportedCall(HttpMethod.POST.name, $constantName, methodName, path)) {""")
           }
-        p1.call(
-          generateBodyParam(
-            method = method,
-            fullInputName = fullInputName,
-            methodName = methodName,
-            body = http.getBody,
-            path = http.getPost,
-            constantName = constantName
-          )
-        )
+        val body = http.getBody
+        val delegateFunctionName = generateDelegateFunctionName(PatternCase.POST, method.getName)
+        p1.indent
+          .when(body == "*")(_.add(s"$delegateFunctionName(body)"))
+          .when(body != "*")(_.add(s"$delegateFunctionName(body, mergeParameters($constantName, queryString))"))
+          .outdent
 
       case PatternCase.DELETE =>
         val constantName = pathsToConstantMap((PatternCase.DELETE, http.getDelete))
         val p1 =
           if (ifStatementStarted)
-            p.add(s"""} else if (isSupportedCall(HttpMethod.DELETE.name, $constantName, methodName, path)) {""")
+            printer.add(s"""} else if (isSupportedCall(HttpMethod.DELETE.name, $constantName, methodName, path)) {""")
           else {
             ifStatementStarted = true
-            p.add(s"""if (isSupportedCall(HttpMethod.DELETE.name, $constantName", methodName, path)) {""")
+            printer.add(s"""if (isSupportedCall(HttpMethod.DELETE.name, $constantName", methodName, path)) {""")
           }
-        p1.indent
-          .add(s"""val parameters = mergeParameters($constantName", queryString)""")
-          .call(generateInputFromQueryString(method.getInputType, fullInputName, required = true))
-          .outdent
+        val delegateFunctionName = generateDelegateFunctionName(PatternCase.DELETE, method.getName)
+        p1.indent.add(s"$delegateFunctionName(mergeParameters($constantName, queryString))").outdent
 
       case PatternCase.PATCH =>
         val constantName = pathsToConstantMap((PatternCase.PATCH, http.getPatch))
         val p1 =
           if (ifStatementStarted)
-            p.add(s"""} else if (isSupportedCall(HttpMethod.PATCH.name, $constantName, methodName, path)) {""")
+            printer.add(s"""} else if (isSupportedCall(HttpMethod.PATCH.name, $constantName, methodName, path)) {""")
           else {
             ifStatementStarted = true
-            p.add(s"""if (isSupportedCall(HttpMethod.PATCH.name, $constantName, methodName, path)) {""")
+            printer.add(s"""if (isSupportedCall(HttpMethod.PATCH.name, $constantName, methodName, path)) {""")
           }
-        p1.indent
-          .add(s"""val parameters = mergeParameters($constantName, queryString)""")
-          .call(generateInputFromQueryString(method.getInputType, fullInputName, required = true))
-          .outdent
+        val delegateFunctionName = generateDelegateFunctionName(PatternCase.PATCH, method.getName)
+        p1.indent.add(s"$delegateFunctionName(mergeParameters($constantName, queryString))").outdent
 
-      case _ => p
+      case _ => printer
     }
   }
 
   private def generateBodyParam(
     method: MethodDescriptor,
+    delegateFunctionName: String,
     fullInputName: String,
     methodName: String,
-    body: String,
-    path: String,
-    constantName: String
+    body: String
   ): PrinterEndo = { printer =>
     if (body.nonEmpty) {
       if (body == "*") {
         printer
           .indent
+          .add(s"""private def $delegateFunctionName(body: String) = {""")
+          .indent
           .add(
             s"val input = Try(JsonFormat.fromJsonString[$fullInputName](body))"
           )
           .addIndented(".recoverWith(jsonException2GatewayExceptionPF)")
-          .add("for {")
-          .addIndented(
-            s"""msg <- Future.fromTry(input)""",
-            s"res <- stub.$methodName(msg)"
-          )
-          .add("} yield res")
+          .add(s"Future.fromTry(input).flatMap(stub.$methodName)")
           .outdent
+          .add("}")
+          .outdent
+          .newline
       } else {
         val inputTypeDescriptor = method.getInputType
         val maybeDescriptor = inputTypeDescriptor.getFields.asScala.find(_.getName == body)
@@ -300,13 +268,14 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
               inputTypeDescriptor.getFields.asScala.map(f => s"${f.getJsonName} = ${f.getJsonName}").mkString(", ")
             printer
               .indent
+              .add(s"""private def $delegateFunctionName(body: String, parameters: Map[String, String]) = {""")
+              .indent
               .add("val parsedBody = ")
               .when(optional)(
                 _.addIndented(s"Try(Option(JsonFormat.fromJsonString[$bodyFullType](body)))")
               )
               .when(!optional)(_.addIndented(s"Try(JsonFormat.fromJsonString[$bodyFullType](body))"))
               .addIndented(".recoverWith(jsonException2GatewayExceptionPF)")
-              .add(s"""val parameters = mergeParameters($constantName, queryString)""")
               .add("val input = Try {")
               .indent
               .call(generateInputFromQueryStringSingle(inputTypeDescriptor, required = true, ignoreFieldName = body))
@@ -314,25 +283,87 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
               .add(s"$fullInputName($args)")
               .outdent
               .add("}")
-              .add("for {")
-              .addIndented(
-                s"""msg <- Future.fromTry(input)""",
-                s"res <- stub.$methodName(msg)"
-              )
-              .add("} yield res")
+              .add(s"Future.fromTry(input).flatMap(stub.$methodName)")
               .outdent
+              .add("}")
+              .outdent
+              .newline
           case None =>
             throw new RuntimeException(
-              s"Unable to determine body type for input: $fullInputName, path: $path,body: $body, method: $methodName"
+              s"Unable to determine body type for input: $fullInputName, body: $body, method: $methodName"
             )
         }
-
       }
     } else
       throw new RuntimeException(
-        s"Body parameter is empty for input: $fullInputName, path: $path, method: $methodName"
+        s"Body parameter is empty for input: $fullInputName, method: $methodName"
       )
   }
+
+  private def generateMethodHandlerDelegates(methods: Seq[MethodDescriptor]): PrinterEndo = { printer =>
+    methods.foldLeft(printer) { case (printer, method) =>
+      val paths = extractPaths(method).groupBy(_._1).map { case (patternCase, seq) =>
+        patternCase -> seq.map { case (_, path, body) =>
+          (path, body)
+        }
+      }
+      paths.foldLeft(printer) { case (printer, (patternCase, pathNBodies)) =>
+        // for a given method having a multiple GET make sense, if we are to have multiple paths for POST and PUT
+        // then we have a problem, for now log the error and process first one
+        if (patternCase == PatternCase.PUT || patternCase == PatternCase.POST) {
+          if (pathNBodies.size > 1) {
+            Console
+              .err
+              .println(s"${Console.RED} Multiple paths found for $patternCase and ${method.getName}  ${Console.RESET}")
+            printer
+          } else printer.call(generateMethodHandlerDelegate(method, patternCase, pathNBodies.head._2))
+        } else printer.call(generateMethodHandlerDelegate(method, patternCase))
+      }
+    }
+  }
+
+  private def generateMethodHandlerDelegate(
+    method: MethodDescriptor,
+    httpMethod: PatternCase,
+    body: String = ""
+  ): PrinterEndo = { printer =>
+    val name = method.getName
+    val methodName = name.charAt(0).toLower + name.substring(1)
+    val delegateFunctionName = generateDelegateFunctionName(httpMethod, name)
+    // FQN of the input type, this done on the assumption that input types can be in the different package
+    val fullInputName = ExtendedMethodDescriptor(method).inputType.scalaType
+    httpMethod match {
+      case PatternCase.GET | PatternCase.DELETE | PatternCase.PATCH =>
+        printer
+          .indent
+          .add(s"""private def $delegateFunctionName(parameters: Map[String, String]) = {""")
+          .indent
+          .add("val input = Try {")
+          .indent
+          .call(generateInputFromQueryString(method.getInputType, fullInputName, required = true))
+          .outdent
+          .add("}")
+          .add(s"Future.fromTry(input).flatMap(stub.$methodName)")
+          .outdent
+          .add("}")
+          .outdent
+          .newline
+      case PatternCase.PUT | PatternCase.POST =>
+        printer.call(
+          generateBodyParam(
+            method = method,
+            delegateFunctionName = delegateFunctionName,
+            fullInputName = fullInputName,
+            methodName = methodName,
+            body = body
+          )
+        )
+      case _ => printer
+    }
+  }
+
+  private def generateDelegateFunctionName(patternCase: PatternCase, name: String) =
+    s"${patternCase.name().toLowerCase}_$name"
 
   /** Generates inputs.
     *

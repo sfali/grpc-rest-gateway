@@ -74,7 +74,7 @@ private class SwaggerMessagePrinter(service: ServiceDescriptor, implicits: Descr
           }
         }
         .foldLeft(mutable.Map.empty[String, Seq[(PatternCase, MethodDescriptor)]]) {
-          case (result, ((patternCase, path), method)) =>
+          case (result, ((patternCase, path, _), method)) =>
             val updatedValues =
               result.get(path) match {
                 case Some(values) => values :+ ((patternCase, method))
