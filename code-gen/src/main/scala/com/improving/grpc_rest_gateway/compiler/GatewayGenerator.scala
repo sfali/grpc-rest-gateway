@@ -155,7 +155,7 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
       }
 
     if (ifStatementStarted)
-      p.add(s"""} else Future.failed(InvalidArgument(s"No route defined for $$methodName($$path)"))""")
+      p.add(s"""else Future.failed(InvalidArgument(s"No route defined for $$methodName($$path)"))""")
     else p
   }
 
@@ -165,10 +165,10 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
         val constantName = pathsToConstantMap((PatternCase.GET, http.getGet))
         val p1 =
           if (ifStatementStarted)
-            printer.add(s"""} else if (isSupportedCall(HttpMethod.GET.name, $constantName, methodName, path)) {""")
+            printer.add(s"""else if (isSupportedCall(HttpMethod.GET.name, $constantName, methodName, path))""")
           else {
             ifStatementStarted = true
-            printer.add(s"""if (isSupportedCall(HttpMethod.GET.name, $constantName, methodName, path)) {""")
+            printer.add(s"""if (isSupportedCall(HttpMethod.GET.name, $constantName, methodName, path))""")
           }
         val delegateFunctionName = generateDelegateFunctionName(PatternCase.GET, method.getName)
         p1.indent.add(s"$delegateFunctionName(mergeParameters($constantName, queryString))").outdent
@@ -177,10 +177,10 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
         val constantName = pathsToConstantMap((PatternCase.PUT, http.getPut))
         val p1 =
           if (ifStatementStarted)
-            printer.add(s"""} else if (isSupportedCall(HttpMethod.PUT.name, $constantName, methodName, path)) {""")
+            printer.add(s"""else if (isSupportedCall(HttpMethod.PUT.name, $constantName, methodName, path))""")
           else {
             ifStatementStarted = true
-            printer.add(s"""if (isSupportedCall(HttpMethod.PUT.name, $constantName, methodName, path)) {""")
+            printer.add(s"""if (isSupportedCall(HttpMethod.PUT.name, $constantName, methodName, path))""")
           }
         val body = http.getBody
         val delegateFunctionName = generateDelegateFunctionName(PatternCase.PUT, method.getName)
@@ -194,10 +194,10 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
 
         val p1 =
           if (ifStatementStarted)
-            printer.add(s"""} else if (isSupportedCall(HttpMethod.POST.name, $constantName, methodName, path)) {""")
+            printer.add(s"""else if (isSupportedCall(HttpMethod.POST.name, $constantName, methodName, path))""")
           else {
             ifStatementStarted = true
-            printer.add(s"""if (isSupportedCall(HttpMethod.POST.name, $constantName, methodName, path)) {""")
+            printer.add(s"""if (isSupportedCall(HttpMethod.POST.name, $constantName, methodName, path))""")
           }
         val body = http.getBody
         val delegateFunctionName = generateDelegateFunctionName(PatternCase.POST, method.getName)
@@ -210,10 +210,10 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
         val constantName = pathsToConstantMap((PatternCase.DELETE, http.getDelete))
         val p1 =
           if (ifStatementStarted)
-            printer.add(s"""} else if (isSupportedCall(HttpMethod.DELETE.name, $constantName, methodName, path)) {""")
+            printer.add(s"""else if (isSupportedCall(HttpMethod.DELETE.name, $constantName, methodName, path))""")
           else {
             ifStatementStarted = true
-            printer.add(s"""if (isSupportedCall(HttpMethod.DELETE.name, $constantName", methodName, path)) {""")
+            printer.add(s"""if (isSupportedCall(HttpMethod.DELETE.name, $constantName", methodName, path))""")
           }
         val delegateFunctionName = generateDelegateFunctionName(PatternCase.DELETE, method.getName)
         p1.indent.add(s"$delegateFunctionName(mergeParameters($constantName, queryString))").outdent
@@ -222,10 +222,10 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
         val constantName = pathsToConstantMap((PatternCase.PATCH, http.getPatch))
         val p1 =
           if (ifStatementStarted)
-            printer.add(s"""} else if (isSupportedCall(HttpMethod.PATCH.name, $constantName, methodName, path)) {""")
+            printer.add(s"""else if (isSupportedCall(HttpMethod.PATCH.name, $constantName, methodName, path))""")
           else {
             ifStatementStarted = true
-            printer.add(s"""if (isSupportedCall(HttpMethod.PATCH.name, $constantName, methodName, path)) {""")
+            printer.add(s"""if (isSupportedCall(HttpMethod.PATCH.name, $constantName, methodName, path))""")
           }
         val delegateFunctionName = generateDelegateFunctionName(PatternCase.PATCH, method.getName)
         p1.indent.add(s"$delegateFunctionName(mergeParameters($constantName, queryString))").outdent
