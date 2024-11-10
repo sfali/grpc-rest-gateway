@@ -349,9 +349,9 @@ To generate Scala classes for gateway handler and Swagger documentation add foll
 [source, sbt]
 ----
 addSbtPlugin("com.thesamet" % "sbt-protoc" % "1.0.7")
-addSbtPlugin("io.github.sfali23" % "grpc-rest-gateway-code-gen" % "0.3.0")
+addSbtPlugin("io.github.sfali23" % "grpc-rest-gateway-code-gen" % "0.5.0")
 
-libraryDependencies += "com.thesamet.scalapb" %% "compilerplugin" % "0.11.15"
+libraryDependencies += "com.thesamet.scalapb" %% "compilerplugin" % "0.11.17"
 resolvers += "Sonatype OSS" at "https://s01.oss.sonatype.org/content/groups/public/"
 ----
 
@@ -361,11 +361,11 @@ And following in the `build.sbt`:
 ----
 Compile / PB.targets := Seq(
   scalapb.gen() -> (Compile / sourceManaged).value / "scalapb",
-  grpc_rest_gateway.gatewayGen() -> -> (Compile / sourceManaged).value / "scalapb",
-  grpc_rest_gateway.swaggerGen() -> -> (Compile / resourceManaged).value / "scalapb"
+  grpc_rest_gateway.gatewayGen() -> (Compile / sourceManaged).value / "scalapb",
+  grpc_rest_gateway.swaggerGen() -> (Compile / resourceManaged).value / "scalapb"
 )
 
-libraryDependencies += "io.github.sfali23" %% "grpc-rest-gateway-runtime" % "0.3.0"
+libraryDependencies += "io.github.sfali23" %% "grpc-rest-gateway-runtime" % "0.5.0"
 ----
 
 === Run tests and sample app
@@ -376,15 +376,19 @@ Tests can be run as follows:
 
 [source, shell]
 ----
-sbt "e2eJVM2_13 / test"
 sbt "e2eJVM2_12 / test"
+sbt "e2eJVM2_13 / test"
+sbt "e2eJVM3 / test"
 ----
 
 Sample app can be run as follows:
 
 [source, shell]
 ----
-sbt "e2e / run" // TODO: move test main to different module
+# within Intellij select either of e2eJVM2_12, e2eJVM2_13, or e2eJVM3 module and run
+# // TODO: figure out how to run via command line
+# Following will start the application but Swagger documentation doesn't load
+# sbt "e2eJVM2_13 / run"
 ----
 
 Open browser and paste following URL in address bar `http://localhost:7070/docs/index.html?urls.primaryName=TestServiceB#/`, you should see Open API specification for service.
