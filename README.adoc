@@ -362,7 +362,7 @@ addSbtPlugin("com.thesamet" % "sbt-protoc" % "1.0.7")
 
 libraryDependencies ++= Seq(
   "com.thesamet.scalapb" %% "compilerplugin" % "0.11.17",
-  "io.github.sfali23" % "grpc-rest-gateway-code-gen" % "0.5.1"
+  "io.github.sfali23" % "grpc-rest-gateway-code-gen" % "0.5.2"
 )
 resolvers += "Sonatype OSS" at "https://s01.oss.sonatype.org/content/groups/public/"
 ----
@@ -380,7 +380,7 @@ Compile / PB.targets := Seq(
 val ScalaPb: String = scalapb.compiler.Version.scalapbVersion
 val GrpcJava: String = scalapb.compiler.Version.grpcJavaVersion
 libraryDependencies ++= Seq(
-  "io.github.sfali23" %% "grpc-rest-gateway-runtime" % "0.5.1",
+  "io.github.sfali23" %% "grpc-rest-gateway-runtime" % "0.5.2",
   "com.thesamet.scalapb" %% "compilerplugin" % V.ScalaPb % "compile;protobuf",
     "com.thesamet.scalapb" %% "scalapb-runtime" % V.ScalaPb % "compile;protobuf",
     "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % V.ScalaPb,
