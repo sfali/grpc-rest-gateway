@@ -46,7 +46,8 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
   private val extendedFileDescriptor = ExtendedFileDescriptor(service.getFile)
   private val serviceName = service.getName
   private val scalaPackageName = extendedFileDescriptor.scalaPackage.fullName
-  private val outputFileName = scalaPackageName.replace('.', '/') + "/" + serviceName + "GatewayHandler.scala"
+  private val handlerClassName = serviceName + "GatewayHandler"
+  private val outputFileName = scalaPackageName.replace('.', '/') + "/" + handlerClassName + ".scala"
 
   lazy val result: CodeGeneratorResponse.File = {
     val b = CodeGeneratorResponse.File.newBuilder()
@@ -97,21 +98,32 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
             s"""private val $constantName = "$path""""
           }
       }
-    printer.add(s"object ${service.getName}GatewayHandler {").indent.seq(paths.toSeq).outdent.add("}")
+    printer
+      .add(s"object $handlerClassName {")
+      .indent
+      .seq(paths.toSeq)
+      .outdent
+      .newline
+      .indent
+      .add(s"def apply(channel: ManagedChannel)(implicit ec: ExecutionContext): $handlerClassName = ")
+      .indent
+      .add(s"new $handlerClassName(channel)")
+      .outdent
+      .outdent
+      .add("}")
   }
 
   private def generateService(service: ServiceDescriptor): PrinterEndo = { printer =>
     val descriptor = ExtendedServiceDescriptor(service)
     // this is NOT the FQN of the service, we are generating gateway handler in the same package as GRPC service
     val grpcService = descriptor.companionObject.name
-    val implName = s"${service.getName}GatewayHandler"
-    val methods: Seq[MethodDescriptor] = getUnaryCallsWithHttpExtension(service).toSeq
+    val methods = getUnaryCallsWithHttpExtension(service).toSeq
     printer
-      .add(s"class $implName(channel: ManagedChannel)(implicit ec: ExecutionContext)")
+      .add(s"class $handlerClassName(channel: ManagedChannel)(implicit ec: ExecutionContext)")
       .indent
       .add(
         "extends GrpcGatewayHandler(channel)(ec) {",
-        s"import $implName._",
+        s"import $handlerClassName._",
         s"""override val name: String = "${service.getName}"""",
         s"private val stub = $grpcService.stub(channel)"
       )
