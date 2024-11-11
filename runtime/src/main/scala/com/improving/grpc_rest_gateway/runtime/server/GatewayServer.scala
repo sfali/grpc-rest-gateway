@@ -65,15 +65,13 @@ object GatewayServer {
     config: Config,
     toHandlers: ManagedChannel => Seq[GrpcGatewayHandler],
     executor: Option[Executor]
-  ): GatewayServer = {
-    val restGatewayConfig = config.getConfig("rest-gateway")
+  ): GatewayServer =
     GatewayServer(
-      serviceHost = restGatewayConfig.getString("host"),
-      servicePort = restGatewayConfig.getInt("service-port"),
-      gatewayPort = restGatewayConfig.getInt("gateway-port"),
+      serviceHost = config.getString("host"),
+      servicePort = config.getInt("service-port"),
+      gatewayPort = config.getInt("gateway-port"),
       toHandlers = toHandlers,
-      usePlainText = restGatewayConfig.getBoolean("use-plain-text"),
+      usePlainText = config.getBoolean("use-plain-text"),
       executor = executor
     )
-  }
 }
