@@ -68,8 +68,8 @@ object GrpcServer {
       gatewayPort = gatewayPort,
       toHandlers = channel =>
         Seq(
-          new TestServiceAGatewayHandler(channel),
-          new TestServiceBGatewayHandler(channel)
+          TestServiceAGatewayHandler(channel),
+          TestServiceBGatewayHandler(channel)
         ),
       executor = Some(executorService)
     )

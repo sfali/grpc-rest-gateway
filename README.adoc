@@ -332,15 +332,25 @@ val server = GatewayServer(
       serviceHost = "localhost",
       servicePort = 8080, // assuming gRPC server is running on port 8080
       gatewayPort = 7070, // REST end point is running at port 7070
-      toHandlers = channel =>
-        Seq(new TestServiceBGatewayHandler(channel)),
-      executor = None // Executor is useful if you want to allocate different thread pool for REST endpoint
+      toHandlers = channel => Seq(TestServiceBGatewayHandler(channel)),
+      executor = None, // Executor is useful if you want to allocate different thread pool for REST endpoint
+      usePlainText = true
     )
 server.start()
 
 // stop server once done
 server.stop()
+
+// via Typesafe config
+val mainConfig = ConfigFactory.load()
+val server = GatewayServer(
+  config = mainConfig.getConfig("rest-gateway"),
+  toHandlers = channel => Seq(TestServiceBGatewayHandler(channel)),
+  executor = None
+)
 ----
+
+`serviceHost`, `servicePort`, `gatewayPort`, `usePlainText` can be override via environment variables `GRPC_HOST`, `GRPC_SERVICE_PORT`, `REST_GATEWAY_PORT`, and `GRPC_USE_PLAIN_TEXT` respectively.
 
 === Set up your project
 
@@ -352,7 +362,7 @@ addSbtPlugin("com.thesamet" % "sbt-protoc" % "1.0.7")
 
 libraryDependencies ++= Seq(
   "com.thesamet.scalapb" %% "compilerplugin" % "0.11.17",
-  "io.github.sfali23" % "grpc-rest-gateway-code-gen" % "0.5.1"
+  "io.github.sfali23" % "grpc-rest-gateway-code-gen" % "0.5.2"
 )
 resolvers += "Sonatype OSS" at "https://s01.oss.sonatype.org/content/groups/public/"
 ----
@@ -367,7 +377,17 @@ Compile / PB.targets := Seq(
   grpc_rest_gateway.swaggerGen() -> (Compile / resourceManaged).value / "scalapb"
 )
 
-libraryDependencies += "io.github.sfali23" %% "grpc-rest-gateway-runtime" % "0.5.1"
+val ScalaPb: String = scalapb.compiler.Version.scalapbVersion
+val GrpcJava: String = scalapb.compiler.Version.grpcJavaVersion
+libraryDependencies ++= Seq(
+  "io.github.sfali23" %% "grpc-rest-gateway-runtime" % "0.5.2",
+  "com.thesamet.scalapb" %% "compilerplugin" % V.ScalaPb % "compile;protobuf",
+    "com.thesamet.scalapb" %% "scalapb-runtime" % V.ScalaPb % "compile;protobuf",
+    "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % V.ScalaPb,
+    "io.grpc" % "grpc-netty" % V.GrpcJava,
+    "com.thesamet.scalapb" %% "scalapb-json4s" % V.ScalaPbJson,
+  "com.thesamet.scalapb.common-protos" %% "proto-google-common-protos-scalapb_0.11" % "2.9.6-0" % "compile,protobuf"
+)
 ----
 
 === Run tests and sample app
