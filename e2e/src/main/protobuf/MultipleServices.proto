@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package rest_gateway_test.api;
+
+import "scalapb/scalapb.proto";
+import "google/api/annotations.proto";
+
+option java_multiple_files = false;
+option java_package = "rest_gateway_test.api.java_api";
+option java_outer_classname = "TestServiceProto";
+
+option (scalapb.options) = {
+  single_file: false
+  lenses: true
+  retain_source_code_info: true
+  preserve_unknown_fields: false
+  package_name: "rest_gateway_test.api.scala_api"
+};
+
+service TestServiceC {
+  rpc GetRequest (Request) returns (Response) {
+    option (google.api.http) = {
+      get: "/restgateway/test/testservicec"
+    };
+  }
+}
+
+service TestServiceD {
+  rpc GetRequest (Request) returns (Response) {
+    option (google.api.http) = {
+      get: "/restgateway/test/testserviced"
+    };
+  }
+}
+
+message Request {
+  string message = 1;
+}
+
+message Response {
+  string message = 1;
+}
