@@ -1,6 +1,6 @@
 package rest_gateway_test
 
-import rest_gateway_test.api.model.common.{
+import rest_gateway_test.api.model.{
   GetMessageRequest,
   GetMessageRequestV2,
   GetMessageResponse,

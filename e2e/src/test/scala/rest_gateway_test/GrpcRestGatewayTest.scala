@@ -6,9 +6,9 @@ import io.grpc.StatusRuntimeException
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
-import rest_gateway_test.api.model.common.{GetMessageRequest, GetMessageRequestV2, TestRequestA, TestRequestB}
-import rest_gateway_test.api.scala_api.TestServiceA.TestServiceAGrpc
-import rest_gateway_test.api.scala_api.TestServiceB.TestServiceBGrpc
+import rest_gateway_test.api.model.{GetMessageRequest, GetMessageRequestV2, TestRequestA, TestRequestB}
+import rest_gateway_test.api.scala_api.TestServiceAGrpc
+import rest_gateway_test.api.scala_api.TestServiceBGrpc
 import rest_gateway_test.server.GrpcServer
 
 import java.util.concurrent.{ExecutorService, Executors}

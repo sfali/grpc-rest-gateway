@@ -3,14 +3,14 @@ package rest_gateway_test.service
 import com.google.rpc.{Code, Status}
 import io.grpc.protobuf.StatusProto
 import org.slf4j.LoggerFactory
-import rest_gateway_test.api.model.common.{
+import rest_gateway_test.api.model.{
   GetMessageRequest,
   GetMessageRequestV2,
   GetMessageResponse,
   TestRequestA,
   TestResponseA
 }
-import rest_gateway_test.api.scala_api.TestServiceA.TestServiceAGrpc
+import rest_gateway_test.api.scala_api.TestServiceAGrpc
 
 import scala.collection.mutable
 import scala.concurrent.Future
