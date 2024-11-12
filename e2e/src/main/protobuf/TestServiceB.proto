@@ -16,6 +16,7 @@ option (scalapb.options) = {
   lenses: true
   retain_source_code_info: true
   preserve_unknown_fields: false
+  flat_package: true
   package_name: "rest_gateway_test.api.scala_api"
 };
 
