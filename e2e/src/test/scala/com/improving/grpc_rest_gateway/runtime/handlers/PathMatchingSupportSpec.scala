@@ -100,20 +100,20 @@ class PathMatchingSupportSpec extends AnyWordSpec with Matchers with PathMatchin
 
     "get parameters when uri have request parameters but no path parameters" in {
       mergeParameters("/v1/messages", new QueryStringDecoder("/v1/messages?message_id=1")) shouldBe
-        Map("message_id" -> "1")
+        Map("message_id" -> Seq("1"))
     }
 
     "get parameters when uri doesn't have path parameters but no request parameters" in {
       mergeParameters("/v1/messages/{message_id}", new QueryStringDecoder("/v1/messages/1")) shouldBe
-        Map("message_id" -> "1")
+        Map("message_id" -> Seq("1"))
     }
 
     "get parameters when uri have both path parameters and request parameters" in {
       mergeParameters(
         "/v1/messages/{message_id}",
-        new QueryStringDecoder("/v1/messages/1?revision=2&date=2024-11-05")
+        new QueryStringDecoder("/v1/messages/1?revision=2&date=2024-11-05&revision=3&revision=4")
       ) shouldBe
-        Map("message_id" -> "1", "revision" -> "2", "date" -> "2024-11-05")
+        Map("message_id" -> Seq("1"), "revision" -> Seq("2", "3", "4"), "date" -> Seq("2024-11-05"))
     }
   }
 }
