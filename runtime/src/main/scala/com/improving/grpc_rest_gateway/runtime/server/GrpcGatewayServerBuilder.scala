@@ -25,7 +25,7 @@ case class GrpcGatewayServerBuilder(port: Int, services: Seq[GrpcGatewayHandler]
           ch.pipeline().addLast("codec", new HttpServerCodec())
           ch.pipeline().addLast("aggregator", new HttpObjectAggregator(512 * 1024))
           ch.pipeline().addLast("swagger", new SwaggerHandler(services))
-          services.foreach(handler => ch.pipeline().addLast(handler.name, handler))
+          services.foreach(handler => ch.pipeline().addLast(handler.serviceName, handler))
           ch.pipeline().addLast(new MethodNotFoundHandler())
         }
       })

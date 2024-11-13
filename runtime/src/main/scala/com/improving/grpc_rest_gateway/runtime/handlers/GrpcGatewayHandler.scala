@@ -22,7 +22,14 @@ abstract class GrpcGatewayHandler(channel: ManagedChannel)(implicit ec: Executio
 
   protected val logger: Logger = LoggerFactory.getLogger(getClass)
 
-  val name: String
+  /** Name of the service
+    */
+  val serviceName: String
+
+  /** Name of OpenAPI yaml file (without extension) which contains OpenAPI specification for this service. This would be
+    * the name of the proto file.
+    */
+  val specificationName: String
 
   def shutdown(): Unit = if (!channel.isShutdown) channel.shutdown()
 

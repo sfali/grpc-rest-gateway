@@ -24,4 +24,10 @@ package object compiler {
     extractPathInternal(http) +: http.getAdditionalBindingsList.asScala.map(extractPathInternal).toSeq
   }
 
+  def getProtoFileName(name: String): String = {
+    val separatorIndex = name.indexOf(".")
+    val nameWithoutExtension = if (separatorIndex >= 0) name.substring(0, separatorIndex) else name
+    nameWithoutExtension.replaceAll("\\.", "-")
+  }
+
 }
