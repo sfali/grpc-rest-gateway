@@ -45,6 +45,7 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
   private var pathsToConstantMap: Map[(PatternCase, String), String] = Map.empty
   private val extendedFileDescriptor = ExtendedFileDescriptor(service.getFile)
   private val serviceName = service.getName
+  private val specificationName = getProtoFileName(extendedFileDescriptor.file.getName)
   private val scalaPackageName = extendedFileDescriptor.scalaPackage.fullName
   private val handlerClassName = serviceName + "GatewayHandler"
   private val outputFileName = scalaPackageName.replace('.', '/') + "/" + handlerClassName + ".scala"
@@ -125,7 +126,8 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
       .add(
         "extends GrpcGatewayHandler(channel)(ec) {",
         s"import $handlerClassName._",
-        s"""override val name: String = "${service.getName}"""",
+        s"""override val serviceName: String = "${service.getName}"""",
+        s"""override val specificationName: String = "$specificationName"""",
         s"private val stub = $grpcService.stub(channel)"
       )
       .call(generateHttpMethodToUrisMap)

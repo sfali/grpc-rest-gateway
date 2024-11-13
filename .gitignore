@@ -23,16 +23,12 @@ projectFilesBackup/
 .classpath
 version.properties
 RUNNING_PID
-node_modules/
 .bloop/
 .metals/
 .vscode/
 .bsp
 sbt-cache/**
-akka-diagnostics/
 .toDelete
 **/buf*.yaml
-/~$SSD_Rules.xlsx
-cassandra-bundle.jar
 *.dylib
 run-release.sh
