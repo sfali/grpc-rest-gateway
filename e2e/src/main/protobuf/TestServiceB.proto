@@ -20,6 +20,7 @@ option (scalapb.options) = {
   package_name: "rest_gateway_test.api.scala_api"
 };
 
+// Test service B
 service TestServiceB {
   rpc GetRequest (rest_gateway_test.api.model.TestRequestB) returns (rest_gateway_test.api.model.TestResponseB) {
     option (google.api.http) = {

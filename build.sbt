@@ -68,10 +68,10 @@ lazy val protocGenGrpcRestGatewayPlugin = protocGenProject("protoc-gen-grpc-rest
     scalaVersion := Scala212
   )
 
-lazy val e2e = (project in file("e2e"))
-  .dependsOn(runtime.projectRefs(1))
+lazy val e2e = (projectMatrix in file("e2e"))
+  .dependsOn(runtime)
   .enablePlugins(LocalCodeGenPlugin, ScalafmtPlugin)
-  // .defaultAxes()
+  .defaultAxes()
   .settings(
     publish / skip := true,
     codeGenClasspath := (codeGenJVM212 / Compile / fullClasspath).value,
@@ -86,7 +86,7 @@ lazy val e2e = (project in file("e2e"))
       ) -> (Compile / resourceManaged).value / "specs"
     )
   )
-//.jvmPlatform(scalaVersions = Seq(Scala212, Scala213, Scala3))
+  .jvmPlatform(scalaVersions = Seq(Scala212, Scala213, Scala3))
 
 lazy val `grpc-rest-gateway` =
   project
