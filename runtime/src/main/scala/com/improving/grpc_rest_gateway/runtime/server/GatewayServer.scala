@@ -38,7 +38,7 @@ final class GatewayServerImpl(server: GrpcGatewayServer, port: Int) extends Gate
         logger.warn("Interrupted while shutting down " + this)
     }
 
-  override def toString: String = "{GatewayServer:port=" + port + "}"
+  override def toString: String = s"GatewayServer @ port: $port"
 }
 
 /** Create a Netty-backed REST Gateway for a given gRPC server with the request handlers created by a given factory
