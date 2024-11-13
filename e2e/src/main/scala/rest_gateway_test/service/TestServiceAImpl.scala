@@ -3,16 +3,17 @@ package rest_gateway_test.service
 import com.google.rpc.{Code, Status}
 import io.grpc.protobuf.StatusProto
 import org.slf4j.LoggerFactory
-import rest_gateway_test.api.model.common.{
+import rest_gateway_test.api.model.{
   GetMessageRequest,
   GetMessageRequestV2,
+  GetMessageRequestV3,
+  GetMessageRequestV4,
   GetMessageResponse,
   TestRequestA,
   TestResponseA
 }
-import rest_gateway_test.api.scala_api.TestServiceA.TestServiceAGrpc
+import rest_gateway_test.api.scala_api.TestServiceAGrpc
 
-import scala.collection.mutable
 import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
 
@@ -76,6 +77,19 @@ class TestServiceAImpl extends TestServiceAGrpc.TestServiceA {
   override def postMessage(request: GetMessageRequestV2): Future[GetMessageResponse] = getMessageV3(request)
 
   override def putMessage(request: GetMessageRequestV2): Future[GetMessageResponse] = getMessageV3(request)
+
+  override def getMessageV4(request: GetMessageRequestV3): Future[GetMessageResponse] =
+    Future.successful(
+      GetMessageResponse(s"""messageId: ${request.messageId.mkString("[", ", ", "]")}, color=${request.color}""")
+    )
+
+  override def getMessageV5(request: GetMessageRequestV4): Future[GetMessageResponse] =
+    Future.successful(GetMessageResponse(s"""colors: ${request.colors.map(_.name).mkString("[", ", ", "]")}, 
+                                            | doubles: ${request.doubles.mkString("[", ", ", "]")},
+                                            | floats: ${request.floats.mkString("[", ", ", "]")},
+                                            | longs: ${request.longs.mkString("[", ", ", "]")},
+                                            | booleans: ${request.booleans.mkString("[", ", ", "]")}
+                                            |""".stripMargin))
 
   private def validateRequestId(requestId: Long) =
     if (requestId <= 0) {

@@ -5,10 +5,11 @@ package rest_gateway_test.api.model;
 import "scalapb/scalapb.proto";
 
 option (scalapb.options) = {
-    single_file: false
+    single_file: true
     lenses: true
     retain_source_code_info: true
     preserve_unknown_fields: false
+    flat_package: true
     no_default_values_in_constructor: true
 };
 
@@ -61,4 +62,17 @@ message GetMessageRequestV2 {
     int32 message_id = 1;
     string user_id = 2;
     SubMessage sub = 3;
+}
+
+message GetMessageRequestV3 {
+    repeated int32 message_id = 1;
+    Color color = 2;
+}
+
+message GetMessageRequestV4 {
+    repeated Color colors = 1;
+    repeated double doubles = 2;
+    repeated float floats = 3;
+    repeated int64 longs = 4;
+    repeated bool booleans = 5;
 }

@@ -6,9 +6,18 @@ import io.grpc.StatusRuntimeException
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
-import rest_gateway_test.api.model.common.{GetMessageRequest, GetMessageRequestV2, TestRequestA, TestRequestB}
-import rest_gateway_test.api.scala_api.TestServiceA.TestServiceAGrpc
-import rest_gateway_test.api.scala_api.TestServiceB.TestServiceBGrpc
+import rest_gateway_test.api.model.Color.{BLUE, GREEN, RED}
+import rest_gateway_test.api.model.{
+  Color,
+  GetMessageRequest,
+  GetMessageRequestV2,
+  GetMessageRequestV3,
+  GetMessageRequestV4,
+  TestRequestA,
+  TestRequestB
+}
+import rest_gateway_test.api.scala_api.TestServiceAGrpc
+import rest_gateway_test.api.scala_api.TestServiceBGrpc
 import rest_gateway_test.server.GrpcServer
 
 import java.util.concurrent.{ExecutorService, Executors}
@@ -153,6 +162,32 @@ class GrpcRestGatewayTest extends AnyWordSpec with Matchers with BeforeAndAfterA
         sub = Some(GetMessageRequestV2.SubMessage(subField1 = 2.0, subField2 = 2.14f))
       )
       serviceAStub.putMessage(request) shouldBe restClient.putMessage(request)
+    }
+
+    "GetMessageV4" in {
+      val request = GetMessageRequestV3(messageId = 0 to 5, color = RED)
+      serviceAStub.getMessageV4(request) shouldBe restClient.getMessageV4(request)
+    }
+
+    "GetMessageV4 with no color" in {
+      val request = GetMessageRequestV3(messageId = 0 to 3, color = Color.Unrecognized(50))
+      serviceAStub.getMessageV4(request) shouldBe restClient.getMessageV4(request)
+    }
+
+    "GetMessageV4 no message id" in {
+      val request = GetMessageRequestV3(messageId = Seq.empty, color = BLUE)
+      serviceAStub.getMessageV4(request) shouldBe restClient.getMessageV4(request)
+    }
+
+    "GetMessageV5" in {
+      val request = GetMessageRequestV4(
+        colors = Seq(RED, GREEN, BLUE),
+        doubles = (0 to 3).map(_.toDouble),
+        floats = (0 to 4).map(_.toFloat),
+        longs = (0 to 2).map(_.toLong),
+        booleans = Seq(true, false, true)
+      )
+      serviceAStub.getMessageV5(request) shouldBe restClient.getMessageV5(request)
     }
   }
 

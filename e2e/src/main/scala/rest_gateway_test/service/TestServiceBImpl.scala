@@ -1,8 +1,8 @@
 package rest_gateway_test.service
 
 import org.slf4j.LoggerFactory
-import rest_gateway_test.api.model.common.{TestRequestB, TestResponseB}
-import rest_gateway_test.api.scala_api.TestServiceB.TestServiceBGrpc
+import rest_gateway_test.api.model.{TestRequestB, TestResponseB}
+import rest_gateway_test.api.scala_api.TestServiceBGrpc
 
 import scala.concurrent.Future
 

@@ -123,14 +123,14 @@ trait PathMatchingSupport {
     runtimePath: String
   ): Boolean = configuredMethodName == runtimeMethodName && isMatchingPaths(configuredPath, runtimePath)
 
-  protected def mergeParameters(configuredPath: String, queryString: QueryStringDecoder): Map[String, String] = {
+  protected def mergeParameters(configuredPath: String, queryString: QueryStringDecoder): Map[String, Seq[String]] = {
     val path = queryString.path()
     val flattenQueryParameters =
       queryString
         .parameters()
         .asScala
         .map { case (key, values) =>
-          key -> values.asScala.head
+          key -> values.asScala.toSeq
         }
         .toMap
 
@@ -147,8 +147,10 @@ trait PathMatchingSupport {
       val mismatchPaths = configuredToRuntimeDiff.exists(s => !s.contains("#"))
       if (!mismatchPaths && configuredToRuntimeDiff.length == runtimeToConfiguredDiff.length) {
         // now remove "#"
-        val pathParameters = configuredToRuntimeDiff.map(_.replaceAll("#", "")).zip(runtimeToConfiguredDiff).toMap
-        Map.empty[String, String] ++ pathParameters ++ flattenQueryParameters
+        val pathParameters = configuredToRuntimeDiff.map(_.replaceAll("#", "")).zip(runtimeToConfiguredDiff).toMap.map {
+          case (key, value) => key -> Seq(value)
+        }
+        Map.empty[String, Seq[String]] ++ pathParameters ++ flattenQueryParameters
       } else flattenQueryParameters
     }
   }
