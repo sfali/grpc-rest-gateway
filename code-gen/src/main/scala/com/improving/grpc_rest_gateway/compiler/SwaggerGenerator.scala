@@ -46,7 +46,7 @@ private class SwaggerMessagePrinter(fd: FileDescriptor, implicits: DescriptorImp
 
   import implicits._
 
-  private val services = fd.getServices.asScala
+  private val services = fd.getServices.asScala.toSeq
 
   lazy val result: CodeGeneratorResponse.File = {
     val b = CodeGeneratorResponse.File.newBuilder()
