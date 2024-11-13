@@ -2,10 +2,10 @@ package com.improving
 package grpc_rest_gateway
 package compiler
 
-import com.google.api.{AnnotationsProto, HttpRule}
+import com.google.api.AnnotationsProto
 import com.google.api.HttpRule.PatternCase
 import com.google.protobuf.Descriptors.FieldDescriptor.JavaType
-import com.google.protobuf.Descriptors.{Descriptor, FieldDescriptor, MethodDescriptor, ServiceDescriptor}
+import com.google.protobuf.Descriptors.{Descriptor, FieldDescriptor, FileDescriptor, MethodDescriptor, ServiceDescriptor}
 import com.google.protobuf.ExtensionRegistry
 import com.google.protobuf.compiler.PluginProtos.CodeGeneratorResponse
 import protocgen.{CodeGenApp, CodeGenRequest, CodeGenResponse}
@@ -31,67 +31,40 @@ object SwaggerGenerator extends CodeGenApp {
         val implicits = DescriptorImplicits.fromCodeGenRequest(params, request)
 
         CodeGenResponse.succeed(
-          for {
-            file <- request.filesToGenerate
-            sd <- file.getServices.asScala
-          } yield new SwaggerMessagePrinter(sd, implicits).result
+          request
+            .filesToGenerate
+            .filter(_.getServices.asScala.nonEmpty)
+            .map(fd => new SwaggerMessagePrinter(fd, implicits))
+            .map(_.result)
         )
 
       case Left(error) => CodeGenResponse.fail(error)
     }
 }
 
-private class SwaggerMessagePrinter(service: ServiceDescriptor, implicits: DescriptorImplicits) {
+private class SwaggerMessagePrinter(fd: FileDescriptor, implicits: DescriptorImplicits) {
 
   import implicits._
 
-  private val extendedFileDescriptor = ExtendedFileDescriptor(service.getFile)
-  private val serviceName = service.getName
-
-  private val outputFileName = serviceName + ".yml"
+  private val services = fd.getServices.asScala
 
   lazy val result: CodeGeneratorResponse.File = {
     val b = CodeGeneratorResponse.File.newBuilder()
-    b.setName(outputFileName)
+    b.setName(s"${getProtoFileName(fd.getName)}.yml")
     b.setContent(content)
     b.build()
   }
 
-  lazy val content: String = {
-    val methods =
-      service.getMethods.asScala.filter { m =>
-        val options = m.toProto.getOptions
-        // only unary calls with http method specified
-        !m.isClientStreaming && !m.isServerStreaming && options.hasExtension(AnnotationsProto.http)
-      }
-
-    val paths: mutable.Map[String, Seq[(PatternCase, MethodDescriptor)]] =
-      methods
-        .flatMap { method =>
-          val paths = extractPaths(method)
-          paths.map { tuple =>
-            tuple -> method
-          }
-        }
-        .foldLeft(mutable.Map.empty[String, Seq[(PatternCase, MethodDescriptor)]]) {
-          case (result, ((patternCase, path, _), method)) =>
-            val updatedValues =
-              result.get(path) match {
-                case Some(values) => values :+ ((patternCase, method))
-                case None         => Seq.empty[(PatternCase, MethodDescriptor)] :+ ((patternCase, method))
-              }
-            result + (path -> updatedValues)
-        }
-
-    val definitions = methods.flatMap(m => extractDefs(m.getInputType) ++ extractDefs(m.getOutputType)).toSet
-
+  lazy val content: String =
     new FunctionalPrinter()
-      .add("swagger: '2.0'", "info:")
+      .add("---", "swagger: '2.0'", "info:")
       .addIndented(
-        s"version: 3.1.0",
-        s"title: '${extendedFileDescriptor.fileDescriptorObject.fullName}'",
-        s"description: 'REST API generated from $serviceName'"
+        "version: 3.1.0",
+        s"description: 'REST API generated from ${fd.getName}'",
+        s"title: '${fd.getFullName}'"
       )
+      .add("tags:")
+      .call(generateTags)
       .add("schemes:")
       .addIndented("- http", "- https")
       .add("consumes:")
@@ -100,16 +73,65 @@ private class SwaggerMessagePrinter(service: ServiceDescriptor, implicits: Descr
       .addIndented("- 'application/json'")
       .add("paths:")
       .indent
-      .print(paths) { case (p, (path, pathMethods)) => generatePath(path, pathMethods)(p) }
+      .print(services) { case (p, service) => generatePaths(service)(p) }
       .outdent
       .add("definitions:")
       .indent
-      .print(definitions) { case (p, d) => generateDefinition(d)(p) }
+      .call(generateDefinitions(services))
       .outdent
       .result()
+
+  private def generateTags: PrinterEndo = { printer =>
+    def generateTag(sd: ExtendedServiceDescriptor): PrinterEndo = { printer =>
+      printer
+        .indent
+        .add(s"- name: ${sd.name}")
+        .add(s"  description: ${sd.comment.map(_.trim).getOrElse(sd.name)}")
+        .outdent
+    }
+    printer.print(services.map(s => ExtendedServiceDescriptor(s))) { case (p, sd) => generateTag(sd)(p) }
   }
 
-  private def extractDefs(d: Descriptor): Set[Descriptor] = {
+  private def generatePaths(service: ServiceDescriptor): PrinterEndo =
+    _.print(getPaths(service)) { case (p, (path, pathMethods)) => generatePath(path, pathMethods)(p) }
+
+  private def generateDefinitions(services: Seq[ServiceDescriptor]): PrinterEndo = { printer =>
+    val definitions = services.flatMap(getDefinitions).toSet
+    printer.print(definitions) { case (p, definition) => generateDefinition(definition)(p) }
+  }
+
+  private def getMethods(service: ServiceDescriptor) =
+    service
+      .getMethods
+      .asScala
+      .filter { m =>
+        val options = m.toProto.getOptions
+        // only unary calls with http method specified
+        !m.isClientStreaming && !m.isServerStreaming && options.hasExtension(AnnotationsProto.http)
+      }
+
+  private def getPaths(service: ServiceDescriptor) =
+    getMethods(service)
+      .flatMap { method =>
+        val paths = extractPaths(method)
+        paths.map { tuple =>
+          tuple -> method
+        }
+      }
+      .foldLeft(Map.empty[String, Seq[(PatternCase, MethodDescriptor)]]) {
+        case (result, ((patternCase, path, _), method)) =>
+          val updatedValues =
+            result.get(path) match {
+              case Some(values) => values :+ ((patternCase, method))
+              case None         => Seq.empty[(PatternCase, MethodDescriptor)] :+ ((patternCase, method))
+            }
+          result + (path -> updatedValues)
+      }
+
+  private def getDefinitions(service: ServiceDescriptor) =
+    getMethods(service).flatMap(m => extractDefs(m.getInputType) ++ extractDefs(m.getOutputType)).toSet
+
+  private def extractDefs(d: Descriptor) = {
     val explored = mutable.Set.empty[Descriptor]
     def extractDefsRec(d: Descriptor): Set[Descriptor] =
       if (explored.contains(d)) Set()
@@ -184,13 +206,15 @@ private class SwaggerMessagePrinter(service: ServiceDescriptor, implicits: Descr
     }
   }
 
-  private def generateMethodInfo(m: MethodDescriptor): PrinterEndo =
+  private def generateMethodInfo(m: MethodDescriptor): PrinterEndo = {
+    val descriptor = ExtendedMethodDescriptor(m)
+    val description = descriptor.comment.filterNot(_.isBlank).getOrElse(s"'Generated from ${m.getFullName}'").trim
     _.add("tags:")
       .addIndented(s"- ${m.getService.getName}")
       .add("summary:")
       .addIndented(s"'${m.getName}'")
       .add("description:")
-      .addIndented(s"'Generated from ${m.getFullName}'")
+      .addIndented(description)
       .add("produces:")
       .addIndented("['application/json']")
       .add("responses:")
@@ -202,6 +226,7 @@ private class SwaggerMessagePrinter(service: ServiceDescriptor, implicits: Descr
       .addIndented(s"""$$ref: "#/definitions/${m.getOutputType.getName}"""")
       .outdent
       .outdent
+  }
 
   private def generateBodyParameters(inputType: Descriptor): PrinterEndo =
     _.add("parameters:")
