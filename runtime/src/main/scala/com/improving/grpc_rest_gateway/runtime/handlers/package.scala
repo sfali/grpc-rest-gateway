@@ -12,6 +12,7 @@ import io.netty.handler.codec.http.{
   HttpResponseStatus,
   HttpUtil
 }
+import scalapb.{GeneratedEnum, GeneratedEnumCompanion}
 import scalapb.json4s.JsonFormatException
 
 import java.nio.charset.StandardCharsets
@@ -67,12 +68,62 @@ package object handlers {
     case err => Failure(InvalidArgument("Wrong json input. Check proto file. Details: " + err.getMessage))
   }
 
-  implicit class ParametersOps(src: Map[String, String]) {
+  implicit class ParametersOps(src: Map[String, Seq[String]]) {
 
-    def toInt(key: String, defaultValue: String = "0"): Int = src.getOrElse(key, defaultValue).toInt
-    def toLong(key: String, defaultValue: String = "0"): Long = src.getOrElse(key, defaultValue).toLong
-    def toDouble(key: String, defaultValue: String = "0"): Double = src.getOrElse(key, defaultValue).toDouble
-    def toFloat(key: String, defaultValue: String = "0"): Float = src.getOrElse(key, defaultValue).toFloat
-    def toStringValue(key: String): String = src.getOrElse(key, "")
+    def toIntValue(key: String, defaultValue: String = "0"): Int =
+      src.get(key).flatMap(_.headOption).getOrElse(defaultValue).toInt
+
+    def toIntValues(key: String): Seq[Int] = {
+      def toValues(values: Seq[String]) = values.map(v => Try(v.toInt).getOrElse(0))
+      toValues(src.getOrElse(key, Seq.empty))
+    }
+
+    def toLongValue(key: String, defaultValue: String = "0"): Long =
+      src.get(key).flatMap(_.headOption).getOrElse(defaultValue).toLong
+
+    def toLongValues(key: String): Seq[Long] = {
+      def toValues(values: Seq[String]) = values.map(v => Try(v.toLong).getOrElse(0L))
+      toValues(src.getOrElse(key, Seq.empty))
+    }
+
+    def toDoubleValue(key: String, defaultValue: String = "0"): Double =
+      src.get(key).flatMap(_.headOption).getOrElse(defaultValue).toDouble
+
+    def toDoubleValues(key: String): Seq[Double] = {
+      def toValues(values: Seq[String]) = values.map(v => Try(v.toDouble).getOrElse(0.0))
+      toValues(src.getOrElse(key, Seq.empty))
+    }
+
+    def toFloatValue(key: String, defaultValue: String = "0"): Float =
+      src.get(key).flatMap(_.headOption).getOrElse(defaultValue).toFloat
+
+    def toFloatValues(key: String): Seq[Float] = {
+      def toValues(values: Seq[String]) = values.map(v => Try(v.toFloat).getOrElse(0.0f))
+      toValues(src.getOrElse(key, Seq.empty))
+    }
+
+    def toBooleanValue(key: String, defaultValue: String = "false"): Boolean =
+      src.get(key).flatMap(_.headOption).getOrElse(defaultValue).toBoolean
+
+    def toBooleanValues(key: String): Seq[Boolean] = {
+      def toValues(values: Seq[String]) = values.map(v => Try(v.toBoolean).getOrElse(false))
+      toValues(src.getOrElse(key, Seq.empty))
+    }
+
+    def toStringValue(key: String): String = src.get(key).flatMap(_.headOption).getOrElse("")
+
+    def toStringValues(key: String): Seq[String] = src.getOrElse(key, Seq.empty)
+
+    def toEnumValue[T <: GeneratedEnum](key: String, companion: GeneratedEnumCompanion[T]): T =
+      toEnumValueInternal(toStringValue(key), companion)
+
+    def toEnumValues[T <: GeneratedEnum](key: String, companion: GeneratedEnumCompanion[T]): Seq[T] =
+      toStringValues(key).map(v => toEnumValueInternal(v, companion))
+
+    private def toEnumValueInternal[T <: GeneratedEnum](value: String, companion: GeneratedEnumCompanion[T]): T =
+      Try(value.toInt).toOption.map(companion.fromValue) match {
+        case Some(value) => value
+        case None        => companion.fromName(value).getOrElse(companion.fromValue(-1))
+      }
   }
 }

@@ -281,7 +281,7 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
               inputTypeDescriptor.getFields.asScala.map(f => s"${f.getJsonName} = ${f.getJsonName}").mkString(", ")
             printer
               .indent
-              .add(s"""private def $delegateFunctionName(body: String, parameters: Map[String, String]) = {""")
+              .add(s"""private def $delegateFunctionName(body: String, parameters: Map[String, Seq[String]]) = {""")
               .indent
               .add("val parsedBody = ")
               .when(optional)(
@@ -349,7 +349,7 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
       case PatternCase.GET | PatternCase.DELETE | PatternCase.PATCH =>
         printer
           .indent
-          .add(s"""private def $delegateFunctionName(parameters: Map[String, String]) = {""")
+          .add(s"""private def $delegateFunctionName(parameters: Map[String, Seq[String]]) = {""")
           .indent
           .add("val input = Try {")
           .indent
@@ -434,24 +434,51 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
             .outdent
             .when(required)(_.add("}"))
             .when(optional)(_.add("}.toOption"))
+
         case JavaType.ENUM =>
-          p.add(s"""val $jsonName = ${f.getName}.valueOf(parameters.getOrElse("$prefix$inputName", ""))""")
+          p.when(f.isRepeated)(
+            _.add(s"""val $jsonName = parameters.toEnumValues("$prefix$inputName", ${f.singleScalaTypeName})""")
+          ).when(!f.isRepeated)(
+            _.add(
+              s"""val $jsonName = parameters.toEnumValue("$prefix$inputName", ${f.singleScalaTypeName})"""
+            )
+          )
+
         case JavaType.BOOLEAN =>
-          p.add(s"""val $jsonName = parameters.getOrElse("$prefix$inputName", "").toBoolean""")
+          if (f.isRepeated) p.add(s"""val $jsonName = parameters.toBooleanValues("$prefix$inputName")""")
+          else
+            p.add(s"""val $jsonName = parameters.toBooleanValue("$prefix$inputName")""")
+
         case JavaType.DOUBLE =>
-          p.when(required)(_.add(s"""val $jsonName = parameters.toDouble("$prefix$inputName")"""))
-            .when(!required)(_.add(s"""val $jsonName = parameters.toDouble("$prefix$inputName", "")"""))
+          if (f.isRepeated) p.add(s"""val $jsonName = parameters.toDoubleValues("$prefix$inputName")""")
+          else
+            p.when(required)(_.add(s"""val $jsonName = parameters.toDoubleValue("$prefix$inputName")"""))
+              .when(!required)(_.add(s"""val $jsonName = parameters.toDoubleValue("$prefix$inputName", "")"""))
+
         case JavaType.FLOAT =>
-          p.when(required)(_.add(s"""val $jsonName = parameters.toFloat("$prefix$inputName")"""))
-            .when(!required)(_.add(s"""val $jsonName = parameters.toFloat("$prefix$inputName", "")"""))
+          if (f.isRepeated) p.add(s"""val $jsonName = parameters.toFloatValues("$prefix$inputName")""")
+          else
+            p.when(required)(_.add(s"""val $jsonName = parameters.toFloatValue("$prefix$inputName")"""))
+              .when(!required)(_.add(s"""val $jsonName = parameters.toFloatValue("$prefix$inputName", "")"""))
+
         case JavaType.INT =>
-          p.when(required)(_.add(s"""val $jsonName = parameters.toInt("$prefix$inputName")"""))
-            .when(!required)(_.add(s"""val $jsonName = parameters.toInt("$prefix$inputName", "")"""))
+          if (f.isRepeated)
+            p.add(s"""val $jsonName = parameters.toIntValues("$prefix$inputName")""")
+          else
+            p.when(required)(_.add(s"""val $jsonName = parameters.toIntValue("$prefix$inputName")"""))
+              .when(!required)(_.add(s"""val $jsonName = parameters.toIntValue("$prefix$inputName", "")"""))
+
         case JavaType.LONG =>
-          p.when(required)(_.add(s"""val $jsonName = parameters.toLong("$prefix$inputName")"""))
-            .when(!required)(_.add(s"""val $jsonName = parameters.toLong("$prefix$inputName", "")"""))
-        case JavaType.STRING => p.add(s"""val $jsonName = parameters.toStringValue("$prefix$inputName")""")
-        case jt              => throw new Exception(s"Unknown java type: $jt")
+          if (f.isRepeated) p.add(s"""val $jsonName = parameters.toLongValues("$prefix$inputName")""")
+          else
+            p.when(required)(_.add(s"""val $jsonName = parameters.toLongValue("$prefix$inputName")"""))
+              .when(!required)(_.add(s"""val $jsonName = parameters.toLongValue("$prefix$inputName", "")"""))
+
+        case JavaType.STRING =>
+          if (f.isRepeated) p.add(s"""val $jsonName = parameters.toStringValues("$prefix$inputName")""")
+          else
+            p.add(s"""val $jsonName = parameters.toStringValue("$prefix$inputName")""")
+        case jt => throw new Exception(s"Unknown java type: $jt")
       }
     }
 

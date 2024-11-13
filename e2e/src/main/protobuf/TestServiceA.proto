@@ -75,6 +75,18 @@ service TestServiceA {
       body: "sub"
     };
   };
+
+  rpc GetMessageV4 (rest_gateway_test.api.model.GetMessageRequestV3) returns (rest_gateway_test.api.model.GetMessageResponse) {
+    option (google.api.http) = {
+      get: "/v1/test/messages"
+    };
+  }
+
+  rpc GetMessageV5 (rest_gateway_test.api.model.GetMessageRequestV4) returns (rest_gateway_test.api.model.GetMessageResponse) {
+    option (google.api.http) = {
+      get: "/v1/test/array"
+    };
+  }
 }
 
 

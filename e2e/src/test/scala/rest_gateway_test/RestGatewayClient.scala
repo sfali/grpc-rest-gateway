@@ -3,6 +3,8 @@ package rest_gateway_test
 import rest_gateway_test.api.model.{
   GetMessageRequest,
   GetMessageRequestV2,
+  GetMessageRequestV3,
+  GetMessageRequestV4,
   GetMessageResponse,
   TestRequestB,
   TestResponseA,
@@ -94,6 +96,21 @@ class RestGatewayClient(gatewayPort: Int) {
       case Left(ex)    => throw new RuntimeException(ex)
       case Right(body) => JsonFormat.fromJsonString[GetMessageResponse](body)
     }
+
+  def getMessageV4(request: GetMessageRequestV3): GetMessageResponse = {
+    val params = request.messageId.map(v => "message_id" -> v.toString) :+ ("color" -> request.color.name)
+    val uri = uri"$baseUrl/v1/test/messages".withParams(params: _*)
+    getMessage(uri)
+  }
+
+  def getMessageV5(request: GetMessageRequestV4): GetMessageResponse = {
+    val params =
+      request.colors.map(v => "colors" -> v.name) ++ request.doubles.map(v => "doubles" -> v.toString) ++
+        request.floats.map(v => "floats" -> v.toString) ++ request.longs.map(v => "longs" -> v.toString) ++
+        request.booleans.map(v => "booleans" -> v.toString)
+    val uri = uri"$baseUrl/v1/test/array".withParams(params: _*)
+    getMessage(uri)
+  }
 
   private def getMessage(uri: Uri): GetMessageResponse = {
     val response = client.send(basicRequest.get(uri).response(asString))
