@@ -12,7 +12,6 @@ object Dependencies {
     val ScalaPb: String = scalapb.compiler.Version.scalapbVersion
     val ScalaPbJson = "0.12.1"
     val ScalaTest = "3.2.19"
-    val ScalaXml = "2.2.0"
     val Slf4j = "2.0.12"
     val Sttp = "3.10.1"
     val SwaggerUi = "5.17.14"
@@ -26,7 +25,6 @@ object Dependencies {
 
   val RuntimeDependencies: Seq[ModuleID] = Seq(
     "javax.activation" % "activation" % V.JavaActivation,
-    "org.scala-lang.modules" %% "scala-xml" % V.ScalaXml,
     "commons-io" % "commons-io" % V.CommonsIo,
     "com.thesamet.scalapb" %% "compilerplugin" % V.ScalaPb,
     "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % V.ScalaPb,
