@@ -10,7 +10,7 @@ import rest_gateway_test.api.model.{
   TestResponseA,
   TestResponseB
 }
-import sttp.client3._
+import sttp.client3.*
 import scalapb.json4s.JsonFormat
 import sttp.model.Uri
 
@@ -99,7 +99,7 @@ class RestGatewayClient(gatewayPort: Int) {
 
   def getMessageV4(request: GetMessageRequestV3): GetMessageResponse = {
     val params = request.messageId.map(v => "message_id" -> v.toString) :+ ("color" -> request.color.name)
-    val uri = uri"$baseUrl/v1/test/messages".withParams(params: _*)
+    val uri = uri"$baseUrl/v1/test/messages".withParams(params*)
     getMessage(uri)
   }
 
@@ -108,7 +108,7 @@ class RestGatewayClient(gatewayPort: Int) {
       request.colors.map(v => "colors" -> v.name) ++ request.doubles.map(v => "doubles" -> v.toString) ++
         request.floats.map(v => "floats" -> v.toString) ++ request.longs.map(v => "longs" -> v.toString) ++
         request.booleans.map(v => "booleans" -> v.toString)
-    val uri = uri"$baseUrl/v1/test/array".withParams(params: _*)
+    val uri = uri"$baseUrl/v1/test/array".withParams(params*)
     getMessage(uri)
   }
 
