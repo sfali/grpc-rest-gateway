@@ -5,7 +5,7 @@ import com.google.api.{AnnotationsProto, HttpRule}
 import com.google.api.HttpRule.PatternCase
 import com.google.protobuf.Descriptors.MethodDescriptor
 
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 
 package object compiler {
 

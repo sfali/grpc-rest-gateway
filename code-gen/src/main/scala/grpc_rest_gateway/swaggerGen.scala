@@ -20,5 +20,5 @@ object swaggerGen {
       options.map(_.toString)
     )
 
-  def apply(options: Set[GeneratorOption] = Set.empty): (SandboxedJvmGenerator, Seq[String]) = apply(options.toSeq: _*)
+  def apply(options: Set[GeneratorOption] = Set.empty): (SandboxedJvmGenerator, Seq[String]) = apply(options.toSeq*)
 }

@@ -6,14 +6,14 @@ package handlers
 import io.grpc.{ManagedChannel, StatusRuntimeException}
 import io.netty.channel.ChannelHandler.Sharable
 import io.netty.channel.{ChannelFutureListener, ChannelHandlerContext, ChannelInboundHandlerAdapter}
-import io.netty.handler.codec.http._
+import io.netty.handler.codec.http.*
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import scalapb.json4s.JsonFormat
 
 import java.nio.charset.StandardCharsets
 import scala.concurrent.{ExecutionContext, Future}
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 
 @Sharable
 abstract class GrpcGatewayHandler(channel: ManagedChannel)(implicit ec: ExecutionContext)
@@ -46,49 +46,49 @@ abstract class GrpcGatewayHandler(channel: ManagedChannel)(implicit ec: Executio
     */
   protected def dispatchCall(method: HttpMethod, uri: String, body: String): Future[GeneratedMessage]
 
+  // TODO: figure out how to cross compile and pattern match
   override def channelRead(ctx: ChannelHandlerContext, msg: scala.Any): Unit =
-    msg match {
-      case req: FullHttpRequest =>
-        if (supportsCall(req.method(), req.uri())) {
-          val body = req.content().toString(StandardCharsets.UTF_8)
+    if (msg.isInstanceOf[FullHttpRequest]) {
+      val req = msg.asInstanceOf[FullHttpRequest]
+      if (supportsCall(req.method(), req.uri())) {
+        val body = req.content().toString(StandardCharsets.UTF_8)
 
-          dispatchCall(req.method(), req.uri(), body)
-            .map(JsonFormat.toJsonString)
-            .map { json =>
-              buildFullHttpResponse(
-                requestMsg = req,
-                responseBody = json,
-                responseStatus = HttpResponseStatus.OK,
-                responseContentType = "application/json"
-              )
+        dispatchCall(req.method(), req.uri(), body)
+          .map(JsonFormat.toJsonString)
+          .map { json =>
+            buildFullHttpResponse(
+              requestMsg = req,
+              responseBody = json,
+              responseStatus = HttpResponseStatus.OK,
+              responseContentType = "application/json"
+            )
+          }
+          .recover { case err =>
+            val (body, status) = err match {
+              case e: GatewayException =>
+                e.details -> GRPC_HTTP_CODE_MAP.getOrElse(e.code, HttpResponseStatus.INTERNAL_SERVER_ERROR)
+              case err: StatusRuntimeException =>
+                val grpcStatus = err.getStatus
+                grpcStatus.getDescription -> GRPC_HTTP_CODE_MAP.getOrElse(
+                  grpcStatus.getCode.value(),
+                  HttpResponseStatus.INTERNAL_SERVER_ERROR
+                )
+              case ex =>
+                logger.warn("unable to generate json response", ex)
+                s"Internal error: ${ex.getMessage}" -> HttpResponseStatus.INTERNAL_SERVER_ERROR
             }
-            .recover { case err =>
-              val (body, status) = err match {
-                case e: GatewayException =>
-                  e.details -> GRPC_HTTP_CODE_MAP.getOrElse(e.code, HttpResponseStatus.INTERNAL_SERVER_ERROR)
-                case err: StatusRuntimeException =>
-                  val grpcStatus = err.getStatus
-                  grpcStatus.getDescription -> GRPC_HTTP_CODE_MAP.getOrElse(
-                    grpcStatus.getCode.value(),
-                    HttpResponseStatus.INTERNAL_SERVER_ERROR
-                  )
-                case ex =>
-                  logger.warn("unable to generate json response", ex)
-                  s"Internal error: ${ex.getMessage}" -> HttpResponseStatus.INTERNAL_SERVER_ERROR
-              }
 
-              buildFullHttpResponse(
-                requestMsg = req,
-                responseBody = body,
-                responseStatus = status,
-                responseContentType = "application/text"
-              )
-            }
-            .foreach(resp => ctx.writeAndFlush(resp).addListener(ChannelFutureListener.CLOSE))
+            buildFullHttpResponse(
+              requestMsg = req,
+              responseBody = body,
+              responseStatus = status,
+              responseContentType = "application/text"
+            )
+          }
+          .foreach(resp => ctx.writeAndFlush(resp).addListener(ChannelFutureListener.CLOSE))
 
-        } else super.channelRead(ctx, msg)
-      case _ => super.channelRead(ctx, msg)
-    }
+      } else super.channelRead(ctx, msg)
+    } else super.channelRead(ctx, msg)
 }
 
 /** Helper trait to make URI path matching. This is done to make testing easier.

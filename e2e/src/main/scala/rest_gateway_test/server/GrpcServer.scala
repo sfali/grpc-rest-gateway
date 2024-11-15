@@ -14,25 +14,27 @@ import scala.concurrent.ExecutionContext
 
 class GrpcServer(port: Int = GrpcPort) {
   private val logger = LoggerFactory.getLogger(classOf[GrpcServer])
-  private[this] var server: Server = _
+  private var server: Option[Server] = None
 
-  private def start(executionContext: ExecutionContext): Server = {
-    server = ServerBuilder
-      .forPort(port)
-      .addService(TestServiceAGrpc.bindService(new TestServiceAImpl, executionContext))
-      .asInstanceOf[ServerBuilder[_]]
-      .addService(TestServiceBGrpc.bindService(new TestServiceBImpl, executionContext))
-      .asInstanceOf[ServerBuilder[_]]
-      .build()
-      .start()
+  private def start(executionContext: ExecutionContext): Option[Server] = {
+    server = Some(
+      ServerBuilder
+        .forPort(port)
+        .addService(TestServiceAGrpc.bindService(new TestServiceAImpl, executionContext))
+        .asInstanceOf[ServerBuilder[?]]
+        .addService(TestServiceBGrpc.bindService(new TestServiceBImpl, executionContext))
+        .asInstanceOf[ServerBuilder[?]]
+        .build()
+        .start()
+    )
 
     logger.info("Server started, listening on {}", port)
     server
   }
 
-  def stop(): Unit = server.shutdown()
+  def stop(): Unit = server.foreach(_.shutdown())
 
-  private def blockUntilShutdown(): Unit = server.awaitTermination()
+  private def blockUntilShutdown(): Unit = server.foreach(_.awaitTermination())
 }
 
 object GrpcServer {

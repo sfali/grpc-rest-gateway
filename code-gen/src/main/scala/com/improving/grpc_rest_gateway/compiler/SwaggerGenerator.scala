@@ -14,7 +14,7 @@ import scalapb.compiler.{DescriptorImplicits, FunctionalPrinter, NameUtils, Prot
 import scalapb.options.Scalapb
 
 import scala.collection.mutable
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 
 object SwaggerGenerator extends CodeGenApp {
 
@@ -44,7 +44,7 @@ object SwaggerGenerator extends CodeGenApp {
 
 private class SwaggerMessagePrinter(fd: FileDescriptor, implicits: DescriptorImplicits) {
 
-  import implicits._
+  import implicits.*
 
   private val services = fd.getServices.asScala.toSeq
 
@@ -282,7 +282,7 @@ private class SwaggerMessagePrinter(fd: FileDescriptor, implicits: DescriptorImp
           .add(s"- name: $prefix${field.getName}")
           .when(inPath)(_.addIndented("in: query", "required: true", "type: string", "enum:"))
           .when(!inPath)(_.addIndented("in: query", "type: string", "enum:"))
-          .addIndented(field.getEnumType.getValues.asScala.toSeq.map(v => s"- ${v.getName}"): _*)
+          .addIndented(field.getEnumType.getValues.asScala.toSeq.map(v => s"- ${v.getName}")*)
       case JavaType.INT =>
         printer
           .add(s"- name: $prefix${field.getName}")
@@ -345,7 +345,7 @@ private class SwaggerMessagePrinter(fd: FileDescriptor, implicits: DescriptorImp
       case JavaType.MESSAGE => _.add(s"""$$ref: "#/definitions/${field.getMessageType.getName}"""")
       case JavaType.ENUM =>
         _.add("type: string", "enum:").add(
-          field.getEnumType.getValues.asScala.toSeq.map(v => s"- ${v.getName}"): _*
+          field.getEnumType.getValues.asScala.toSeq.map(v => s"- ${v.getName}")*
         )
       case JavaType.INT    => _.add("type: integer", "format: int32")
       case JavaType.LONG   => _.add("type: integer", "format: int64")
