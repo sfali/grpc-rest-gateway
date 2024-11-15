@@ -13,9 +13,15 @@ import io.netty.util.CharsetUtil
 import org.apache.commons.io.IOUtils
 
 import scala.io.Source
+import scala.util.{Failure, Success, Using}
 
 object SwaggerHandler {
-  private val SwaggerUiPath = Paths.get("META-INF/resources/webjars/swagger-ui/5.17.14") // must match dependency version
+  private val SwaggerUiPath = {
+    val swaggerDependency = BuildInfo.allDependencies.filter(_.startsWith("org.webjars:swagger-ui")).head
+    val index = swaggerDependency.lastIndexOf(":")
+    val version = swaggerDependency.substring(index + 1)
+    Paths.get(s"META-INF/resources/webjars/swagger-ui/$version")
+  }
   private val SpecsPrefix = Paths.get("/specs/")
   private val DocsPrefix = Paths.get("/docs/")
   private val DocsLandingPage = Paths.get("/docs/index.html")
@@ -99,11 +105,19 @@ class SwaggerHandler(services: Seq[GrpcGatewayHandler]) extends ChannelInboundHa
   private val specificationNames = services.map(_.specificationName).distinct.sorted
   private val serviceUrls = specificationNames.map(s => s"{url: '/specs/$s.yml', name: '$s'}").mkString(", ")
   private val serviceNames = specificationNames.mkString(", ")
-  private val indexPage = Source
-    .fromInputStream(Thread.currentThread().getContextClassLoader.getResourceAsStream("index.html"))
-    .getLines()
-    .mkString(System.lineSeparator())
-    .replaceAll("\\{serviceUrls}", serviceUrls)
-    .replaceAll("\\{serviceNames}", serviceNames)
+  private val indexPage =
+    Using(
+      Source
+        .fromInputStream(Thread.currentThread().getContextClassLoader.getResourceAsStream("index.html"))
+    ) { source =>
+      source
+        .getLines()
+        .mkString(System.lineSeparator())
+        .replaceAll("\\{serviceUrls}", serviceUrls)
+        .replaceAll("\\{serviceNames}", serviceNames)
+    } match {
+      case Failure(ex)   => throw ex
+      case Success(html) => html
+    }
 
 }

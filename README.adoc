@@ -327,7 +327,7 @@ Following mapping defines how HTTP request supposed to be constructed.
 *HTTP method:* POST +
 *Path:* /v1/messages +
 *HTTP request:* http://localhost:7070/v1/messages +
-*Mapping:* entire message is mapped as body payloadr
+*Mapping:* entire message is mapped as body payload
 
 === Run gateway server
 
@@ -374,7 +374,7 @@ addSbtPlugin("com.thesamet" % "sbt-protoc" % "1.0.7")
 
 libraryDependencies ++= Seq(
   "com.thesamet.scalapb" %% "compilerplugin" % "0.11.17",
-  "io.github.sfali23" % "grpc-rest-gateway-code-gen" % "0.6.0"
+  "io.github.sfali23" % "grpc-rest-gateway-code-gen" % "0.7.1"
 )
 resolvers += "Sonatype OSS" at "https://s01.oss.sonatype.org/content/groups/public/"
 ----
@@ -386,18 +386,27 @@ And following in the `build.sbt`:
 Compile / PB.targets := Seq(
   scalapb.gen() -> (Compile / sourceManaged).value / "scalapb",
   grpc_rest_gateway.gatewayGen() -> (Compile / sourceManaged).value / "scalapb",
-  grpc_rest_gateway.swaggerGen() -> (Compile / resourceManaged).value / "scalapb"
+  grpc_rest_gateway.swaggerGen() -> (Compile / resourceDirectory).value / "scalapb"
 )
+
+// generate code for Scala 3
+Compile / PB.targets := Seq(
+  scalapb.gen(scala3Sources = true) -> (Compile / sourceManaged).value / "scalapb",
+  grpc_rest_gateway.gatewayGen(scala3Sources = true) -> (Compile / sourceManaged).value / "scalapb",
+  grpc_rest_gateway.swaggerGen() -> (Compile / resourceDirectory).value / "scalapb"
+)
+
+// add `**/resources/specs/**/*.yml` in your .gitignore to ignore generated yml files
 
 val ScalaPb: String = scalapb.compiler.Version.scalapbVersion
 val GrpcJava: String = scalapb.compiler.Version.grpcJavaVersion
 libraryDependencies ++= Seq(
-  "io.github.sfali23" %% "grpc-rest-gateway-runtime" % "0.6.0",
+  "io.github.sfali23" %% "grpc-rest-gateway-runtime" % "0.7.1",
   "com.thesamet.scalapb" %% "compilerplugin" % V.ScalaPb % "compile;protobuf",
-    "com.thesamet.scalapb" %% "scalapb-runtime" % V.ScalaPb % "compile;protobuf",
-    "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % V.ScalaPb,
-    "io.grpc" % "grpc-netty" % V.GrpcJava,
-    "com.thesamet.scalapb" %% "scalapb-json4s" % V.ScalaPbJson,
+  "com.thesamet.scalapb" %% "scalapb-runtime" % V.ScalaPb % "compile;protobuf",
+  "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % V.ScalaPb,
+  "io.grpc" % "grpc-netty" % V.GrpcJava,
+  "com.thesamet.scalapb" %% "scalapb-json4s" % V.ScalaPbJson,
   "com.thesamet.scalapb.common-protos" %% "proto-google-common-protos-scalapb_0.11" % "2.9.6-0" % "compile,protobuf"
 )
 ----
@@ -419,17 +428,38 @@ Sample app can be run as follows:
 
 [source, shell]
 ----
-# within Intellij select either of e2eJVM2_12, e2eJVM2_13, or e2eJVM3 module and run
-# // TODO: figure out how to run via command line
-# Following will start the application but Swagger documentation doesn't load
-# sbt "e2eJVM2_13 / run"
+# For Scala 2.12
+sbt "e2eJVM2_12 / run"
+
+# # For Scala 2.13
+sbt "e2eJVM2_13 / run"
+
+# For Scala 3
+sbt "e2eJVM3 / run"
 ----
 
-Open browser and paste following URL in address bar `http://localhost:7070/docs/index.html?urls.primaryName=TestServiceB#/`, you should see Open API specification for service.
+Open browser and paste following URL in address bar `http://localhost:7070`, you should see Open API specification for service.
 
 image::media/swagger.png[]
+
+=== Reference implementation using Apache Pekko
+
+A reference implementation of https://petstore.swagger.io/[Swagger petstore] is attempted https://github.com/sfali/petstore-grpc[here].
+
+Run app as follows:
+
+[source, shell]
+----
+sbt "service / run local"
+----
+
+Open browser and paste following URL in address bar `http://localhost:7070`, you should see Open API specification for petstore service.
+
+image::media/petstore.png[]
+
+Following is corresponding https://github.com/sfali/petstore-grpc/blob/main/api/src/main/protobuf/petstore/petstore.proto[proto] file.
 
 == Limitations
 
 . Streaming calls are not supported.
-
+. HTTP headers are not currently supported
