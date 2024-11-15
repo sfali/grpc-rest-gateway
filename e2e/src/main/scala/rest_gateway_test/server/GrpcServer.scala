@@ -20,9 +20,9 @@ class GrpcServer(port: Int = GrpcPort) {
     server = ServerBuilder
       .forPort(port)
       .addService(TestServiceAGrpc.bindService(new TestServiceAImpl, executionContext))
-      .asInstanceOf[ServerBuilder[_]]
+      .asInstanceOf[ServerBuilder[?]]
       .addService(TestServiceBGrpc.bindService(new TestServiceBImpl, executionContext))
-      .asInstanceOf[ServerBuilder[_]]
+      .asInstanceOf[ServerBuilder[?]]
       .build()
       .start()
 
