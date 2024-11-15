@@ -1,4 +1,4 @@
-addSbtPlugin("com.eed3si9n" % "sbt-projectmatrix" % "0.7.0")
+addSbtPlugin("com.eed3si9n" % "sbt-projectmatrix" % "0.10.0")
 addSbtPlugin("com.thesamet" % "sbt-protoc" % "1.0.7")
 addSbtPlugin("org.scalameta" % "sbt-scalafmt" % "2.4.6")
 addSbtPlugin("com.thesamet" % "sbt-protoc-gen-project" % "0.1.6")
