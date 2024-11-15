@@ -32,7 +32,7 @@ ThisBuild / developers := List(
   )
 )
 ThisBuild / licenses := Seq(
-  "APL2" -> url("http://www.apache.org/licenses/LICENSE-2.0.txt")
+  "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0.txt")
 )
 ThisBuild / homepage := Some(url("https://github.com/sfali/grpc-rest-gateway"))
 
@@ -109,9 +109,10 @@ lazy val e2e = (projectMatrix in file("e2e"))
     libraryDependencies ++= E2EDependencies,
     scalacOptions ++= (if (isScala3.value) Seq("-source", "future")
                        else Seq("-Xsource:3")),
-    Compile / PB.targets ++= Seq(
-      genModule(
-        "com.improving.grpc_rest_gateway.compiler.GatewayGenerator$"
+    Compile / PB.targets := Seq(
+      (
+        genModule("com.improving.grpc_rest_gateway.compiler.GatewayGenerator$"),
+        Seq("scala3_sources")
       ) -> (Compile / sourceManaged).value / "scalapb",
       genModule(
         "com.improving.grpc_rest_gateway.compiler.SwaggerGenerator$"
@@ -146,6 +147,4 @@ lazy val `grpc-rest-gateway` =
       )
     )
     .aggregate(protocGenGrpcRestGatewayPlugin.agg)
-    .aggregate(
-      (codeGen.projectRefs ++ runtime.projectRefs)*
-    )
+    .aggregate((codeGen.projectRefs ++ runtime.projectRefs)*)
