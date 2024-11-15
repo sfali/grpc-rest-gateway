@@ -56,7 +56,7 @@
 <script src="./swagger-ui-standalone-preset.js"></script>
 <script>
     window.onload = function() {
-        const ui = SwaggerUIBundle({
+        window.ui = SwaggerUIBundle({
             urls: [{serviceUrls}],
                 dom_id: '#swagger-ui',
                 deepLinking: true,
@@ -70,7 +70,6 @@
                 layout: 'StandaloneLayout',
                 validatorUrl: ''
         })
-        window.ui = ui
     }
 </script>
 </body>
