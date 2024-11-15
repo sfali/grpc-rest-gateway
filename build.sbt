@@ -1,3 +1,4 @@
+import SettingsHelper.*
 import Dependencies.*
 import ReleaseTransformations.*
 import sbt.Def
@@ -44,6 +45,7 @@ ThisBuild / scmInfo := Some(
 )
 
 lazy val runtime = (projectMatrix in file("runtime"))
+  .configure(configureBuildInfo("com.improving.grpc_rest_gateway.runtime"))
   .enablePlugins(ScalafmtPlugin)
   .defaultAxes()
   .settings(
@@ -55,12 +57,12 @@ lazy val runtime = (projectMatrix in file("runtime"))
   .jvmPlatform(scalaVersions = Seq(Scala212, Scala213, Scala3))
 
 lazy val codeGen = (projectMatrix in file("code-gen"))
-  .enablePlugins(BuildInfoPlugin, ScalafmtPlugin)
+  .configure(configureBuildInfo("com.improving.grpc_rest_gateway.compiler"))
+  .enablePlugins(ScalafmtPlugin)
   .defaultAxes()
   .settings(
     name := "grpc-rest-gateway-code-gen",
     buildInfoKeys := Seq[BuildInfoKey](name, organization, version, scalaVersion, sbtVersion, Compile / allDependencies),
-    buildInfoPackage := "com.improving.grpc_rest_gateway.compiler",
     libraryDependencies ++= CodegenDependencies,
     scalacOptions ++= (if (isScala3.value) Seq("-source", "future")
                        else Seq("-Xsource:3"))
