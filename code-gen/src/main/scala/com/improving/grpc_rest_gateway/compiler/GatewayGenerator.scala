@@ -11,7 +11,7 @@ import scalapb.compiler.FunctionalPrinter.PrinterEndo
 import scalapb.compiler.{DescriptorImplicits, FunctionalPrinter, NameUtils, ProtobufGenerator}
 import scalapb.options.Scalapb
 
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 
 object GatewayGenerator extends CodeGenApp {
 
@@ -39,7 +39,7 @@ object GatewayGenerator extends CodeGenApp {
 }
 
 private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: DescriptorImplicits) {
-  import implicits._
+  import implicits.*
 
   private var ifStatementStarted = false
   private var pathsToConstantMap: Map[(PatternCase, String), String] = Map.empty
@@ -49,6 +49,7 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
   private val scalaPackageName = extendedFileDescriptor.scalaPackage.fullName
   private val handlerClassName = serviceName + "GatewayHandler"
   private val outputFileName = scalaPackageName.replace('.', '/') + "/" + handlerClassName + ".scala"
+  private val wildcardImport = extendedFileDescriptor.V.WildcardImport
 
   lazy val result: CodeGeneratorResponse.File = {
     val b = CodeGeneratorResponse.File.newBuilder()
@@ -65,15 +66,15 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
       .add(
         "import scalapb.GeneratedMessage",
         "import scalapb.json4s.JsonFormat",
-        "import com.improving.grpc_rest_gateway.runtime.handlers._",
-        "import io.grpc._",
+        s"import com.improving.grpc_rest_gateway.runtime.handlers.$wildcardImport",
+        s"import io.grpc.$wildcardImport",
         "import io.netty.handler.codec.http.{HttpMethod, QueryStringDecoder}"
       )
       .newline
       .add(
         "import scala.concurrent.{ExecutionContext, Future}",
         "import scalapb.json4s.JsonFormatException",
-        "import scala.util._"
+        s"import scala.util.$wildcardImport"
       )
       .newline
       .call(generateCompanionObject(service))
@@ -125,7 +126,7 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
       .indent
       .add(
         "extends GrpcGatewayHandler(channel)(ec) {",
-        s"import $handlerClassName._",
+        s"import $handlerClassName.$wildcardImport",
         s"""override val serviceName: String = "${service.getName}"""",
         s"""override val specificationName: String = "$specificationName"""",
         s"private val stub = $grpcService.stub(channel)"
