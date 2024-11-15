@@ -12,7 +12,7 @@ object gatewayGen {
         "scala",
         Artifact(
           BuildInfo.organization,
-          "grpc-rest-gateway-code-gen_2.12",
+          s"${BuildInfo.name}_2.12",
           BuildInfo.version
         ),
         "com.improving.grpc_rest_gateway.compiler.GatewayGenerator$",
