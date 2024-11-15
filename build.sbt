@@ -116,7 +116,7 @@ lazy val e2e = (projectMatrix in file("e2e"))
       ) -> (Compile / sourceManaged).value / "scalapb",
       genModule(
         "com.improving.grpc_rest_gateway.compiler.SwaggerGenerator$"
-      ) -> (Compile / resourceManaged).value / "specs"
+      ) -> (Compile / resourceDirectory).value / "specs"
     )
   )
   .jvmPlatform(scalaVersions = Seq(Scala212, Scala213, Scala3))
