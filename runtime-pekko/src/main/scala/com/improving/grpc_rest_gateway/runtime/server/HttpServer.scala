@@ -5,6 +5,7 @@ package server
 
 import runtime.handlers.{GrpcGatewayHandler, SwaggerHandler}
 import org.apache.pekko
+import org.slf4j.LoggerFactory
 import pekko.actor.ClassicActorSystemProvider
 import pekko.http.scaladsl.Http
 import pekko.http.scaladsl.server.Directives.*
@@ -13,6 +14,8 @@ import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success}
 
 object HttpServer {
+
+  private val logger = LoggerFactory.getLogger(classOf[HttpServer.type])
 
   def apply(
     host: String,
@@ -28,13 +31,16 @@ object HttpServer {
       .bind(concat(routes*))
       .onComplete {
         case Failure(ex) =>
-          Console
-            .err
-            .println(
-              s"${Console.RED}Failed to bind HTTP endpoint at $host:$port, reason=${ex.getClass.getName}:${ex.getMessage}${Console.RESET}"
-            )
+          logger.error(
+            "Failed to bind HTTP endpoint at {}:{}, reason={}:{}",
+            host,
+            port,
+            ex.getClass.getName,
+            ex.getMessage
+          )
         case Success(binding) =>
-          Console.out.println(s"${Console.BOLD}Http server started at ${binding.localAddress}${Console.RESET}")
+          val localAddress = binding.localAddress
+          logger.info("Http server started at http://{}:{}", localAddress.getHostString, localAddress.getPort)
       }
   }
 }
