@@ -7,7 +7,8 @@ import scalapb.GeneratedMessage
 import scalapb.json4s.JsonFormatException
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Try}
+import scala.io.Source
+import scala.util.{Failure, Success, Try, Using}
 
 package object core {
 
@@ -41,4 +42,21 @@ package object core {
         Future.failed(ex.toGatewayException)
       }
 
+  def readSwaggerIndexPage(specificationNames: Seq[String]): String = {
+    val serviceUrls = specificationNames.map(s => s"{url: '/specs/$s.yml', name: '$s'}").mkString(", ")
+    val serviceNames = specificationNames.mkString(", ")
+    Using(
+      Source
+        .fromInputStream(Thread.currentThread().getContextClassLoader.getResourceAsStream("swagger/index.html"))
+    ) { source =>
+      source
+        .getLines()
+        .mkString(System.lineSeparator())
+        .replaceAll("\\{serviceUrls}", serviceUrls)
+        .replaceAll("\\{serviceNames}", serviceNames)
+    } match {
+      case Failure(ex)   => throw ex
+      case Success(html) => html
+    }
+  }
 }
