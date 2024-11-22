@@ -13,10 +13,9 @@ import io.netty.handler.codec.http.{
   HttpUtil
 }
 import scalapb.{GeneratedEnum, GeneratedEnumCompanion}
-import scalapb.json4s.JsonFormatException
 
 import java.nio.charset.StandardCharsets
-import scala.util.{Failure, Try}
+import scala.util.Try
 
 package object handlers {
 
@@ -60,12 +59,6 @@ package object handlers {
     HttpUtil.setContentLength(res, buf.readableBytes)
     HttpUtil.setKeepAlive(res, HttpUtil.isKeepAlive(requestMsg))
     res
-  }
-
-  def jsonException2GatewayExceptionPF[U]: PartialFunction[Throwable, Try[U]] = {
-    case _: NoSuchElementException => Failure(InvalidArgument("Wrong json input. Check proto file"))
-    case err: JsonFormatException  => Failure(InvalidArgument("Wrong json syntax: " + err.msg))
-    case err => Failure(InvalidArgument("Wrong json input. Check proto file. Details: " + err.getMessage))
   }
 
   implicit class ParametersOps(src: Map[String, Seq[String]]) {

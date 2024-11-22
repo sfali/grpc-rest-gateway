@@ -17,7 +17,7 @@ import scala.util.{Failure, Success, Using}
 
 object SwaggerHandler {
   private val SwaggerUiPath = {
-    val swaggerDependency = BuildInfo.allDependencies.filter(_.startsWith("org.webjars:swagger-ui")).head
+    val swaggerDependency = runtime.core.BuildInfo.allDependencies.filter(_.startsWith("org.webjars:swagger-ui")).head
     val index = swaggerDependency.lastIndexOf(":")
     val version = swaggerDependency.substring(index + 1)
     Paths.get(s"META-INF/resources/webjars/swagger-ui/$version")

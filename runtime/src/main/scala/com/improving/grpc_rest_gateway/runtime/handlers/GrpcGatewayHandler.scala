@@ -3,7 +3,8 @@ package grpc_rest_gateway
 package runtime
 package handlers
 
-import io.grpc.{ManagedChannel, StatusRuntimeException}
+import runtime.core.GatewayException
+import io.grpc.ManagedChannel
 import io.netty.channel.ChannelHandler.Sharable
 import io.netty.channel.{ChannelFutureListener, ChannelHandlerContext, ChannelInboundHandlerAdapter}
 import io.netty.handler.codec.http.*
@@ -66,13 +67,7 @@ abstract class GrpcGatewayHandler(channel: ManagedChannel)(implicit ec: Executio
           .recover { case err =>
             val (body, status) = err match {
               case e: GatewayException =>
-                e.details -> GRPC_HTTP_CODE_MAP.getOrElse(e.code, HttpResponseStatus.INTERNAL_SERVER_ERROR)
-              case err: StatusRuntimeException =>
-                val grpcStatus = err.getStatus
-                grpcStatus.getDescription -> GRPC_HTTP_CODE_MAP.getOrElse(
-                  grpcStatus.getCode.value(),
-                  HttpResponseStatus.INTERNAL_SERVER_ERROR
-                )
+                e.message -> GRPC_HTTP_CODE_MAP.getOrElse(e.statusCode, HttpResponseStatus.INTERNAL_SERVER_ERROR)
               case ex =>
                 logger.warn("unable to generate json response", ex)
                 s"Internal error: ${ex.getMessage}" -> HttpResponseStatus.INTERNAL_SERVER_ERROR

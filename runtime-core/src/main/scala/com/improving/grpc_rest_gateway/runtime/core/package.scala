@@ -2,7 +2,6 @@ package com.improving
 package grpc_rest_gateway
 package runtime
 
-import io.grpc.Status.Code
 import io.grpc.StatusRuntimeException
 import scalapb.GeneratedMessage
 import scalapb.json4s.JsonFormatException
@@ -20,12 +19,12 @@ package object core {
 
   def jsonException2GatewayExceptionPF[U]: PartialFunction[Throwable, Try[U]] = {
     case _: NoSuchElementException =>
-      Failure(GatewayException(Code.INVALID_ARGUMENT.value(), "Wrong json input. Check proto file"))
+      Failure(GatewayException.toInvalidArgument("Wrong json input. Check proto file"))
     case err: JsonFormatException =>
-      Failure(GatewayException(Code.INVALID_ARGUMENT.value(), "Wrong json syntax: " + err.msg))
+      Failure(GatewayException.toInvalidArgument("Wrong json syntax: " + err.msg))
     case err =>
       Failure(
-        GatewayException(Code.INVALID_ARGUMENT.value(), "Wrong json input. Check proto file. Details: " + err.getMessage)
+        GatewayException.toInvalidArgument("Wrong json input. Check proto file. Details: " + err.getMessage)
       )
   }
 

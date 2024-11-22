@@ -163,3 +163,7 @@ lazy val `grpc-rest-gateway` =
     )
     .aggregate(protocGenGrpcRestGatewayPlugin.agg)
     .aggregate((codeGen.projectRefs ++ runtime.projectRefs)*)
+
+addCommandAlias("nettyJVM212Test", "e2eJVM2_12 / clean; e2eJVM2_12 / test")
+addCommandAlias("nettyJVM213Test", "e2eJVM2_13 / clean; e2eJVM2_13 / test")
+addCommandAlias("nettyJVM3Test", "e2eJVM3 / clean; e2eJVM3 / test")
