@@ -103,6 +103,12 @@ lazy val protocGenGrpcRestGatewayPlugin = protocGenProject("protoc-gen-grpc-rest
     scalaVersion := Scala212
   )
 
+lazy val `e2e-api` = project
+  .in(file("e2e-api"))
+  .settings(
+    publish / skip := true
+  )
+
 lazy val e2e = (projectMatrix in file("e2e"))
   .dependsOn(`runtime-netty`)
   .enablePlugins(LocalCodeGenPlugin, ScalafmtPlugin)
@@ -137,6 +143,7 @@ lazy val e2e = (projectMatrix in file("e2e"))
     libraryDependencies ++= E2EDependencies,
     scalacOptions ++= (if (isScala3.value) Seq("-source", "future")
                        else Seq("-Xsource:3")),
+    (Compile / PB.protoSources) += (`e2e-api` / baseDirectory).value / "src" / "main" / "protobuf",
     Compile / PB.targets := Seq(
       (
         genModule("com.improving.grpc_rest_gateway.compiler.GatewayGenerator$"),
