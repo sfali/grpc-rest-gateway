@@ -44,17 +44,30 @@ ThisBuild / scmInfo := Some(
   )
 )
 
-lazy val runtime = (projectMatrix in file("runtime"))
-  .configure(configureBuildInfo("com.improving.grpc_rest_gateway.runtime"))
+lazy val `runtime-core` = (projectMatrix in file("runtime-core"))
+  .configure(configureBuildInfo("com.improving.grpc_rest_gateway.runtime.core"))
   .enablePlugins(ScalafmtPlugin)
   .defaultAxes()
   .settings(
-    name := "grpc-rest-gateway-runtime",
+    name := "grpc-rest-gateway-runtime-core",
+    libraryDependencies ++= RuntimeCoreDependencies,
+    scalacOptions ++= (if (isScala3.value) Seq("-source", "future", "-explain")
+                       else Seq("-Xsource:3"))
+  )
+  .jvmPlatform(scalaVersions = Seq(Scala212, Scala213, Scala3))
+
+lazy val `runtime-netty` = (projectMatrix in file("runtime-netty"))
+  .configure(configureBuildInfo("com.improving.grpc_rest_gateway.runtime.netty"))
+  .enablePlugins(ScalafmtPlugin)
+  .defaultAxes()
+  .settings(
+    name := "grpc-rest-gateway-runtime-netty",
     libraryDependencies ++= RuntimeDependencies,
     scalacOptions ++= (if (isScala3.value) Seq("-source", "future", "-explain")
                        else Seq("-Xsource:3"))
   )
   .jvmPlatform(scalaVersions = Seq(Scala212, Scala213, Scala3))
+  .dependsOn(`runtime-core`)
 
 lazy val codeGen = (projectMatrix in file("code-gen"))
   .configure(configureBuildInfo("com.improving.grpc_rest_gateway.compiler"))
@@ -78,7 +91,7 @@ lazy val protocGenGrpcRestGatewayPlugin = protocGenProject("protoc-gen-grpc-rest
   )
 
 lazy val e2e = (projectMatrix in file("e2e"))
-  .dependsOn(runtime)
+  .dependsOn(`runtime-netty`)
   .enablePlugins(LocalCodeGenPlugin, ScalafmtPlugin)
   .defaultAxes()
   .customRow(
@@ -137,9 +150,9 @@ lazy val `grpc-rest-gateway` =
         checkSnapshotDependencies,
         inquireVersions,
         runClean,
-        releaseStepCommand("e2eJVM2_12 / test"),
-        releaseStepCommand("e2eJVM2_13 / test"),
-        releaseStepCommand("e2eJVM3 / test"),
+        releaseStepCommand("nettyJVM212Test"),
+        releaseStepCommand("nettyJVM213Test"),
+        releaseStepCommand("nettyJVM3Test"),
         setReleaseVersion,
         tagRelease,
         publishArtifacts,
@@ -149,4 +162,11 @@ lazy val `grpc-rest-gateway` =
       )
     )
     .aggregate(protocGenGrpcRestGatewayPlugin.agg)
-    .aggregate((codeGen.projectRefs ++ runtime.projectRefs)*)
+    .aggregate((codeGen.projectRefs ++ `runtime-core`.projectRefs ++ `runtime-netty`.projectRefs)*)
+
+addCommandAlias("nettyJVM212Test", "e2eJVM2_12 / clean; e2eJVM2_12 / test")
+addCommandAlias("nettyJVM213Test", "e2eJVM2_13 / clean; e2eJVM2_13 / test")
+addCommandAlias("nettyJVM3Test", "e2eJVM3 / clean; e2eJVM3 / test")
+addCommandAlias("nettyJVM212Run", "e2eJVM2_12 / run")
+addCommandAlias("nettyJVM213Run", "e2eJVM2_13 / run")
+addCommandAlias("nettyJVM3Run", "e2eJVM3 / run")

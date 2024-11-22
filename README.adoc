@@ -419,9 +419,9 @@ Tests can be run as follows:
 
 [source, shell]
 ----
-sbt "e2eJVM2_12 / test"
-sbt "e2eJVM2_13 / test"
-sbt "e2eJVM3 / test"
+sbt "nettyJVM212Test"
+sbt "nettyJVM213Test"
+sbt "nettyJVM3Test"
 ----
 
 Sample app can be run as follows:
@@ -429,13 +429,13 @@ Sample app can be run as follows:
 [source, shell]
 ----
 # For Scala 2.12
-sbt "e2eJVM2_12 / run"
+sbt "nettyJVM212Run"
 
 # # For Scala 2.13
-sbt "e2eJVM2_13 / run"
+sbt "nettyJVM213Run"
 
 # For Scala 3
-sbt "e2eJVM3 / run"
+sbt "nettyJVM3Run"
 ----
 
 Open browser and paste following URL in address bar `http://localhost:7070`, you should see Open API specification for service.

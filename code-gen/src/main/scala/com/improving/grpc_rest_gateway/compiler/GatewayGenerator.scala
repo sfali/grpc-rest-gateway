@@ -76,7 +76,9 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
       .add(
         "import scalapb.GeneratedMessage",
         "import scalapb.json4s.JsonFormat",
-        s"import com.improving.grpc_rest_gateway.runtime.handlers.$wildcardImport",
+        s"import com.improving.grpc_rest_gateway.runtime",
+        s"import runtime.core.$wildcardImport",
+        s"import runtime.handlers.$wildcardImport",
         s"import io.grpc.$wildcardImport",
         "import io.netty.handler.codec.http.{HttpMethod, QueryStringDecoder}"
       )
@@ -181,7 +183,7 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
       }
 
     if (ifStatementStarted)
-      p.add(s"""else Future.failed(InvalidArgument(s"No route defined for $$methodName($$path)"))""")
+      p.add(s"""else Future.failed(GatewayException.toInvalidArgument(s"No route defined for $$methodName($$path)"))""")
     else p
   }
 
@@ -277,7 +279,7 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
             s"val input = Try(JsonFormat.fromJsonString[$fullInputName](body))"
           )
           .addIndented(".recoverWith(jsonException2GatewayExceptionPF)")
-          .add(s"Future.fromTry(input).flatMap(stub.$methodName)")
+          .add(s"toResponse(input, stub.$methodName)")
           .outdent
           .add("}")
           .outdent
@@ -309,7 +311,7 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
               .add(s"$fullInputName($args)")
               .outdent
               .add("}")
-              .add(s"Future.fromTry(input).flatMap(stub.$methodName)")
+              .add(s"toResponse(input, stub.$methodName)")
               .outdent
               .add("}")
               .outdent
@@ -369,7 +371,7 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
           .call(generateInputFromQueryString(method.getInputType, fullInputName, required = true))
           .outdent
           .add("}")
-          .add(s"Future.fromTry(input).flatMap(stub.$methodName)")
+          .add(s"toResponse(input, stub.$methodName)")
           .outdent
           .add("}")
           .outdent
