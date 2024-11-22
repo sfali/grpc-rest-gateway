@@ -8,6 +8,8 @@ object Dependencies {
     val GrpcJava: String = scalapb.compiler.Version.grpcJavaVersion
     val JavaActivation = "1.1.1"
     val Logback = "1.5.12"
+    val Pekko = "1.1.2"
+    val PekkoHttp = "1.1.0"
     val ScalaPb: String = scalapb.compiler.Version.scalapbVersion
     val ScalaPbJson = "0.12.1"
     val ScalaTest = "3.2.19"
@@ -24,20 +26,26 @@ object Dependencies {
 
   val RuntimeCoreDependencies: Seq[ModuleID] = Seq(
     "io.grpc" % "grpc-api" % V.GrpcJava,
+    "com.thesamet.scalapb" %% "compilerplugin" % V.ScalaPb,
     "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % V.ScalaPb,
     "com.thesamet.scalapb" %% "scalapb-json4s" % V.ScalaPbJson,
     "org.webjars" % "swagger-ui" % V.SwaggerUi,
     "com.typesafe" % "config" % V.TypesafeConfig,
-    "org.slf4j" % "slf4j-api" % V.Slf4j
+    "org.slf4j" % "slf4j-api" % V.Slf4j,
+    "javax.activation" % "activation" % V.JavaActivation,
+    "commons-io" % "commons-io" % V.CommonsIo,
+    "com.thesamet.scalapb.common-protos" %% "proto-google-common-protos-scalapb_0.11" % V.CommonProtos % "protobuf",
+    "com.thesamet.scalapb.common-protos" %% "proto-google-common-protos-scalapb_0.11" % V.CommonProtos
   )
 
   val RuntimeDependencies: Seq[ModuleID] = Seq(
-    "javax.activation" % "activation" % V.JavaActivation,
-    "commons-io" % "commons-io" % V.CommonsIo,
-    "com.thesamet.scalapb" %% "compilerplugin" % V.ScalaPb,
-    "io.grpc" % "grpc-netty" % V.GrpcJava,
-    "com.thesamet.scalapb.common-protos" %% "proto-google-common-protos-scalapb_0.11" % V.CommonProtos % "protobuf",
-    "com.thesamet.scalapb.common-protos" %% "proto-google-common-protos-scalapb_0.11" % V.CommonProtos
+    "io.grpc" % "grpc-netty" % V.GrpcJava
+  )
+
+  val RuntimePekkoDependencies: Seq[ModuleID] = Seq(
+    "org.apache.pekko" %% "pekko-actor" % V.Pekko % "provided",
+    "org.apache.pekko" %% "pekko-stream-typed" % V.Pekko % "provided",
+    "org.apache.pekko" %% "pekko-http" % V.PekkoHttp % "provided"
   )
 
   val E2EDependencies: Seq[ModuleID] = Seq(

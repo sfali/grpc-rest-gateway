@@ -69,6 +69,19 @@ lazy val `runtime-netty` = (projectMatrix in file("runtime-netty"))
   .jvmPlatform(scalaVersions = Seq(Scala212, Scala213, Scala3))
   .dependsOn(`runtime-core`)
 
+lazy val `runtime-pekko` = (projectMatrix in file("runtime-pekko"))
+  .configure(configureBuildInfo("com.improving.grpc_rest_gateway.runtime.pekko"))
+  .enablePlugins(ScalafmtPlugin)
+  .defaultAxes()
+  .settings(
+    name := "grpc-rest-gateway-runtime-pekko",
+    libraryDependencies ++= RuntimePekkoDependencies,
+    scalacOptions ++= (if (isScala3.value) Seq("-source", "future", "-explain")
+                       else Seq("-Xsource:3"))
+  )
+  .jvmPlatform(scalaVersions = Seq(Scala212, Scala213, Scala3))
+  .dependsOn(`runtime-core`)
+
 lazy val codeGen = (projectMatrix in file("code-gen"))
   .configure(configureBuildInfo("com.improving.grpc_rest_gateway.compiler"))
   .enablePlugins(ScalafmtPlugin)
@@ -162,7 +175,9 @@ lazy val `grpc-rest-gateway` =
       )
     )
     .aggregate(protocGenGrpcRestGatewayPlugin.agg)
-    .aggregate((codeGen.projectRefs ++ `runtime-core`.projectRefs ++ `runtime-netty`.projectRefs)*)
+    .aggregate(
+      (codeGen.projectRefs ++ `runtime-core`.projectRefs ++ `runtime-netty`.projectRefs ++ `runtime-pekko`.projectRefs)*
+    )
 
 addCommandAlias("nettyJVM212Test", "e2eJVM2_12 / clean; e2eJVM2_12 / test")
 addCommandAlias("nettyJVM213Test", "e2eJVM2_13 / clean; e2eJVM2_13 / test")
