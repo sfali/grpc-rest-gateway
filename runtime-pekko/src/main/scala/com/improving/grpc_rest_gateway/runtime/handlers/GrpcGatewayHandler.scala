@@ -72,6 +72,6 @@ trait GrpcGatewayHandler {
       entity = HttpEntity(contentType = ContentTypes.`application/json`, bytes = JsonFormat.toJsonString(msg).getBytes)
     )
 
-  private[handlers] val specificationName: String
-  private[runtime] val route: Route
+  val specificationName: String
+  val route: Route
 }
