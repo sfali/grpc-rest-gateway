@@ -66,12 +66,6 @@ class SwaggerHandler(handlers: Seq[GrpcGatewayHandler]) {
 }
 
 object SwaggerHandler {
-  private val SwaggerUiPath = {
-    val swaggerDependency = BuildInfo.allDependencies.filter(_.startsWith("org.webjars:swagger-ui")).head
-    val index = swaggerDependency.lastIndexOf(":")
-    val version = swaggerDependency.substring(index + 1)
-    Paths.get(s"META-INF/resources/webjars/swagger-ui/$version")
-  }
   private val SpecsPrefix = "specs"
   private val DocsPrefix = "docs"
   private val IndexPage = "index.html"

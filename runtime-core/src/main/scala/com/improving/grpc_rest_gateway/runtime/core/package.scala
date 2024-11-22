@@ -6,11 +6,19 @@ import io.grpc.StatusRuntimeException
 import scalapb.GeneratedMessage
 import scalapb.json4s.JsonFormatException
 
+import java.nio.file.{Path, Paths}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.io.Source
 import scala.util.{Failure, Success, Try, Using}
 
 package object core {
+
+  lazy val SwaggerUiPath: Path = {
+    val swaggerDependency = BuildInfo.allDependencies.filter(_.startsWith("org.webjars:swagger-ui")).head
+    val index = swaggerDependency.lastIndexOf(":")
+    val version = swaggerDependency.substring(index + 1)
+    Paths.get(s"META-INF/resources/webjars/swagger-ui/$version")
+  }
 
   implicit class StatusRuntimeExceptionOps(src: StatusRuntimeException) {
 

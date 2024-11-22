@@ -3,6 +3,7 @@ package grpc_rest_gateway
 package runtime
 package handlers
 
+import runtime.core.*
 import java.nio.file.{Path, Paths}
 import javax.activation.MimetypesFileTypeMap
 import io.netty.buffer.Unpooled
@@ -13,12 +14,6 @@ import io.netty.util.CharsetUtil
 import org.apache.commons.io.IOUtils
 
 object SwaggerHandler {
-  private val SwaggerUiPath = {
-    val swaggerDependency = runtime.core.BuildInfo.allDependencies.filter(_.startsWith("org.webjars:swagger-ui")).head
-    val index = swaggerDependency.lastIndexOf(":")
-    val version = swaggerDependency.substring(index + 1)
-    Paths.get(s"META-INF/resources/webjars/swagger-ui/$version")
-  }
   private val SpecsPrefix = Paths.get("/specs/")
   private val DocsPrefix = Paths.get("/docs/")
   private val DocsLandingPage = Paths.get("/docs/index.html")
@@ -99,6 +94,6 @@ class SwaggerHandler(services: Seq[GrpcGatewayHandler]) extends ChannelInboundHa
   private val mimeTypes = new MimetypesFileTypeMap()
   mimeTypes.addMimeTypes("image/png png PNG")
   mimeTypes.addMimeTypes("text/css css CSS")
-  private val indexPage = runtime.core.readSwaggerIndexPage(services.map(_.specificationName).distinct.sorted)
+  private val indexPage = readSwaggerIndexPage(services.map(_.specificationName).distinct.sorted)
 
 }
