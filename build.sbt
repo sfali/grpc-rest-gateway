@@ -167,3 +167,6 @@ lazy val `grpc-rest-gateway` =
 addCommandAlias("nettyJVM212Test", "e2eJVM2_12 / clean; e2eJVM2_12 / test")
 addCommandAlias("nettyJVM213Test", "e2eJVM2_13 / clean; e2eJVM2_13 / test")
 addCommandAlias("nettyJVM3Test", "e2eJVM3 / clean; e2eJVM3 / test")
+addCommandAlias("nettyJVM212Run", "e2eJVM2_12 / run")
+addCommandAlias("nettyJVM213Run", "e2eJVM2_13 / run")
+addCommandAlias("nettyJVM3Run", "e2eJVM3 / run")
