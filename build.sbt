@@ -44,6 +44,18 @@ ThisBuild / scmInfo := Some(
   )
 )
 
+lazy val `runtime-core` = (projectMatrix in file("runtime-core"))
+  .configure(configureBuildInfo("com.improving.grpc_rest_gateway.runtime.core"))
+  .enablePlugins(ScalafmtPlugin)
+  .defaultAxes()
+  .settings(
+    name := "grpc-rest-gateway-runtime-core",
+    libraryDependencies ++= RuntimeCoreDependencies,
+    scalacOptions ++= (if (isScala3.value) Seq("-source", "future", "-explain")
+                       else Seq("-Xsource:3"))
+  )
+  .jvmPlatform(scalaVersions = Seq(Scala212, Scala213, Scala3))
+
 lazy val runtime = (projectMatrix in file("runtime"))
   .configure(configureBuildInfo("com.improving.grpc_rest_gateway.runtime"))
   .enablePlugins(ScalafmtPlugin)
@@ -55,6 +67,7 @@ lazy val runtime = (projectMatrix in file("runtime"))
                        else Seq("-Xsource:3"))
   )
   .jvmPlatform(scalaVersions = Seq(Scala212, Scala213, Scala3))
+  .dependsOn(`runtime-core`)
 
 lazy val codeGen = (projectMatrix in file("code-gen"))
   .configure(configureBuildInfo("com.improving.grpc_rest_gateway.compiler"))
