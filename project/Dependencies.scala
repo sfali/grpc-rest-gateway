@@ -9,6 +9,7 @@ object Dependencies {
     val JavaActivation = "1.1.1"
     val Logback = "1.5.12"
     val Pekko = "1.1.2"
+    val PekkoGrpc = "1.1.1"
     val PekkoHttp = "1.1.0"
     val ScalaPb: String = scalapb.compiler.Version.scalapbVersion
     val ScalaPbJson = "0.12.1"
@@ -52,5 +53,13 @@ object Dependencies {
     "ch.qos.logback" % "logback-classic" % V.Logback,
     "org.scalatest" %% "scalatest" % V.ScalaTest % Test,
     "com.softwaremill.sttp.client3" %% "core" % V.Sttp % Test
+  )
+
+  val E2EPekkoDependencies: Seq[ModuleID] = Seq(
+    "org.apache.pekko" %% "pekko-actor" % V.Pekko,
+    "org.apache.pekko" %% "pekko-actor-typed" % V.Pekko,
+    "org.apache.pekko" %% "pekko-stream-typed" % V.Pekko,
+    "org.apache.pekko" %% "pekko-http" % V.PekkoHttp,
+    "org.apache.pekko" %% "pekko-grpc-runtime" % V.PekkoGrpc
   )
 }
