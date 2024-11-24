@@ -109,7 +109,7 @@ lazy val `e2e-api` = project
     publish / skip := true
   )
 
-lazy val e2e = (projectMatrix in file("e2e"))
+lazy val `e2e-netty` = (projectMatrix in file("e2e-netty"))
   .dependsOn(`runtime-netty`)
   .enablePlugins(LocalCodeGenPlugin, ScalafmtPlugin)
   .defaultAxes()
@@ -234,14 +234,14 @@ lazy val `grpc-rest-gateway` =
       (codeGen.projectRefs ++ `runtime-core`.projectRefs ++ `runtime-netty`.projectRefs ++ `runtime-pekko`.projectRefs)*
     )
 
-addCommandAlias("nettyJVM212Test", "e2eJVM2_12 / clean; e2eJVM2_12 / test")
-addCommandAlias("nettyJVM213Test", "e2eJVM2_13 / clean; e2eJVM2_13 / test")
-addCommandAlias("nettyJVM3Test", "e2eJVM3 / clean; e2eJVM3 / test")
+addCommandAlias("nettyJVM212Test", "e2e-nettyJVM2_12 / clean; e2e-nettyJVM2_12 / test")
+addCommandAlias("nettyJVM213Test", "e2e-nettyJVM2_13 / clean; e2e-nettyJVM2_13 / test")
+addCommandAlias("nettyJVM3Test", "e2e-nettyJVM3 / clean; e2e-nettyJVM3 / test")
 
 addCommandAlias("pekkoJVM212Test", "e2e-pekkoJVM2_12 / clean; e2e-pekkoJVM2_12 / compile")
 addCommandAlias("pekkoJVM213Test", "e2e-pekkoJVM2_13 / clean; e2e-pekkoJVM2_13 / compile")
 addCommandAlias("pekkoJVM3Test", "e2e-pekkoJVM3 / clean; e2e-pekkoJVM3 / compile")
 
-addCommandAlias("nettyJVM212Run", "e2eJVM2_12 / run")
-addCommandAlias("nettyJVM213Run", "e2eJVM2_13 / run")
-addCommandAlias("nettyJVM3Run", "e2eJVM3 / run")
+addCommandAlias("nettyJVM212Run", "e2e-nettyJVM2_12 / run")
+addCommandAlias("nettyJVM213Run", "e2e-nettyJVM2_13 / run")
+addCommandAlias("nettyJVM3Run", "e2e-nettyJVM3 / run")
