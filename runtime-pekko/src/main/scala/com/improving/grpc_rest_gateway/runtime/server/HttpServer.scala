@@ -13,9 +13,9 @@ import pekko.http.scaladsl.server.Directives.*
 import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success}
 
-object HttpServer {
+class HttpServer {
 
-  private val logger = LoggerFactory.getLogger(classOf[HttpServer.type])
+  private val logger = LoggerFactory.getLogger(classOf[HttpServer])
 
   def apply(
     host: String,
@@ -31,10 +31,10 @@ object HttpServer {
       .bind(concat(routes*))
       .onComplete {
         case Failure(ex) =>
-          logger.error(
+          logger.warn(
             "Failed to bind HTTP endpoint at {}:{}, reason={}:{}",
             host,
-            port,
+            port.toString,
             ex.getClass.getName,
             ex.getMessage
           )
