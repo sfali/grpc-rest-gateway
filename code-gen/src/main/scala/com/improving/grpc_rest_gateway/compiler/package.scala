@@ -3,7 +3,7 @@ package grpc_rest_gateway
 
 import com.google.api.{AnnotationsProto, HttpRule}
 import com.google.api.HttpRule.PatternCase
-import com.google.protobuf.Descriptors.MethodDescriptor
+import com.google.protobuf.Descriptors.{MethodDescriptor, ServiceDescriptor}
 
 import scala.jdk.CollectionConverters.*
 
@@ -19,9 +19,16 @@ package object compiler {
       case _                  => (PatternCase.PATTERN_NOT_SET, "", "")
     }
 
+  def isMethodAllowed(patternCase: PatternCase): Boolean =
+    (PatternCase.GET == patternCase) ||
+      (PatternCase.PUT == patternCase) ||
+      (PatternCase.POST == patternCase) ||
+      (PatternCase.DELETE == patternCase) ||
+      (PatternCase.PATCH == patternCase)
+
   def extractPaths(m: MethodDescriptor): Seq[(PatternCase, String, String)] = {
     val http = m.getOptions.getExtension(AnnotationsProto.http)
-    extractPathInternal(http) +: http.getAdditionalBindingsList.asScala.map(extractPathInternal).toSeq
+    extractPathInternal(http) +: http.getAdditionalBindingsList.asScala.toList.map(extractPathInternal)
   }
 
   def getProtoFileName(name: String): String = {
@@ -30,4 +37,9 @@ package object compiler {
     nameWithoutExtension.replaceAll("\\.", "-")
   }
 
+  def getUnaryCallsWithHttpExtension(service: ServiceDescriptor): Seq[MethodDescriptor] =
+    service.getMethods.asScala.filter { m =>
+      // only unary calls with http method specified
+      !m.isClientStreaming && !m.isServerStreaming && m.getOptions.hasExtension(AnnotationsProto.http)
+    }
 }

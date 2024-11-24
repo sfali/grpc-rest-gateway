@@ -24,7 +24,7 @@ object GatewayGenerator extends CodeGenApp {
   override def suggestedDependencies: Seq[Artifact] = Seq(
     Artifact(
       groupId = BuildInfo.organizationName,
-      artifactId = "grpc-rest-gateway-runtime",
+      artifactId = "grpc-rest-gateway-runtime-netty",
       version = BuildInfo.version,
       crossVersion = true
     ).asSbtPlugin(BuildInfo.scalaVersion, BuildInfo.sbtVersion)
@@ -151,12 +151,6 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
       .call(generateMethodHandlerDelegates(methods))
       .add("}")
   }
-
-  private def getUnaryCallsWithHttpExtension(service: ServiceDescriptor) =
-    service.getMethods.asScala.filter { m =>
-      // only unary calls with http method specified
-      !m.isClientStreaming && !m.isServerStreaming && m.getOptions.hasExtension(AnnotationsProto.http)
-    }
 
   private def generateDispatchCall(methods: Seq[MethodDescriptor]): PrinterEndo =
     _.add(
