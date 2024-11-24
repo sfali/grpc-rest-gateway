@@ -2,10 +2,10 @@ package com.improving.grpc_rest_gateway.compiler
 
 import com.google.api.{AnnotationsProto, HttpRule}
 import com.google.api.HttpRule.PatternCase
-import com.google.protobuf.Descriptors.FieldDescriptor.JavaType
-import com.google.protobuf.Descriptors.{Descriptor, FieldDescriptor, MethodDescriptor, ServiceDescriptor}
+import com.google.protobuf.Descriptors.{MethodDescriptor, ServiceDescriptor}
 import com.google.protobuf.ExtensionRegistry
 import com.google.protobuf.compiler.PluginProtos.CodeGeneratorResponse
+import com.improving.grpc_rest_gateway.compiler.utils.{GenerateDelegateFunctions, GenerateImportStatements}
 import protocbridge.Artifact
 import protocgen.{CodeGenApp, CodeGenRequest, CodeGenResponse}
 import scalapb.compiler.FunctionalPrinter.PrinterEndo
@@ -60,6 +60,7 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
   private val handlerClassName = serviceName + "GatewayHandler"
   private val outputFileName = scalaPackageName.replace('.', '/') + "/" + handlerClassName + ".scala"
   private val wildcardImport = extendedFileDescriptor.V.WildcardImport
+  private val methods = getUnaryCallsWithHttpExtension(service).toList
 
   lazy val result: CodeGeneratorResponse.File = {
     val b = CodeGeneratorResponse.File.newBuilder()
@@ -75,28 +76,30 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
       .newline
       .add(
         "import scalapb.GeneratedMessage",
-        "import scalapb.json4s.JsonFormat",
-        s"import com.improving.grpc_rest_gateway.runtime",
-        s"import runtime.core.$wildcardImport",
-        s"import runtime.handlers.$wildcardImport",
-        s"import io.grpc.$wildcardImport",
+        "import io.grpc.ManagedChannel",
         "import io.netty.handler.codec.http.{HttpMethod, QueryStringDecoder}"
       )
       .newline
       .add(
+        s"import com.improving.grpc_rest_gateway.runtime",
+        s"import runtime.core.$wildcardImport",
+        s"import runtime.handlers.$wildcardImport"
+      )
+      .call(GenerateImportStatements(scalaPackageName, implicits, methods))
+      .newline
+      .add(
         "import scala.concurrent.{ExecutionContext, Future}",
-        "import scalapb.json4s.JsonFormatException",
-        s"import scala.util.$wildcardImport"
+        "import scala.util.Try"
       )
       .newline
-      .call(generateCompanionObject(service))
+      .call(generateCompanionObject)
       .newline
       .print(Seq(service)) { case (p, s) => generateService(s)(p) }
       .result()
 
-  private def generateCompanionObject(service: ServiceDescriptor): PrinterEndo = { printer =>
+  private def generateCompanionObject: PrinterEndo = { printer =>
     val paths =
-      service.getMethods.asScala.filter(_.getOptions.hasExtension(AnnotationsProto.http)).flatMap { method =>
+      methods.filter(_.getOptions.hasExtension(AnnotationsProto.http)).flatMap { method =>
         val uppercaseMethodName = NameUtils.snakeCaseToCamelCase(method.getName, upperInitial = true)
         val paths = extractPaths(method)
         if (paths.size == 1) {
@@ -116,7 +119,7 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
     printer
       .add(s"object $handlerClassName {")
       .indent
-      .seq(paths.toSeq)
+      .seq(paths)
       .outdent
       .newline
       .indent
@@ -132,7 +135,6 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
     val descriptor = ExtendedServiceDescriptor(service)
     // this is NOT the FQN of the service, we are generating gateway handler in the same package as GRPC service
     val grpcService = descriptor.companionObject.name
-    val methods = getUnaryCallsWithHttpExtension(service).toSeq
     printer
       .add(s"class $handlerClassName(channel: ManagedChannel)(implicit ec: ExecutionContext)")
       .indent
@@ -141,18 +143,18 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
         s"import $handlerClassName.$wildcardImport",
         s"""override val serviceName: String = "${service.getName}"""",
         s"""override val specificationName: String = "$specificationName"""",
-        s"private val stub = $grpcService.stub(channel)"
+        s"private val client = $grpcService.stub(channel)"
       )
       .call(generateHttpMethodToUrisMap)
       .newline
-      .call(generateDispatchCall(methods))
+      .call(generateDispatchCall)
       .outdent
       .newline
-      .call(generateMethodHandlerDelegates(methods))
+      .call(GenerateDelegateFunctions(implicits, "toResponse", methods))
       .add("}")
   }
 
-  private def generateDispatchCall(methods: Seq[MethodDescriptor]): PrinterEndo =
+  private def generateDispatchCall: PrinterEndo =
     _.add(
       s"override protected def dispatchCall(method: HttpMethod, uri: String, body: String): Future[GeneratedMessage] = {"
     )
@@ -162,11 +164,11 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
         "val path = queryString.path",
         "val methodName = method.name"
       )
-      .call(generateMethodHandlers(methods.toSeq))
+      .call(generateMethodHandlers)
       .outdent
       .add("}")
 
-  private def generateMethodHandlers(methods: Seq[MethodDescriptor]): PrinterEndo = { printer =>
+  private def generateMethodHandlers: PrinterEndo = { printer =>
     val p =
       methods.foldLeft(printer) { case (printer, method) =>
         val http = method.getOptions.getExtension(AnnotationsProto.http)
@@ -182,6 +184,8 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
   }
 
   private def generateMethodHandler(method: MethodDescriptor, http: HttpRule): PrinterEndo = { printer =>
+    val body = http.getBody
+    val delegateFunctionName = GenerateDelegateFunctions.generateDelegateFunctionName(method.getName)
     http.getPatternCase match {
       case PatternCase.GET =>
         val constantName = pathsToConstantMap((PatternCase.GET, http.getGet))
@@ -192,7 +196,6 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
             ifStatementStarted = true
             printer.add(s"""if (isSupportedCall(HttpMethod.GET.name, $constantName, methodName, path))""")
           }
-        val delegateFunctionName = generateDelegateFunctionName(PatternCase.GET, method.getName)
         p1.indent.add(s"$delegateFunctionName(mergeParameters($constantName, queryString))").outdent
 
       case PatternCase.PUT =>
@@ -204,8 +207,6 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
             ifStatementStarted = true
             printer.add(s"""if (isSupportedCall(HttpMethod.PUT.name, $constantName, methodName, path))""")
           }
-        val body = http.getBody
-        val delegateFunctionName = generateDelegateFunctionName(PatternCase.PUT, method.getName)
         p1.indent
           .when(body == "*")(_.add(s"$delegateFunctionName(body)"))
           .when(body != "*")(_.add(s"$delegateFunctionName(body, mergeParameters($constantName, queryString))"))
@@ -221,8 +222,6 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
             ifStatementStarted = true
             printer.add(s"""if (isSupportedCall(HttpMethod.POST.name, $constantName, methodName, path))""")
           }
-        val body = http.getBody
-        val delegateFunctionName = generateDelegateFunctionName(PatternCase.POST, method.getName)
         p1.indent
           .when(body == "*")(_.add(s"$delegateFunctionName(body)"))
           .when(body != "*")(_.add(s"$delegateFunctionName(body, mergeParameters($constantName, queryString))"))
@@ -237,7 +236,6 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
             ifStatementStarted = true
             printer.add(s"""if (isSupportedCall(HttpMethod.DELETE.name, $constantName", methodName, path))""")
           }
-        val delegateFunctionName = generateDelegateFunctionName(PatternCase.DELETE, method.getName)
         p1.indent.add(s"$delegateFunctionName(mergeParameters($constantName, queryString))").outdent
 
       case PatternCase.PATCH =>
@@ -249,256 +247,15 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
             ifStatementStarted = true
             printer.add(s"""if (isSupportedCall(HttpMethod.PATCH.name, $constantName, methodName, path))""")
           }
-        val delegateFunctionName = generateDelegateFunctionName(PatternCase.PATCH, method.getName)
         p1.indent.add(s"$delegateFunctionName(mergeParameters($constantName, queryString))").outdent
 
       case _ => printer
     }
   }
 
-  private def generateBodyParam(
-    method: MethodDescriptor,
-    delegateFunctionName: String,
-    fullInputName: String,
-    methodName: String,
-    body: String
-  ): PrinterEndo = { printer =>
-    if (body.nonEmpty) {
-      if (body == "*") {
-        printer
-          .indent
-          .add(s"""private def $delegateFunctionName(body: String) = {""")
-          .indent
-          .add(
-            s"val input = Try(JsonFormat.fromJsonString[$fullInputName](body))"
-          )
-          .addIndented(".recoverWith(jsonException2GatewayExceptionPF)")
-          .add(s"toResponse(input, stub.$methodName)")
-          .outdent
-          .add("}")
-          .outdent
-          .newline
-      } else {
-        val inputTypeDescriptor = method.getInputType
-        val maybeDescriptor = inputTypeDescriptor.getFields.asScala.find(_.getName == body)
-        maybeDescriptor match {
-          case Some(descriptor) =>
-            val fd = ExtendedFieldDescriptor(descriptor)
-            val bodyFullType = fd.singleScalaTypeName
-            val optional = !fd.noBox // this is an Option in parent type
-            val args =
-              inputTypeDescriptor.getFields.asScala.map(f => s"${f.getJsonName} = ${f.getJsonName}").mkString(", ")
-            printer
-              .indent
-              .add(s"""private def $delegateFunctionName(body: String, parameters: Map[String, Seq[String]]) = {""")
-              .indent
-              .add("val parsedBody = ")
-              .when(optional)(
-                _.addIndented(s"Try(Option(JsonFormat.fromJsonString[$bodyFullType](body)))")
-              )
-              .when(!optional)(_.addIndented(s"Try(JsonFormat.fromJsonString[$bodyFullType](body))"))
-              .addIndented(".recoverWith(jsonException2GatewayExceptionPF)")
-              .add("val input = Try {")
-              .indent
-              .call(generateInputFromQueryStringSingle(inputTypeDescriptor, required = true, ignoreFieldName = body))
-              .add(s"""val $body = parsedBody.get""")
-              .add(s"$fullInputName($args)")
-              .outdent
-              .add("}")
-              .add(s"toResponse(input, stub.$methodName)")
-              .outdent
-              .add("}")
-              .outdent
-              .newline
-          case None =>
-            throw new RuntimeException(
-              s"Unable to determine body type for input: $fullInputName, body: $body, method: $methodName"
-            )
-        }
-      }
-    } else
-      throw new RuntimeException(
-        s"Body parameter is empty for input: $fullInputName, method: $methodName"
-      )
-  }
-
-  private def generateMethodHandlerDelegates(methods: Seq[MethodDescriptor]): PrinterEndo = { printer =>
-    methods.foldLeft(printer) { case (printer, method) =>
-      val paths = extractPaths(method).groupBy(_._1).map { case (patternCase, seq) =>
-        patternCase -> seq.map { case (_, path, body) =>
-          (path, body)
-        }
-      }
-      paths.foldLeft(printer) { case (printer, (patternCase, pathNBodies)) =>
-        // for a given method having a multiple GET make sense, if we are to have multiple paths for POST and PUT
-        // then we have a problem, for now log the error and process first one
-        if (patternCase == PatternCase.PUT || patternCase == PatternCase.POST) {
-          if (pathNBodies.size > 1) {
-            Console
-              .err
-              .println(s"${Console.RED} Multiple paths found for $patternCase and ${method.getName}  ${Console.RESET}")
-            printer
-          } else printer.call(generateMethodHandlerDelegate(method, patternCase, pathNBodies.head._2))
-        } else printer.call(generateMethodHandlerDelegate(method, patternCase))
-      }
-    }
-  }
-
-  private def generateMethodHandlerDelegate(
-    method: MethodDescriptor,
-    httpMethod: PatternCase,
-    body: String = ""
-  ): PrinterEndo = { printer =>
-    val name = method.getName
-    val methodName = name.charAt(0).toLower + name.substring(1)
-    val delegateFunctionName = generateDelegateFunctionName(httpMethod, name)
-    // FQN of the input type, this done on the assumption that input types can be in the different package
-    val fullInputName = ExtendedMethodDescriptor(method).inputType.scalaType
-    httpMethod match {
-      case PatternCase.GET | PatternCase.DELETE | PatternCase.PATCH =>
-        printer
-          .indent
-          .add(s"""private def $delegateFunctionName(parameters: Map[String, Seq[String]]) = {""")
-          .indent
-          .add("val input = Try {")
-          .indent
-          .call(generateInputFromQueryString(method.getInputType, fullInputName, required = true))
-          .outdent
-          .add("}")
-          .add(s"toResponse(input, stub.$methodName)")
-          .outdent
-          .add("}")
-          .outdent
-          .newline
-      case PatternCase.PUT | PatternCase.POST =>
-        printer.call(
-          generateBodyParam(
-            method = method,
-            delegateFunctionName = delegateFunctionName,
-            fullInputName = fullInputName,
-            methodName = methodName,
-            body = body
-          )
-        )
-      case _ => printer
-    }
-  }
-
-  private def generateDelegateFunctionName(patternCase: PatternCase, name: String) =
-    s"${patternCase.name().toLowerCase}_$name"
-
-  /** Generates inputs.
-    *
-    * @param d
-    *   current descriptor
-    * @param fullName
-    *   full name of parent type
-    * @param required
-    *   flag to indicate if current is type is required, this flag will dictate how primitive types will be evaluated
-    * @param prefix
-    *   prefix (if applicable) of the query string
-    * @return
-    *   FunctionalPrinter function
-    */
-  private def generateInputFromQueryString(
-    d: Descriptor,
-    fullName: String,
-    required: Boolean,
-    prefix: String = ""
-  ): PrinterEndo = { printer =>
-    val args = d.getFields.asScala.map(f => s"${f.getJsonName} = ${f.getJsonName}").mkString(", ")
-
-    // If field name in Protobuf is defined with underscore then inputName and jsonName will be different
-    printer
-      .call(generateInputFromQueryStringSingle(d, required, prefix))
-      .add(s"$fullName($args)")
-  }
-
-  private def generateInputFromQueryStringSingle(
-    d: Descriptor,
-    required: Boolean,
-    prefix: String = "",
-    ignoreFieldName: String = ""
-  ): PrinterEndo =
-    // If field name in Protobuf is defined with underscore then inputName and jsonName will be different
-    _.print(d.getFields.asScala) { case (p, f) =>
-      val inputName = getInputName(f, prefix)
-      val jsonName = f.getJsonName
-      f.getJavaType match {
-        case JavaType.MESSAGE if ignoreFieldName == inputName => p
-        case JavaType.MESSAGE =>
-          val required = f.noBox
-          val optional = !required
-          p.when(required)(_.add(s"""val $jsonName = {"""))
-            .when(optional)(_.add(s"""val $jsonName = Try {"""))
-            .indent
-            .call(
-              generateInputFromQueryString(
-                d = f.getMessageType,
-                fullName = f.singleScalaTypeName,
-                required = required,
-                prefix = if (prefix.isBlank) s"$inputName." else s"$prefix.$inputName."
-              )
-            )
-            .outdent
-            .when(required)(_.add("}"))
-            .when(optional)(_.add("}.toOption"))
-
-        case JavaType.ENUM =>
-          p.when(f.isRepeated)(
-            _.add(s"""val $jsonName = parameters.toEnumValues("$prefix$inputName", ${f.singleScalaTypeName})""")
-          ).when(!f.isRepeated)(
-            _.add(
-              s"""val $jsonName = parameters.toEnumValue("$prefix$inputName", ${f.singleScalaTypeName})"""
-            )
-          )
-
-        case JavaType.BOOLEAN =>
-          if (f.isRepeated) p.add(s"""val $jsonName = parameters.toBooleanValues("$prefix$inputName")""")
-          else
-            p.add(s"""val $jsonName = parameters.toBooleanValue("$prefix$inputName")""")
-
-        case JavaType.DOUBLE =>
-          if (f.isRepeated) p.add(s"""val $jsonName = parameters.toDoubleValues("$prefix$inputName")""")
-          else
-            p.when(required)(_.add(s"""val $jsonName = parameters.toDoubleValue("$prefix$inputName")"""))
-              .when(!required)(_.add(s"""val $jsonName = parameters.toDoubleValue("$prefix$inputName", "")"""))
-
-        case JavaType.FLOAT =>
-          if (f.isRepeated) p.add(s"""val $jsonName = parameters.toFloatValues("$prefix$inputName")""")
-          else
-            p.when(required)(_.add(s"""val $jsonName = parameters.toFloatValue("$prefix$inputName")"""))
-              .when(!required)(_.add(s"""val $jsonName = parameters.toFloatValue("$prefix$inputName", "")"""))
-
-        case JavaType.INT =>
-          if (f.isRepeated)
-            p.add(s"""val $jsonName = parameters.toIntValues("$prefix$inputName")""")
-          else
-            p.when(required)(_.add(s"""val $jsonName = parameters.toIntValue("$prefix$inputName")"""))
-              .when(!required)(_.add(s"""val $jsonName = parameters.toIntValue("$prefix$inputName", "")"""))
-
-        case JavaType.LONG =>
-          if (f.isRepeated) p.add(s"""val $jsonName = parameters.toLongValues("$prefix$inputName")""")
-          else
-            p.when(required)(_.add(s"""val $jsonName = parameters.toLongValue("$prefix$inputName")"""))
-              .when(!required)(_.add(s"""val $jsonName = parameters.toLongValue("$prefix$inputName", "")"""))
-
-        case JavaType.STRING =>
-          if (f.isRepeated) p.add(s"""val $jsonName = parameters.toStringValues("$prefix$inputName")""")
-          else
-            p.add(s"""val $jsonName = parameters.toStringValue("$prefix$inputName")""")
-        case jt => throw new Exception(s"Unknown java type: $jt")
-      }
-    }
-
-  private def getInputName(d: FieldDescriptor, prefix: String = ""): String = {
-    val name = prefix.split(".").filter(_.nonEmpty).map(s => s.charAt(0).toUpper + s.substring(1)).mkString + d.getName
-    name.charAt(0).toLower + name.substring(1)
-  }
-
   private def generateHttpMethodToUrisMap: PrinterEndo = { printer =>
     val httpMethodsToUrisMap =
-      pathsToConstantMap.foldLeft(Map.empty[PatternCase, Seq[String]]) { case (result, ((patternCase, path), value)) =>
+      pathsToConstantMap.foldLeft(Map.empty[PatternCase, Seq[String]]) { case (result, ((patternCase, _), value)) =>
         val updatedValues =
           result.get(patternCase) match {
             case Some(values) => values :+ value

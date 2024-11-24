@@ -141,8 +141,8 @@ class GenerateDelegateFunctions private[utils] (
               .indent
               .add(s"""private def $delegateFunctionName(body: String, parameters: Map[String, Seq[String]]) = {""")
               .indent
-              .when(optional)(_.addIndented(s"val parsedBody = parseBodyOptional[$bodyFullType](body)"))
-              .when(!optional)(_.addIndented(s"val parsedBody = parseBody[$bodyFullType](body)"))
+              .when(optional)(_.add(s"val parsedBody = parseBodyOptional[$bodyFullType](body)"))
+              .when(!optional)(_.add(s"val parsedBody = parseBody[$bodyFullType](body)"))
               .add("val input = Try {")
               .indent
               .call(generateInputFromQueryStringSingle(inputTypeDescriptor, required = true, ignoreFieldName = body))
