@@ -20,6 +20,7 @@ object Dependencies {
     val Sttp = "3.10.1"
     val SwaggerUi = "5.17.14"
     val TypesafeConfig = "1.4.3"
+    val Xerces = "2.12.2"
   }
 
   val CodegenDependencies: Seq[ModuleID] = Seq(
@@ -27,7 +28,7 @@ object Dependencies {
     "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % V.ScalaPb,
     "org.scalameta" % "scalafmt-interfaces" % V.ScalaFmt,
     "io.get-coursier" % "interface" % V.Coursier,
-    "xerces" % "xercesImpl" % "2.12.2"
+    "xerces" % "xercesImpl" % V.Xerces
   )
 
   val RuntimeCoreDependencies: Seq[ModuleID] = Seq(

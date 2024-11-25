@@ -89,8 +89,7 @@ lazy val codeGen = (projectMatrix in file("code-gen"))
   .settings(
     name := "grpc-rest-gateway-code-gen",
     libraryDependencies ++= CodegenDependencies,
-    scalacOptions ++= Seq("-J--add-modules", "-Jjava.xml") ++ (if (isScala3.value) Seq("-source", "future")
-                                                               else Seq("-Xsource:3"))
+    scalacOptions ++= (if (isScala3.value) Seq("-source", "future") else Seq("-Xsource:3"))
   )
   .jvmPlatform(scalaVersions = Seq(Scala212, Scala213, Scala3))
 
