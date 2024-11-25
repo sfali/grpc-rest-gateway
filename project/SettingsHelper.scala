@@ -11,6 +11,7 @@ import sbt.Keys.{
   startYear,
   version
 }
+import sbt.librarymanagement.CrossVersion
 import sbt.{Compile, Project}
 import sbtbuildinfo.BuildInfoPlugin
 import sbtbuildinfo.BuildInfoPlugin.autoImport.{BuildInfoKey, buildInfoKeys, buildInfoPackage}
@@ -32,6 +33,9 @@ object SettingsHelper {
         version,
         scalaVersion,
         sbtVersion,
+        "scalaPartialVersion" -> CrossVersion.partialVersion(scalaVersion.value),
+        "scalafmtVersion" -> Dependencies.V.ScalaFmt,
+        "swaggerUiVersion" -> Dependencies.V.SwaggerUi,
         Compile / allDependencies
       )
     )

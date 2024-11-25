@@ -1,11 +1,13 @@
-package com.improving.grpc_rest_gateway.compiler
+package com.improving
+package grpc_rest_gateway
+package compiler
 
 import com.google.api.{AnnotationsProto, HttpRule}
 import com.google.api.HttpRule.PatternCase
 import com.google.protobuf.Descriptors.{MethodDescriptor, ServiceDescriptor}
 import com.google.protobuf.ExtensionRegistry
 import com.google.protobuf.compiler.PluginProtos.CodeGeneratorResponse
-import com.improving.grpc_rest_gateway.compiler.utils.{GenerateDelegateFunctions, GenerateImportStatements}
+import compiler.utils.{Formatter, GenerateDelegateFunctions, GenerateImportStatements}
 import protocbridge.Artifact
 import protocgen.{CodeGenApp, CodeGenRequest, CodeGenResponse}
 import scalapb.compiler.FunctionalPrinter.PrinterEndo
@@ -65,7 +67,7 @@ private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: Descr
   lazy val result: CodeGeneratorResponse.File = {
     val b = CodeGeneratorResponse.File.newBuilder()
     b.setName(outputFileName)
-    b.setContent(content)
+    b.setContent(Formatter.format(content))
     b.build()
   }
 

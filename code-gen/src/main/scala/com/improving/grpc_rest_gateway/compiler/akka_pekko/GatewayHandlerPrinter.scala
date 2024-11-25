@@ -6,7 +6,7 @@ package akka_pekko
 import com.google.api.HttpRule.PatternCase
 import com.google.protobuf.Descriptors.{MethodDescriptor, ServiceDescriptor}
 import com.google.protobuf.compiler.PluginProtos.CodeGeneratorResponse
-import com.improving.grpc_rest_gateway.compiler.utils.{GenerateDelegateFunctions, GenerateImportStatements}
+import compiler.utils.{Formatter, GenerateDelegateFunctions, GenerateImportStatements}
 import scalapb.compiler.FunctionalPrinter.PrinterEndo
 import scalapb.compiler.{DescriptorImplicits, FunctionalPrinter}
 
@@ -32,7 +32,7 @@ class GatewayHandlerPrinter(packageNamePrefix: String, service: ServiceDescripto
   lazy val result: CodeGeneratorResponse.File = {
     val b = CodeGeneratorResponse.File.newBuilder()
     b.setName(outputFileName)
-    b.setContent(content)
+    b.setContent(Formatter.format(content))
     b.build()
   }
 

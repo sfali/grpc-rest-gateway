@@ -38,7 +38,7 @@ package object compiler {
   }
 
   def getUnaryCallsWithHttpExtension(service: ServiceDescriptor): Seq[MethodDescriptor] =
-    service.getMethods.asScala.filter { m =>
+    service.getMethods.asScala.toList.filter { m =>
       // only unary calls with http method specified
       !m.isClientStreaming && !m.isServerStreaming && m.getOptions.hasExtension(AnnotationsProto.http)
     }
