@@ -3,7 +3,7 @@ import sbt.*
 object Dependencies {
 
   object V {
-    val CommonsIo = "2.16.1"
+    val CommonsIo = "2.18.0"
     val CommonProtos = "2.9.6-0"
     val Coursier = "1.0.24"
     val GrpcJava: String = scalapb.compiler.Version.grpcJavaVersion
@@ -55,6 +55,12 @@ object Dependencies {
     "org.apache.pekko" %% "pekko-http" % V.PekkoHttp % "provided"
   )
 
+  val E2ECore: Seq[ModuleID] = Seq(
+    "ch.qos.logback" % "logback-classic" % V.Logback,
+    "com.softwaremill.sttp.client3" %% "core" % V.Sttp,
+    "com.thesamet.scalapb" %% "compilerplugin" % V.ScalaPb,
+  )
+
   val E2EDependencies: Seq[ModuleID] = Seq(
     "ch.qos.logback" % "logback-classic" % V.Logback,
     "org.scalatest" %% "scalatest" % V.ScalaTest % Test,
@@ -66,6 +72,7 @@ object Dependencies {
     "org.apache.pekko" %% "pekko-actor-typed" % V.Pekko,
     "org.apache.pekko" %% "pekko-stream-typed" % V.Pekko,
     "org.apache.pekko" %% "pekko-http" % V.PekkoHttp,
-    "org.apache.pekko" %% "pekko-grpc-runtime" % V.PekkoGrpc
+    "org.apache.pekko" %% "pekko-grpc-runtime" % V.PekkoGrpc,
+    "org.scalatest" %% "scalatest" % V.ScalaTest % Test
   )
 }

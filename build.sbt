@@ -110,11 +110,19 @@ lazy val protocGenGrpcRestPekkoGatewayPlugin =
       scalaVersion := Scala212
     )
 
-lazy val `e2e-api` = project
-  .in(file("e2e-api"))
+lazy val `e2e-core` = (projectMatrix in file("e2e-core"))
+  .defaultAxes()
+  .dependsOn(`runtime-core`)
   .settings(
-    publish / skip := true
+    publish / skip := true,
+    libraryDependencies ++= E2ECore,
+    scalacOptions ++= (if (isScala3.value) Seq("-source", "future")
+                       else Seq("-Xsource:3"))
   )
+  .jvmPlatform(scalaVersions = Seq(Scala212, Scala213, Scala3))
+
+lazy val `e2e-api` = (project in file("e2e-api"))
+  .settings(publish / skip := true)
 
 lazy val `e2e-netty` = (projectMatrix in file("e2e-netty"))
   .dependsOn(`runtime-netty`)
@@ -164,7 +172,7 @@ lazy val `e2e-netty` = (projectMatrix in file("e2e-netty"))
   .jvmPlatform(scalaVersions = Seq(Scala212, Scala213, Scala3))
 
 lazy val `e2e-pekko` = (projectMatrix in file("e2e-pekko"))
-  .dependsOn(`runtime-pekko`)
+  .dependsOn(`runtime-pekko`, `e2e-core`)
   .enablePlugins(PekkoGrpcPlugin, LocalCodeGenPlugin, ScalafmtPlugin)
   .defaultAxes()
   .customRow(
@@ -247,9 +255,13 @@ addCommandAlias("nettyJVM213Test", "e2e-nettyJVM2_13 / clean; e2e-nettyJVM2_13 /
 addCommandAlias("nettyJVM3Test", "e2e-nettyJVM3 / clean; e2e-nettyJVM3 / test")
 
 addCommandAlias("pekkoJVM212Test", "e2e-pekkoJVM2_12 / clean; e2e-pekkoJVM2_12 / compile")
-addCommandAlias("pekkoJVM213Test", "e2e-pekkoJVM2_13 / clean; e2e-pekkoJVM2_13 / compile")
+addCommandAlias("pekkoJVM213Test", "e2e-pekkoJVM2_13 / clean; e2e-pekkoJVM2_13 / test")
 addCommandAlias("pekkoJVM3Test", "e2e-pekkoJVM3 / clean; e2e-pekkoJVM3 / compile")
 
 addCommandAlias("nettyJVM212Run", "e2e-nettyJVM2_12 / run")
 addCommandAlias("nettyJVM213Run", "e2e-nettyJVM2_13 / run")
 addCommandAlias("nettyJVM3Run", "e2e-nettyJVM3 / run")
+
+addCommandAlias("pekkoJVM212Run", "e2e-pekkoJVM2_12 / run")
+addCommandAlias("pekkoJVM213Run", "e2e-pekkoJVM2_13 / run")
+addCommandAlias("pekkoJVM3Run", "e2e-pekkoJVM3 / run")
