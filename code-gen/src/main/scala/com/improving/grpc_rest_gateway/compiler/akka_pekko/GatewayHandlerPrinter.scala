@@ -89,7 +89,7 @@ class GatewayHandlerPrinter(packageNamePrefix: String, service: ServiceDescripto
       .indent(2)
       .print(methods)((p, method) => generateRouteForMethod(method)(p))
       .outdent
-      .add("})")
+      .add("}}")
       .outdent(1)
   }
 
@@ -105,7 +105,7 @@ class GatewayHandlerPrinter(packageNamePrefix: String, service: ServiceDescripto
         if (routeStarted) "} ~ "
         else {
           routeStarted = true
-          "Route.seal("
+          "handleExceptions(exceptionHandler) {"
         }
 
       if (isMethodAllowed(patternCase)) {

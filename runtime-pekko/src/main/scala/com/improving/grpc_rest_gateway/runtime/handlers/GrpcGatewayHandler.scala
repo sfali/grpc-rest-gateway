@@ -38,7 +38,7 @@ trait GrpcGatewayHandler {
     Code.UNAUTHENTICATED.value() -> StatusCodes.Unauthorized
   ).withDefaultValue(StatusCodes.InternalServerError)
 
-  protected implicit def exceptionHandler: ExceptionHandler = ExceptionHandler { case ex: GatewayException =>
+  protected def exceptionHandler: ExceptionHandler = ExceptionHandler { case ex: GatewayException =>
     complete(
       HttpResponse(
         status = GrpcToStatusCodes(ex.statusCode.intValue()),
