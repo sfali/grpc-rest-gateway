@@ -89,17 +89,19 @@ lazy val codeGen = (projectMatrix in file("code-gen"))
   .settings(
     name := "grpc-rest-gateway-code-gen",
     libraryDependencies ++= CodegenDependencies,
-    scalacOptions ++= (if (isScala3.value) Seq("-source", "future") else Seq("-Xsource:3"))
+    scalacOptions ++= (if (isScala3.value) Seq("-source", "future")
+                       else Seq("-Xsource:3"))
   )
   .jvmPlatform(scalaVersions = Seq(Scala212, Scala213, Scala3))
 
 lazy val codeGenJVM212 = codeGen.jvm(Scala212)
 
-lazy val protocGenGrpcRestGatewayPlugin = protocGenProject("protoc-gen-grpc-rest-gateway-plugin", codeGenJVM212)
-  .settings(
-    Compile / mainClass := Some("com.improving.grpc_rest_gateway.compiler.GatewayGenerator"),
-    scalaVersion := Scala212
-  )
+lazy val protocGenGrpcRestNettyGatewayPlugin =
+  protocGenProject("protoc-gen-grpc-rest--netty-gateway-plugin", codeGenJVM212)
+    .settings(
+      Compile / mainClass := Some("com.improving.grpc_rest_gateway.compiler.NettyGatewayGenerator"),
+      scalaVersion := Scala212
+    )
 
 lazy val `e2e-api` = project
   .in(file("e2e-api"))
@@ -144,7 +146,7 @@ lazy val `e2e-netty` = (projectMatrix in file("e2e-netty"))
     (Compile / PB.protoSources) += (`e2e-api` / baseDirectory).value / "src" / "main" / "protobuf",
     Compile / PB.targets := Seq(
       (
-        genModule("com.improving.grpc_rest_gateway.compiler.GatewayGenerator$"),
+        genModule("com.improving.grpc_rest_gateway.compiler.NettyGatewayGenerator$"),
         Seq("scala3_sources")
       ) -> (Compile / sourceManaged).value / "scalapb",
       genModule(
@@ -227,7 +229,7 @@ lazy val `grpc-rest-gateway` =
         pushChanges
       )
     )
-    .aggregate(protocGenGrpcRestGatewayPlugin.agg)
+    .aggregate(protocGenGrpcRestNettyGatewayPlugin.agg)
     .aggregate(
       (codeGen.projectRefs ++ `runtime-core`.projectRefs ++ `runtime-netty`.projectRefs ++ `runtime-pekko`.projectRefs)*
     )

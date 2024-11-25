@@ -16,7 +16,7 @@ import scalapb.options.Scalapb
 
 import scala.jdk.CollectionConverters.*
 
-object GatewayGenerator extends CodeGenApp {
+object NettyGatewayGenerator extends CodeGenApp {
 
   override def registerExtensions(registry: ExtensionRegistry): Unit = {
     Scalapb.registerAllExtensions(registry)
