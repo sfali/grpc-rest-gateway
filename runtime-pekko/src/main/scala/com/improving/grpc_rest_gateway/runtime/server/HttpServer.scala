@@ -17,7 +17,7 @@ class HttpServer {
 
   private val logger = LoggerFactory.getLogger(classOf[HttpServer])
 
-  def apply(
+  def run(
     host: String,
     port: Int,
     handlers: GrpcGatewayHandler*
