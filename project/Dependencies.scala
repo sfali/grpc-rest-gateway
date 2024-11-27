@@ -28,7 +28,8 @@ object Dependencies {
     "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % V.ScalaPb,
     "org.scalameta" % "scalafmt-interfaces" % V.ScalaFmt,
     "io.get-coursier" % "interface" % V.Coursier,
-    "xerces" % "xercesImpl" % V.Xerces
+    "xerces" % "xercesImpl" % V.Xerces,
+    "org.scalatest" %% "scalatest" % V.ScalaTest % Test
   )
 
   val RuntimeCoreDependencies: Seq[ModuleID] = Seq(
@@ -58,7 +59,7 @@ object Dependencies {
   val E2ECore: Seq[ModuleID] = Seq(
     "ch.qos.logback" % "logback-classic" % V.Logback,
     "com.softwaremill.sttp.client3" %% "core" % V.Sttp,
-    "com.thesamet.scalapb" %% "compilerplugin" % V.ScalaPb,
+    "com.thesamet.scalapb" %% "compilerplugin" % V.ScalaPb
   )
 
   val E2EDependencies: Seq[ModuleID] = Seq(
