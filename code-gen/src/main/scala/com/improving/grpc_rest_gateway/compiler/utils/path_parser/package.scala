@@ -14,8 +14,8 @@ package object path_parser {
       .groupBy(_._1)
       .map { case (path, seq) =>
         val methodInfos =
-          seq.map { case (_, patternCase, body, source) =>
-            MethodInfo(patternCase, body, source)
+          seq.map { case (path, patternCase, body, source) =>
+            MethodInfo(patternCase, path, body, source)
           }
         RawPath(path, methodInfos.toList.sorted)
       }

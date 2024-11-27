@@ -16,7 +16,9 @@ object RawPath {
     x.path.compareTo(y.path)
 }
 
-case class MethodInfo[Source](patternCase: PatternCase, body: String, source: Source)
+case class MethodInfo[Source](patternCase: PatternCase, fullPath: String, body: String, source: Source) {
+  val method: String = patternCase.name().toLowerCase
+}
 
 object MethodInfo {
   implicit def methodOrdering[Source]: Ordering[MethodInfo[Source]] =
