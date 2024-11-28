@@ -13,9 +13,9 @@ import pekko.http.scaladsl.server.Directives.*
 import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success}
 
-class HttpServer {
+class GatewayHttpServer {
 
-  private val logger = LoggerFactory.getLogger(classOf[HttpServer])
+  private val logger = LoggerFactory.getLogger(classOf[GatewayHttpServer])
 
   def run(
     host: String,
