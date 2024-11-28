@@ -5,7 +5,6 @@ package handlers
 
 import runtime.core.*
 import io.grpc.Status.Code
-import io.grpc.StatusRuntimeException
 import org.apache.pekko
 import pekko.http.scaladsl.server.Directives.*
 import pekko.http.scaladsl.server.{ExceptionHandler, Route}
@@ -57,9 +56,6 @@ trait GrpcGatewayHandler {
     val eventualResponse =
       toResponse(in, dispatchCall)
         .map(toHttpResponse(statusCode))
-        .recoverWith { case ex: StatusRuntimeException =>
-          Future.failed(ex.toGatewayException)
-        }
     onComplete(eventualResponse) {
       case Failure(ex)       => complete(ex)
       case Success(response) => complete(response)
