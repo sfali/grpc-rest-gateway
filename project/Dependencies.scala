@@ -1,3 +1,4 @@
+import SettingsHelper.isScala3
 import sbt.*
 
 object Dependencies {
@@ -5,7 +6,6 @@ object Dependencies {
   object V {
     val CommonsIo = "2.18.0"
     val CommonProtos = "2.9.6-0"
-    val Coursier = "1.0.24"
     val GrpcJava: String = scalapb.compiler.Version.grpcJavaVersion
     val JavaActivation = "1.1.1"
     val Logback = "1.5.12"
@@ -30,7 +30,6 @@ object Dependencies {
     "com.thesamet.scalapb" %% "compilerplugin" % V.ScalaPb,
     "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % V.ScalaPb,
     "org.scalameta" % "scalafmt-interfaces" % V.ScalaFmt,
-    "io.get-coursier" % "interface" % V.Coursier,
     "xerces" % "xercesImpl" % V.Xerces,
     "org.scalatest" %% "scalatest" % V.ScalaTest % Test
   )

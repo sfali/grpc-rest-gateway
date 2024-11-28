@@ -47,6 +47,12 @@ lazy val codeGen = (projectMatrix in file("code-gen"))
   .settings(
     name := "grpc-rest-gateway-code-gen",
     libraryDependencies ++= CodegenDependencies,
+    libraryDependencies ++= {
+      Seq(
+        if (isScala3.value) "org.scalameta" %% "scalafmt-dynamic" % V.ScalaFmt cross CrossVersion.for3Use2_13
+        else "org.scalameta" %% "scalafmt-dynamic" % V.ScalaFmt
+      )
+    },
     scalacOptions ++= (if (isScala3.value) Seq("-source", "future")
                        else Seq("-Xsource:3"))
   )
