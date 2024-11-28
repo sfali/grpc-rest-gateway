@@ -163,7 +163,7 @@ private class RouteGenerator(implicits: DescriptorImplicits, methods: List[Metho
                     case Some(value)
                         if value.pathMatcherName == pathMatcherName || value.pathMatcherName == "Segment" =>
                       valuesMap
-                    case None => valuesMap + (pathName -> PathVariableInfo(pathName, pathMatcherName, javaType))
+                    case _ => valuesMap + (pathName -> PathVariableInfo(pathName, pathMatcherName, javaType))
                   }
 
                 case None => Map(pathName -> PathVariableInfo(pathName, pathMatcherName, javaType))

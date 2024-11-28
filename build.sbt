@@ -240,12 +240,12 @@ lazy val `grpc-rest-gateway` =
         releaseStepCommand("pekkoJVM212Test"),
         releaseStepCommand("pekkoJVM213Test"),
         releaseStepCommand("pekkoJVM3Test"),
-        /*setReleaseVersion,
+        setReleaseVersion,
         tagRelease,
         publishArtifacts,
         releaseStepCommand("publishSigned"),
         releaseStepCommand("sonatypeBundleRelease"),
-        pushChanges*/
+        pushChanges
       )
     )
     .aggregate(protocGenGrpcRestNettyGatewayPlugin.agg)
