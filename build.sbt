@@ -1,52 +1,10 @@
 import SettingsHelper.*
 import Dependencies.*
 import ReleaseTransformations.*
-import sbt.Def
-import xerial.sbt.Sonatype.*
-
-val Scala213 = "2.13.15"
-val Scala212 = "2.12.20"
-val Scala3 = "3.5.2"
-
-def isScala3: Def.Initialize[Boolean] = Def.setting[Boolean](scalaVersion.value.startsWith("3."))
-
-Global / onChangedBuildSource := ReloadOnSourceChanges
-ThisBuild / organization := "io.github.sfali23"
-ThisBuild / scalaVersion := Scala213
-ThisBuild / sonatypeRepository := "https://s01.oss.sonatype.org/service/local"
-ThisBuild / sonatypeCredentialHost := "s01.oss.sonatype.org"
-ThisBuild / credentials += Credentials(Path.userHome / ".sbt" / "sonatype-credentials")
-ThisBuild / publishTo := sonatypePublishToBundle.value
-ThisBuild / sonatypeProjectHosting := Some(
-  GitHubHosting(
-    "sfali",
-    "grpc-rest-gateway",
-    "syed.f.ali@improving.com"
-  )
-)
-ThisBuild / developers := List(
-  Developer(
-    id = "sfali",
-    name = "Syed Farhan Ali",
-    email = "syed.f.ali@improving.com",
-    url = url("https://github.com/sfali/grpc-rest-gateway")
-  )
-)
-ThisBuild / licenses := Seq(
-  "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0.txt")
-)
-ThisBuild / homepage := Some(url("https://github.com/sfali/grpc-rest-gateway"))
-
-ThisBuild / scmInfo := Some(
-  ScmInfo(
-    url("https://github.com/sfali/grpc-rest-gateway"),
-    "scm:git@github.com:sfali/grpc-rest-gateway.git"
-  )
-)
 
 lazy val `runtime-core` = (projectMatrix in file("runtime-core"))
+  .configure(commonSettings)
   .configure(configureBuildInfo("com.improving.grpc_rest_gateway.runtime.core"))
-  .enablePlugins(ScalafmtPlugin)
   .defaultAxes()
   .settings(
     name := "grpc-rest-gateway-runtime-core",
@@ -54,11 +12,11 @@ lazy val `runtime-core` = (projectMatrix in file("runtime-core"))
     scalacOptions ++= (if (isScala3.value) Seq("-source", "future", "-explain")
                        else Seq("-Xsource:3"))
   )
-  .jvmPlatform(scalaVersions = Seq(Scala212, Scala213, Scala3))
+  .jvmPlatform(scalaVersions = Seq(V.Scala212, V.Scala213, V.Scala3))
 
 lazy val `runtime-netty` = (projectMatrix in file("runtime-netty"))
+  .configure(commonSettings)
   .configure(configureBuildInfo("com.improving.grpc_rest_gateway.runtime.netty"))
-  .enablePlugins(ScalafmtPlugin)
   .defaultAxes()
   .settings(
     name := "grpc-rest-gateway-runtime-netty",
@@ -66,12 +24,12 @@ lazy val `runtime-netty` = (projectMatrix in file("runtime-netty"))
     scalacOptions ++= (if (isScala3.value) Seq("-source", "future", "-explain")
                        else Seq("-Xsource:3"))
   )
-  .jvmPlatform(scalaVersions = Seq(Scala212, Scala213, Scala3))
+  .jvmPlatform(scalaVersions = Seq(V.Scala212, V.Scala213, V.Scala3))
   .dependsOn(`runtime-core`)
 
 lazy val `runtime-pekko` = (projectMatrix in file("runtime-pekko"))
+  .configure(commonSettings)
   .configure(configureBuildInfo("com.improving.grpc_rest_gateway.runtime.pekko"))
-  .enablePlugins(ScalafmtPlugin)
   .defaultAxes()
   .settings(
     name := "grpc-rest-gateway-runtime-pekko",
@@ -79,12 +37,12 @@ lazy val `runtime-pekko` = (projectMatrix in file("runtime-pekko"))
     scalacOptions ++= (if (isScala3.value) Seq("-source", "future", "-explain")
                        else Seq("-Xsource:3"))
   )
-  .jvmPlatform(scalaVersions = Seq(Scala212, Scala213, Scala3))
+  .jvmPlatform(scalaVersions = Seq(V.Scala212, V.Scala213, V.Scala3))
   .dependsOn(`runtime-core`)
 
 lazy val codeGen = (projectMatrix in file("code-gen"))
+  .configure(commonSettings)
   .configure(configureBuildInfo("com.improving.grpc_rest_gateway.compiler"))
-  .enablePlugins(ScalafmtPlugin)
   .defaultAxes()
   .settings(
     name := "grpc-rest-gateway-code-gen",
@@ -92,25 +50,28 @@ lazy val codeGen = (projectMatrix in file("code-gen"))
     scalacOptions ++= (if (isScala3.value) Seq("-source", "future")
                        else Seq("-Xsource:3"))
   )
-  .jvmPlatform(scalaVersions = Seq(Scala212, Scala213, Scala3))
+  .jvmPlatform(scalaVersions = Seq(V.Scala212, V.Scala213, V.Scala3))
 
-lazy val codeGenJVM212 = codeGen.jvm(Scala212)
+lazy val codeGenJVM212 = codeGen.jvm(V.Scala212)
 
 lazy val protocGenGrpcRestNettyGatewayPlugin =
-  protocGenProject("protoc-gen-grpc-rest--netty-gateway-plugin", codeGenJVM212)
+  protocGenProject("protoc-gen-grpc-rest-netty-gateway-plugin", codeGenJVM212)
+    .settings(assemblyOptions)
     .settings(
       Compile / mainClass := Some("com.improving.grpc_rest_gateway.compiler.NettyGatewayGenerator"),
-      scalaVersion := Scala212
+      scalaVersion := V.Scala212
     )
 
 lazy val protocGenGrpcRestPekkoGatewayPlugin =
-  protocGenProject("protoc-gen-grpc-rest--pekko-gateway-plugin", codeGenJVM212)
+  protocGenProject("protoc-gen-grpc-rest-pekko-gateway-plugin", codeGenJVM212)
+    .settings(assemblyOptions)
     .settings(
       Compile / mainClass := Some("com.improving.grpc_rest_gateway.compiler.PekkoGatewayGenerator"),
-      scalaVersion := Scala212
+      scalaVersion := V.Scala212
     )
 
 lazy val `e2e-core` = (projectMatrix in file("e2e-core"))
+  .configure(commonSettings)
   .defaultAxes()
   .dependsOn(`runtime-core`)
   .settings(
@@ -119,17 +80,19 @@ lazy val `e2e-core` = (projectMatrix in file("e2e-core"))
     scalacOptions ++= (if (isScala3.value) Seq("-source", "future")
                        else Seq("-Xsource:3"))
   )
-  .jvmPlatform(scalaVersions = Seq(Scala212, Scala213, Scala3))
+  .jvmPlatform(scalaVersions = Seq(V.Scala212, V.Scala213, V.Scala3))
 
 lazy val `e2e-api` = (project in file("e2e-api"))
+  .configure(commonSettings)
   .settings(publish / skip := true)
 
 lazy val `e2e-netty` = (projectMatrix in file("e2e-netty"))
+  .configure(commonSettings)
   .dependsOn(`runtime-netty`, `e2e-core`)
-  .enablePlugins(LocalCodeGenPlugin, ScalafmtPlugin)
+  .enablePlugins(LocalCodeGenPlugin)
   .defaultAxes()
   .customRow(
-    scalaVersions = Seq(Scala212),
+    scalaVersions = Seq(V.Scala212),
     axisValues = Seq(VirtualAxis.jvm),
     settings = Seq(
       Test / unmanagedSourceDirectories += (Test / scalaSource).value.getParentFile / "jvm-2.12",
@@ -137,7 +100,7 @@ lazy val `e2e-netty` = (projectMatrix in file("e2e-netty"))
     )
   )
   .customRow(
-    scalaVersions = Seq(Scala213),
+    scalaVersions = Seq(V.Scala213),
     axisValues = Seq(VirtualAxis.jvm),
     settings = Seq(
       Test / unmanagedSourceDirectories += (Test / scalaSource).value.getParentFile / "jvm-2.13",
@@ -145,7 +108,7 @@ lazy val `e2e-netty` = (projectMatrix in file("e2e-netty"))
     )
   )
   .customRow(
-    scalaVersions = Seq(Scala3),
+    scalaVersions = Seq(V.Scala3),
     axisValues = Seq(VirtualAxis.jvm),
     settings = Seq(
       Test / unmanagedSourceDirectories += (Test / scalaSource).value.getParentFile / "jvm-3",
@@ -169,28 +132,29 @@ lazy val `e2e-netty` = (projectMatrix in file("e2e-netty"))
       ) -> (Compile / resourceDirectory).value / "specs"
     )
   )
-  .jvmPlatform(scalaVersions = Seq(Scala212, Scala213, Scala3))
+  .jvmPlatform(scalaVersions = Seq(V.Scala212, V.Scala213, V.Scala3))
 
 lazy val `e2e-pekko` = (projectMatrix in file("e2e-pekko"))
+  .configure(commonSettings)
   .dependsOn(`runtime-pekko`, `e2e-core`)
-  .enablePlugins(PekkoGrpcPlugin, LocalCodeGenPlugin, ScalafmtPlugin)
+  .enablePlugins(PekkoGrpcPlugin, LocalCodeGenPlugin)
   .defaultAxes()
   .customRow(
-    scalaVersions = Seq(Scala212),
+    scalaVersions = Seq(V.Scala212),
     axisValues = Seq(VirtualAxis.jvm),
     settings = Seq(
       Test / unmanagedSourceDirectories += (Test / scalaSource).value.getParentFile / "jvm-2.12"
     )
   )
   .customRow(
-    scalaVersions = Seq(Scala213),
+    scalaVersions = Seq(V.Scala213),
     axisValues = Seq(VirtualAxis.jvm),
     settings = Seq(
       Test / unmanagedSourceDirectories += (Test / scalaSource).value.getParentFile / "jvm-2.13"
     )
   )
   .customRow(
-    scalaVersions = Seq(Scala3),
+    scalaVersions = Seq(V.Scala3),
     axisValues = Seq(VirtualAxis.jvm),
     settings = Seq(
       Test / unmanagedSourceDirectories += (Test / scalaSource).value.getParentFile / "jvm-3"
@@ -217,10 +181,11 @@ lazy val `e2e-pekko` = (projectMatrix in file("e2e-pekko"))
       ) -> (Compile / resourceDirectory).value / "specs"
     )
   )
-  .jvmPlatform(scalaVersions = Seq(Scala212, Scala213, Scala3))
+  .jvmPlatform(scalaVersions = Seq(V.Scala212, V.Scala213, V.Scala3))
 
 lazy val `grpc-rest-gateway` =
   project
+    .configure(commonSettings)
     .in(file("."))
     .enablePlugins(DependencyUpdaterPlugin)
     .settings(

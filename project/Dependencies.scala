@@ -12,6 +12,9 @@ object Dependencies {
     val Pekko = "1.1.2"
     val PekkoGrpc = "1.1.1"
     val PekkoHttp = "1.1.0"
+    val Scala213 = "2.13.15"
+    val Scala212 = "2.12.20"
+    val Scala3 = "3.5.2"
     val ScalaFmt = "3.8.3"
     val ScalaPb: String = scalapb.compiler.Version.scalapbVersion
     val ScalaPbJson = "0.12.1"
