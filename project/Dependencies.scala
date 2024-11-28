@@ -62,10 +62,8 @@ object Dependencies {
     "com.thesamet.scalapb" %% "compilerplugin" % V.ScalaPb
   )
 
-  val E2EDependencies: Seq[ModuleID] = Seq(
-    "ch.qos.logback" % "logback-classic" % V.Logback,
-    "org.scalatest" %% "scalatest" % V.ScalaTest % Test,
-    "com.softwaremill.sttp.client3" %% "core" % V.Sttp % Test
+  val E2ENettyDependencies: Seq[ModuleID] = Seq(
+    "org.scalatest" %% "scalatest" % V.ScalaTest % Test
   )
 
   val E2EPekkoDependencies: Seq[ModuleID] = Seq(

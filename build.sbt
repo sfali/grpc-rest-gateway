@@ -125,7 +125,7 @@ lazy val `e2e-api` = (project in file("e2e-api"))
   .settings(publish / skip := true)
 
 lazy val `e2e-netty` = (projectMatrix in file("e2e-netty"))
-  .dependsOn(`runtime-netty`)
+  .dependsOn(`runtime-netty`, `e2e-core`)
   .enablePlugins(LocalCodeGenPlugin, ScalafmtPlugin)
   .defaultAxes()
   .customRow(
@@ -155,7 +155,7 @@ lazy val `e2e-netty` = (projectMatrix in file("e2e-netty"))
   .settings(
     publish / skip := true,
     codeGenClasspath := (codeGenJVM212 / Compile / fullClasspath).value,
-    libraryDependencies ++= E2EDependencies,
+    libraryDependencies ++= E2ENettyDependencies,
     scalacOptions ++= (if (isScala3.value) Seq("-source", "future")
                        else Seq("-Xsource:3")),
     (Compile / PB.protoSources) += (`e2e-api` / baseDirectory).value / "src" / "main" / "protobuf",
