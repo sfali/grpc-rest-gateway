@@ -31,7 +31,6 @@ import rest_gateway_test.api.scala_api.{
   TestServiceBGatewayHandler
 }
 import rest_gateway_test.server.GrpcServer
-import rest_gateway_test.test.{TestServiceAGatewayHandler => TestServiceAGatewayHandler2}
 
 import scala.util.Random
 
