@@ -24,11 +24,16 @@ import rest_gateway_test.api.model.{
   TestResponseA,
   TestResponseB
 }
-import rest_gateway_test.api.scala_api.{TestServiceAClient, TestServiceBClient, TestServiceBGatewayHandler}
+import rest_gateway_test.api.scala_api.{
+  TestServiceAClient,
+  TestServiceAGatewayHandler,
+  TestServiceBClient,
+  TestServiceBGatewayHandler
+}
 import rest_gateway_test.server.GrpcServer
-import rest_gateway_test.test.TestServiceAGatewayHandler
+import rest_gateway_test.test.{TestServiceAGatewayHandler => TestServiceAGatewayHandler2}
 
-import scala.util.{Failure, Random, Success, Try}
+import scala.util.Random
 
 class GrpcRestGatewayTest extends AnyWordSpec with Matchers with BeforeAndAfterAll with ScalaFutures {
 
@@ -60,7 +65,8 @@ class GrpcRestGatewayTest extends AnyWordSpec with Matchers with BeforeAndAfterA
     "simple GET call to service B" in {
       val requestId = 1L
       val grpcResponse = serviceBClient.process(TestRequestB(requestId)).futureValue
-      val restResponse = restClient.getRequestServiceB[TestResponseB](requestId).getOrElse(TestResponseB.defaultInstance)
+      val restResponse =
+        restClient.getRequestServiceB[TestResponseB](requestId).futureValue.getOrElse(TestResponseB.defaultInstance)
       restResponse shouldBe grpcResponse
     }
 
@@ -80,12 +86,12 @@ class GrpcRestGatewayTest extends AnyWordSpec with Matchers with BeforeAndAfterA
       }
 
       // rest call
-      Try(restClient.getRequestServiceA[TestResponseA](requestId)) match {
-        case Failure(ex: HttpResponseException) =>
+      restClient.getRequestServiceA[TestResponseA](requestId).failed.futureValue match {
+        case ex: HttpResponseException =>
           ex.status shouldBe 404
           ex.message shouldBe message
-        case Failure(ex) => fail(s""""Test failed due to exception: "${ex.getMessage}".""")
-        case Success(_)  => fail("Test failed")
+
+        case ex => fail(s"""Test failed due to exception: "${ex.getMessage}".""")
       }
     }
 
@@ -105,19 +111,20 @@ class GrpcRestGatewayTest extends AnyWordSpec with Matchers with BeforeAndAfterA
       }
 
       // rest call
-      Try(restClient.getRequestServiceA[TestResponseA](requestId)) match {
-        case Failure(ex: HttpResponseException) =>
+      restClient.getRequestServiceA[TestResponseA](requestId).failed.futureValue match {
+        case ex: HttpResponseException =>
           ex.status shouldBe 400
           ex.message shouldBe message
-        case Failure(ex) => fail(s"""Test failed due to exception: "${ex.getMessage}".""")
-        case Success(_)  => fail("Test failed")
+
+        case ex => fail(s"""Test failed due to exception: "${ex.getMessage}".""")
       }
     }
 
     "post with GRPC and get with rest" in {
       val requestId = 1L
       val grpcResponse = serviceAClient.process(TestRequestA(requestId)).futureValue
-      val restResponse = restClient.getRequestServiceA[TestResponseA](requestId).getOrElse(TestResponseA.defaultInstance)
+      val restResponse =
+        restClient.getRequestServiceA[TestResponseA](requestId).futureValue.getOrElse(TestResponseA.defaultInstance)
       grpcResponse shouldBe restResponse
     }
 
@@ -126,6 +133,7 @@ class GrpcRestGatewayTest extends AnyWordSpec with Matchers with BeforeAndAfterA
       serviceAClient.getMessageV1(request).futureValue shouldBe
         restClient
           .getMessageV1[GetMessageResponse](request.messageId, request.userId)
+          .futureValue
           .getOrElse(GetMessageResponse.defaultInstance)
     }
 
@@ -134,6 +142,7 @@ class GrpcRestGatewayTest extends AnyWordSpec with Matchers with BeforeAndAfterA
       serviceAClient.getMessageV2(request).futureValue shouldBe
         restClient
           .getMessageV2[GetMessageResponse](request.userId, request.messageId)
+          .futureValue
           .getOrElse(GetMessageResponse.defaultInstance)
     }
 
@@ -142,6 +151,7 @@ class GrpcRestGatewayTest extends AnyWordSpec with Matchers with BeforeAndAfterA
       serviceAClient.getMessageV2(request).futureValue shouldBe
         restClient
           .getMessageV2AdditionalBinding[GetMessageResponse](request.userId, request.messageId)
+          .futureValue
           .getOrElse(GetMessageResponse.defaultInstance)
     }
 
@@ -150,6 +160,7 @@ class GrpcRestGatewayTest extends AnyWordSpec with Matchers with BeforeAndAfterA
       serviceAClient.getMessageV3(request).futureValue shouldBe
         restClient
           .getMessageV3[GetMessageResponse](request.messageId, request.userId)
+          .futureValue
           .getOrElse(GetMessageResponse.defaultInstance)
     }
 
@@ -167,6 +178,7 @@ class GrpcRestGatewayTest extends AnyWordSpec with Matchers with BeforeAndAfterA
             request.sub.map(_.subField1),
             request.sub.map(_.subField2)
           )
+          .futureValue
           .getOrElse(GetMessageResponse.defaultInstance)
     }
 
@@ -183,6 +195,7 @@ class GrpcRestGatewayTest extends AnyWordSpec with Matchers with BeforeAndAfterA
             request.messageId,
             request.sub.get
           )
+          .futureValue
           .getOrElse(GetMessageResponse.defaultInstance)
     }
 
@@ -199,6 +212,7 @@ class GrpcRestGatewayTest extends AnyWordSpec with Matchers with BeforeAndAfterA
             request.messageId,
             request.sub.get
           )
+          .futureValue
           .getOrElse(GetMessageResponse.defaultInstance)
     }
 
@@ -207,6 +221,7 @@ class GrpcRestGatewayTest extends AnyWordSpec with Matchers with BeforeAndAfterA
       serviceAClient.getMessageV4(request).futureValue shouldBe
         restClient
           .getMessageV4[GetMessageResponse](request.messageId, request.color.name)
+          .futureValue
           .getOrElse(GetMessageResponse.defaultInstance)
     }
 
@@ -215,6 +230,7 @@ class GrpcRestGatewayTest extends AnyWordSpec with Matchers with BeforeAndAfterA
       serviceAClient.getMessageV4(request).futureValue shouldBe
         restClient
           .getMessageV4[GetMessageResponse](request.messageId, request.color.name)
+          .futureValue
           .getOrElse(GetMessageResponse.defaultInstance)
     }
 
@@ -223,6 +239,7 @@ class GrpcRestGatewayTest extends AnyWordSpec with Matchers with BeforeAndAfterA
       serviceAClient.getMessageV4(request).futureValue shouldBe
         restClient
           .getMessageV4[GetMessageResponse](request.messageId, request.color.name)
+          .futureValue
           .getOrElse(GetMessageResponse.defaultInstance)
     }
 
@@ -243,6 +260,7 @@ class GrpcRestGatewayTest extends AnyWordSpec with Matchers with BeforeAndAfterA
             request.longs,
             request.booleans
           )
+          .futureValue
           .getOrElse(GetMessageResponse.defaultInstance)
     }
   }
