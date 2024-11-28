@@ -1,6 +1,6 @@
 package rest_gateway_test
 
-import com.improving.grpc_rest_gateway.runtime.server.GatewayHttpServer
+import com.improving.grpc_rest_gateway.runtime.server.GatewayServer
 import rest_gateway_test.api.scala_api.{
   TestServiceAGatewayHandler,
   TestServiceBGatewayHandler,
@@ -23,14 +23,14 @@ object Main {
     new GrpcServer(host, 8080).run()
 
     val settings = GrpcClientSettings.fromConfig("pekko-gateway")
-    new GatewayHttpServer().run(
+    GatewayServer(
       "0.0.0.0",
       7070,
       TestServiceAGatewayHandler(settings),
       TestServiceBGatewayHandler(settings),
       TestServiceCGatewayHandler(settings),
       TestServiceDGatewayHandler(settings)
-    )
+    ).run()
 
     println("Server now online. \nPress RETURN to stop...")
     StdIn.readLine() // let it run until user presses return

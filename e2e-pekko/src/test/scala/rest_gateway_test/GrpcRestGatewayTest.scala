@@ -1,7 +1,7 @@
 package rest_gateway_test
 
 import com.google.rpc.Code
-import com.improving.grpc_rest_gateway.runtime.server.GatewayHttpServer
+import com.improving.grpc_rest_gateway.runtime.server.GatewayServer
 import io.grpc.StatusRuntimeException
 import org.apache.pekko.actor.typed.ActorSystem
 import org.apache.pekko.actor.typed.scaladsl.Behaviors
@@ -52,12 +52,12 @@ class GrpcRestGatewayTest extends AnyWordSpec with Matchers with BeforeAndAfterA
     super.beforeAll()
     new GrpcServer("localhost", grpcPort).run()
 
-    new GatewayHttpServer().run(
+    GatewayServer(
       "localhost",
       gatewayPort,
       TestServiceAGatewayHandler(settings),
       TestServiceBGatewayHandler(settings)
-    )
+    ).run()
   }
 
   "GrpcRestGateway" should {
