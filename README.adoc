@@ -1,24 +1,164 @@
 = gRPC to REST Gateway
+:sectnums:
+:toc:
+:toclevels: 4
 
 gRPC to REST gateway generates a reverse-proxy server which converts REST HTTP API into gRPC. This project is based on work done by https://github.com/btlines/grpcgateway[grpcgateway].
 
 == About this project
 
-This project has two main modules, namely `grpc-rest-gateway-runtime` and `grpc-rest-gateway-code-gen`.
+This project has two main modules:
 
-=== Runtime library &mdash; `grpc-rest-gateway-runtime`
+. Runtime library that serves a bridge between HTTP request and gRPC server and responsible for converting to and from HTTP to gRPC.
 
-Following are main classes in runtime library:
+. Code generation module which generates runtime handler(s) from given `protobuf` definition.
 
-. `GrpcGatewayHandler` &mdash; base abstract class responsible for dispatch given HTTP call to corresponding function in gRPC service.
+== Runtime implementations
+
+There are three main classes in each runtime implementations along with server classe(s) to build REST server:
+
+. `GrpcGatewayHandler` &mdash; base abstract class / trait responsible for dispatching given HTTP request to corresponding
+function in gRPC service.
 . `SwaggerHandler` &mdash; responsible for Open API yaml files and generate Swagger UI.
-. Server classes to build REST server and transform gRPC response HTTP response.
+. `GatewayServer` &mdash; responsible for starting HTTP server at the given host and port.
 
-=== Code generation library &mdash; `grpc-rest-gateway-code-gen`
+Three different implementations are provided for runtime library:
 
-Code generation library is responsible for reading given Protobuf files and generating corresponding implementation of `GrpcGatewayHandler`.
+. Netty based runtime library &mdash; `grpc-rest-gateway-runtime-netty`.
+. https://pekko.apache.org/[Apache Pekko] based runtime library &mdash; `grpc-rest-gateway-runtime-pekko`.
+. https://akka.io/[Akka] based runtime library &mdash; `grpc-rest-gateway-runtime-akka`. **Coming Soon**
 
-For example following Protobuf definition:
+=== Error handling and HTTP status code mapping
+
+gRPC-REST gateway has built in mapping between gRPC and HTTP status codes. Following is the mappings between two systems:
+
+[width=75%]
+|====
+|gRPC status code |HTTP status code
+
+|OK | OK (200)
+|DATA_LOSS |Partial Content (206)
+|INVALID_ARGUMENT, OUT_OF_RANGE |Bad Request (400)
+|UNAUTHENTICATED |Unauthorized(401)
+|PERMISSION_DENIED |Forbidden (403)
+|NOT_FOUND, UNKNOWN |Not Found (404)
+|UNAVAILABLE |Not Acceptable (406)
+|ALREADY_EXISTS |Conflict (409)
+|ABORTED, CANCELLED |Gone (410)
+|FAILED_PRECONDITION |Precondition Failed (412)
+|INTERNAL |Internal Server Error (500)
+|UNIMPLEMENTED |Not Implemented (501)
+|DEADLINE_EXCEEDED |Gateway Timeout (504)
+|RESOURCE_EXHAUSTED |Insufficient Storage (507)
+
+|====
+
+**Note:** Any unmapped code will be mapped to `Internal Server Error (500)`.
+
+Build `io.grpc.StatusRuntimeException` using `io.grpc.protobuf.StatusProto` to set corresponding status code and message.
+
+[source, scala]
+----
+import com.google.rpc.{Code, Status}
+import io.grpc.protobuf.StatusProto
+import scala.concurrent.Future
+
+// handle bad request
+Future.failed(StatusProto.toStatusRuntimeException(
+        Status
+          .newBuilder()
+          .setCode(Code.INVALID_ARGUMENT_VALUE)
+          .setMessage("Invalid argument")
+          .build())
+)
+
+// not found
+Future.failed(StatusProto.toStatusRuntimeException(
+        Status
+          .newBuilder()
+          .setCode(Code.NOT_FOUND_VALUE)
+          .setMessage("Not found")
+          .build())
+)
+----
+
+=== Protobuf to REST mapping
+
+Following is how Protobuf to REST mapping will work as described in the https://github.com/googleapis/api-common-protos/blob/main/google/api/http.proto[documentation].
+
+Given following Protobuf definition:
+
+[source,protobuf]
+----
+ service Messaging {
+       rpc GetMessage(GetMessageRequest) returns (Message) {
+         option (google.api.http) = {
+           get: "/v1/messages/{message_id}/{sub.subfield}"
+           additional_bindings {
+              get: "/v1/messages/{message_id}"
+           }
+         };
+       }
+
+       rpc PostMessage(GetMessageRequest) returns (Message) {
+         option (google.api.http) = {
+           put: "/v1/messages/{message_id}"
+           body: "sub"
+         };
+       }
+
+       rpc PostMessage(GetMessageRequest) returns (Message) {
+         option (google.api.http) = {
+           post: "/v1/messages"
+           body: "*"
+         };
+       }
+}
+
+message GetMessageRequest {
+  message SubMessage {
+    string subfield = 1;
+  }
+  string message_id = 1;
+  SubMessage sub = 2;
+}
+
+message Message {
+  string text = 1;
+}
+----
+
+Following mapping defines how HTTP request supposed to be constructed.
+
+*HTTP method:* GET +
+*Path:* /v1/messages/{message_id}/{sub.subfield} +
+*HTTP request:* http://localhost:7070/v1/messages/xyz/abc +
+*Mapping:* Both `message_id` and `sub.subfield` are mapped as path variables
+
+*HTTP method:* GET +
+*Path:* /v1/messages/{message_id} +
+*HTTP request:* http://localhost:7070/v1/messages/xyz?sub.subfield=abc +
+*Mapping:* `message_id` is mapped as path variable while `sub.subfield` is mapped as query parameter
+
+*HTTP method:* PUT +
+*Path:* |http://localhost:7070/v1/messages/xyz +
+*HTTP request:* http://localhost:7070/v1/messages/xyz?sub.subfield=abc [`body`: `{"subfield": "sub"}]` +
+*Mapping:* `message_id` is mapped as path variable while `sub` is mapped as body payload
+
+*HTTP method:* POST +
+*Path:* /v1/messages +
+*HTTP request:* http://localhost:7070/v1/messages +
+*Mapping:* entire message is mapped as body payload
+
+== Code generation library &mdash; `grpc-rest-gateway-code-gen`
+
+Code generation library is responsible for reading given Protobuf files and generating corresponding implementation of `GrpcGatewayHandler` based on its runtime library. There are three different plugins to generate runtime handlers, namely:
+
+. `grpc_rest_gateway.nettyGatewayGen()` for Netty based implementation
+. `grpc_rest_gateway.pekkoGatewayGen()` for Pekko based implementation
+. `grpc_rest_gateway.akkaGatewayGen()` for Akka based implementation
+
+For example, for following Protobuf definition:
 
 [source, protobuf]
 ----
@@ -61,75 +201,7 @@ service TestServiceB {
 }
 ----
 
-will generate following implementation of `GrpcGatewayHandler` and Open API specification respectively:
-
-[source, scala]
-----
-/*
- * Generated by GRPC-REST gateway compiler. DO NOT EDIT.
- */
-package rest_gateway_test.api.scala_api
-
-import scalapb.GeneratedMessage
-import scalapb.json4s.JsonFormat
-import com.improving.grpc_rest_gateway.runtime.handlers._
-import io.grpc._
-import io.netty.handler.codec.http.{HttpMethod, QueryStringDecoder}
-
-import scala.concurrent.{ExecutionContext, Future}
-import scalapb.json4s.JsonFormatException
-import scala.util._
-
-object TestServiceBGatewayHandler {
-  private val GetGetRequestPath = "/restgateway/test/testserviceb"
-  private val PostProcessPath = "/restgateway/test/testserviceb"
-
-  def apply(channel: ManagedChannel)(implicit ec: ExecutionContext): TestServiceBGatewayHandler =
-    new TestServiceBGatewayHandler(channel)
-}
-
-class TestServiceBGatewayHandler(channel: ManagedChannel)(implicit ec: ExecutionContext)
-  extends GrpcGatewayHandler(channel)(ec) {
-  import TestServiceBGatewayHandler._
-  override val serviceName: String = "TestServiceB"
-  override val specificationName: String = "TestServiceB"
-  private val stub = TestServiceBGrpc.stub(channel)
-  override protected val httpMethodsToUrisMap: Map[String, Seq[String]] = Map(
-    "GET" -> Seq(
-      GetGetRequestPath
-    ),
-    "POST" -> Seq(
-      PostProcessPath
-    )
-  )
-
-  override protected def dispatchCall(method: HttpMethod, uri: String, body: String): Future[GeneratedMessage] = {
-    val queryString = new QueryStringDecoder(uri)
-    val path = queryString.path
-    val methodName = method.name
-    if (isSupportedCall(HttpMethod.GET.name, GetGetRequestPath, methodName, path))
-      get_GetRequest(mergeParameters(GetGetRequestPath, queryString))
-    else if (isSupportedCall(HttpMethod.POST.name, PostProcessPath, methodName, path))
-      post_Process(body)
-    else Future.failed(InvalidArgument(s"No route defined for $methodName($path)"))
-  }
-
-  private def get_GetRequest(parameters: Map[String, Seq[String]]) = {
-    val input = Try {
-      val requestId = parameters.toLongValue("requestId")
-      rest_gateway_test.api.model.TestRequestB(requestId = requestId)
-    }
-    Future.fromTry(input).flatMap(stub.getRequest)
-  }
-
-  private def post_Process(body: String) = {
-    val input = Try(JsonFormat.fromJsonString[rest_gateway_test.api.model.TestRequestB](body))
-      .recoverWith(jsonException2GatewayExceptionPF)
-    Future.fromTry(input).flatMap(stub.process)
-  }
-
-}
-----
+=== Generated Open API specification:
 
 [source, yaml]
 ----
@@ -207,131 +279,250 @@ definitions:
         type: string
 ----
 
-=== Error handling and HTTP status code mapping
-
-gRPC-REST gateway has built in mapping between gRPC and HTTP status codes. Following is the mappings between two systems:
-
-[width=75%]
-|====
-|gRPC status code |HTTP status code
-
-|OK | OK (200)
-|DATA_LOSS |Partial Content (206)
-|INVALID_ARGUMENT, OUT_OF_RANGE |Bad Request (400)
-|UNAUTHENTICATED |Unauthorized(401)
-|PERMISSION_DENIED |Forbidden (403)
-|NOT_FOUND, UNKNOWN |Not Found (404)
-|UNAVAILABLE |Not Acceptable (406)
-|ALREADY_EXISTS |Conflict (409)
-|ABORTED, CANCELLED |Gone (410)
-|FAILED_PRECONDITION |Precondition Failed (412)
-|INTERNAL |Internal Server Error (500)
-|UNIMPLEMENTED |Not Implemented (501)
-|DEADLINE_EXCEEDED |Gateway Timeout (504)
-|RESOURCE_EXHAUSTED |Insufficient Storage (507)
-
-|====
-
-**Note:** Any unmapped code will be mapped to `Internal Server Error (500)`.
-
-Build `io.grpc.StatusRuntimeException` using `io.grpc.protobuf.StatusProto` to set corresponding status code and message.
+=== Generated Netty based `GrpcGatewayHandler`
 
 [source, scala]
 ----
-import com.google.rpc.{Code, Status}
-import io.grpc.protobuf.StatusProto
-import scala.concurrent.Future
+/*
+ * Generated by GRPC-REST gateway compiler. DO NOT EDIT.
+ */
+package rest_gateway_test.api.scala_api
 
-// handle bad request
-Future.failed(StatusProto.toStatusRuntimeException(
-        Status
-          .newBuilder()
-          .setCode(Code.INVALID_ARGUMENT_VALUE)
-          .setMessage("Invalid argument")
-          .build())
-)
+import scalapb.GeneratedMessage
+import io.grpc.ManagedChannel
+import io.netty.handler.codec.http.{HttpMethod, QueryStringDecoder}
 
-// not found
-Future.failed(StatusProto.toStatusRuntimeException(
-        Status
-          .newBuilder()
-          .setCode(Code.NOT_FOUND_VALUE)
-          .setMessage("Not foundt")
-          .build())
-)
-----
+import com.improving.grpc_rest_gateway.runtime
+import runtime.core.*
+import runtime.handlers.*
+import rest_gateway_test.api.model.TestRequestB
 
-=== Protobuf to REST mapping
+import scala.concurrent.{ExecutionContext, Future}
+import scala.util.Try
 
-Following is how Protobuf to REST mapping will work as described in the https://github.com/googleapis/api-common-protos/blob/main/google/api/http.proto[documentation].
+object TestServiceBGatewayHandler {
+  private val GetGetRequestPath = "/restgateway/test/testserviceb"
+  private val PostProcessPath = "/restgateway/test/testserviceb"
 
-Given following Protobuf definition:
-
-[source,protobuf]
-----
- service Messaging {
-       rpc GetMessage(GetMessageRequest) returns (Message) {
-         option (google.api.http) = {
-           get: "/v1/messages/{message_id}/{sub.subfield}"
-           additional_bindings {
-              get: "/v1/messages/{message_id}"
-           }
-         };
-       }
-
-       rpc PostMessage(GetMessageRequest) returns (Message) {
-         option (google.api.http) = {
-           put: "/v1/messages/{message_id}"
-           body: "sub"
-         };
-       }
-
-       rpc PostMessage(GetMessageRequest) returns (Message) {
-         option (google.api.http) = {
-           post: "/v1/messages"
-           body: "*"
-         };
-       }
+  def apply(channel: ManagedChannel)(implicit ec: ExecutionContext): TestServiceBGatewayHandler =
+    new TestServiceBGatewayHandler(channel)
 }
 
-message GetMessageRequest {
-  message SubMessage {
-    string subfield = 1;
+class TestServiceBGatewayHandler(channel: ManagedChannel)(implicit ec: ExecutionContext)
+    extends GrpcGatewayHandler(channel)(ec) {
+  import TestServiceBGatewayHandler.*
+  override val serviceName: String = "TestServiceB"
+  override val specificationName: String = "TestServiceB"
+  private val client = TestServiceBGrpc.stub(channel)
+  override protected val httpMethodsToUrisMap: Map[String, Seq[String]] = Map(
+    "GET" -> Seq(
+      GetGetRequestPath
+    ),
+    "POST" -> Seq(
+      PostProcessPath
+    )
+  )
+
+  override protected def dispatchCall(method: HttpMethod, uri: String, body: String): Future[GeneratedMessage] = {
+    val queryString = new QueryStringDecoder(uri)
+    val path = queryString.path
+    val methodName = method.name
+    if (isSupportedCall(HttpMethod.GET.name, GetGetRequestPath, methodName, path))
+      dispatchGetRequest(mergeParameters(GetGetRequestPath, queryString))
+    else if (isSupportedCall(HttpMethod.POST.name, PostProcessPath, methodName, path))
+      dispatchProcess(body)
+    else Future.failed(GatewayException.toInvalidArgument(s"No route defined for $methodName($path)"))
   }
-  string message_id = 1;
-  SubMessage sub = 2;
-}
 
-message Message {
-  string text = 1;
+  private def dispatchGetRequest(parameters: Map[String, Seq[String]]) = {
+    val input = Try {
+      val requestId = parameters.toLongValue("requestId")
+      TestRequestB(requestId = requestId)
+    }
+    toResponse(input, client.getRequest)
+  }
+
+  private def dispatchProcess(body: String) = {
+    val input = parseBody[TestRequestB](body)
+    toResponse(input, client.process)
+  }
+
 }
 ----
 
-Following mapping defines how HTTP request supposed to be constructed.
+=== Generated Pekko based `GrpcGatewayHandler`
 
-*HTTP method:* GET +
-*Path:* /v1/messages/{message_id}/{sub.subfield} +
-*HTTP request:* http://localhost:7070/v1/messages/xyz/abc +
-*Mapping:* Both `message_id` and `sub.subfield` are mapped as path variables
+[source, scala]
+----
+/*
+ * Generated by GRPC-REST gateway compiler. DO NOT EDIT.
+ */
+package rest_gateway_test.api.scala_api
 
-*HTTP method:* GET +
-*Path:* /v1/messages/{message_id} +
-*HTTP request:* http://localhost:7070/v1/messages/xyz?sub.subfield=abc +
-*Mapping:* `message_id` is mapped as path variable while `sub.subfield` is mapped as query parameter
+import com.improving.grpc_rest_gateway.runtime
+import runtime.core._
+import runtime.handlers.GrpcGatewayHandler
+import rest_gateway_test.api.model.TestRequestB
 
-*HTTP method:* PUT +
-*Path:* |http://localhost:7070/v1/messages/xyz +
-*HTTP request:* http://localhost:7070/v1/messages/xyz?sub.subfield=abc [`body`: `{"subfield": "sub"}]` +
-*Mapping:* `message_id` is mapped as path variable while `sub` is mapped as body payload
+import org.apache.pekko
+import pekko.grpc.GrpcClientSettings
+import pekko.actor.ClassicActorSystemProvider
+import pekko.http.scaladsl.server.Route
+import pekko.http.scaladsl.server.Directives._
 
-*HTTP method:* POST +
-*Path:* /v1/messages +
-*HTTP request:* http://localhost:7070/v1/messages +
-*Mapping:* entire message is mapped as body payload
+import scala.concurrent.ExecutionContext
+import scala.util.Try
 
-=== Run gateway server
+class TestServiceBGatewayHandler(settings: GrpcClientSettings)(implicit sys: ClassicActorSystemProvider)
+    extends GrpcGatewayHandler {
+
+  private implicit val ec: ExecutionContext = sys.classicSystem.dispatcher
+  private val client = TestServiceBClient(settings)
+  override val specificationName: String = "TestServiceB"
+
+  override val route: Route = handleExceptions(exceptionHandler) {
+    pathPrefix("restgateway") {
+      pathPrefix("test") {
+        pathPrefix("testserviceb") {
+          pathEnd {
+            concat(
+              get {
+                parameterMultiMap { queryParameters =>
+                  dispatchGetRequest(queryParameters)
+                }
+              },
+              post {
+                entity(as[String]) { body =>
+                  dispatchProcess(body)
+                }
+              }
+            )
+          }
+        }
+      }
+    }
+  }
+
+  private def dispatchGetRequest(parameters: Map[String, Seq[String]]) = {
+    val input = Try {
+      val requestId = parameters.toLongValue("requestId")
+      TestRequestB(requestId = requestId)
+    }
+    completeResponse(input, client.getRequest)
+  }
+
+  private def dispatchProcess(body: String) = {
+    val input = parseBody[TestRequestB](body)
+    completeResponse(input, client.process)
+  }
+
+}
+
+object TestServiceBGatewayHandler {
+
+  def apply(settings: GrpcClientSettings)(implicit sys: ClassicActorSystemProvider): GrpcGatewayHandler =
+    new TestServiceBGatewayHandler(settings)
+
+  def apply(clientName: String)(implicit sys: ClassicActorSystemProvider): GrpcGatewayHandler =
+    TestServiceBGatewayHandler(GrpcClientSettings.fromConfig(clientName))
+}
+----
+
+=== Generated Akka based `GrpcGatewayHandler`
+
+**Coming Soon**
+
+== Set up your project
+
+=== Configured dependencies
+
+==== Configure plugin for compiler fo code generation
+
+To generate Scala classes for gateway handler and Swagger documentation add following in `plugin.sbt`:
+
+[source, sbt]
+----
+addSbtPlugin("com.thesamet" % "sbt-protoc" % "1.0.7")
+
+libraryDependencies ++= Seq(
+  "com.thesamet.scalapb" %% "compilerplugin" % "0.11.17",
+  "io.github.sfali23" % "grpc-rest-gateway-code-gen" % "0.8.0"
+)
+----
+
+And following in the `build.sbt`:
+
+[source, sbt]
+----
+// replace grpc_rest_gateway.nettyGatewayGen with either grpc_rest_gateway.pekkoGatewayGen or grpc_rest_gateway.akkaGatewayGen
+// to generate Pekko or Akka based implementations
+
+Compile / PB.targets := Seq(
+  scalapb.gen() -> (Compile / sourceManaged).value / "scalapb",
+  grpc_rest_gateway.nettyGatewayGen() -> (Compile / sourceManaged).value / "scalapb",
+  grpc_rest_gateway.swaggerGen() -> (Compile / resourceDirectory).value / "scalapb"
+)
+
+// generate code for Scala 3
+Compile / PB.targets := Seq(
+  scalapb.gen(scala3Sources = true) -> (Compile / sourceManaged).value / "scalapb",
+  grpc_rest_gateway.nettyGatewayGen(scala3Sources = true) -> (Compile / sourceManaged).value / "scalapb",
+  grpc_rest_gateway.swaggerGen() -> (Compile / resourceDirectory).value / "scalapb"
+)
+
+// TODO: generate resource files in target and add resource path
+// add `**/resources/specs/**/*.yml` in your .gitignore to ignore generated yml files
+----
+
+==== Configure dependencies for Netty based implementation
+
+Add following dependencies
+
+[source, sbt]
+----
+val ScalaPb: String = scalapb.compiler.Version.scalapbVersion
+val GrpcJava: String = scalapb.compiler.Version.grpcJavaVersion
+libraryDependencies ++= Seq(
+  "io.github.sfali23" %% "grpc-rest-gateway-runtime-netty" % "0.8.0",
+  "com.thesamet.scalapb" %% "compilerplugin" % V.ScalaPb % "compile;protobuf",
+  "com.thesamet.scalapb" %% "scalapb-runtime" % V.ScalaPb % "compile;protobuf",
+  "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % V.ScalaPb,
+  "io.grpc" % "grpc-netty" % V.GrpcJava,
+  "com.thesamet.scalapb" %% "scalapb-json4s" % V.ScalaPbJson,
+  "com.thesamet.scalapb.common-protos" %% "proto-google-common-protos-scalapb_0.11" % "2.9.6-0" % "compile,protobuf"
+)
+----
+
+==== Configure dependencies for Pekko based implementation
+
+Add following dependencies:
+
+[source, sbt]
+----
+val ScalaPb: String = scalapb.compiler.Version.scalapbVersion
+val GrpcJava: String = scalapb.compiler.Version.grpcJavaVersion
+libraryDependencies ++= Seq(
+  "io.github.sfali23" %% "grpc-rest-gateway-runtime-pekko" % "0.8.0",
+  "org.apache.pekko" %% "pekko-actor" % "1.1.2",
+  "org.apache.pekko" %% "pekko-actor-typed" % "1.1.2",
+  "org.apache.pekko" %% "pekko-stream-typed" % "1.1.2",
+  "org.apache.pekko" %% "pekko-http" % "1.1.0",
+  "org.apache.pekko" %% "pekko-grpc-runtime" % "1.1.1",
+  "com.thesamet.scalapb.common-protos" %% "proto-google-common-protos-scalapb_0.11" % "2.9.6-0" % "compile,protobuf"
+)
+----
+
+NOTE: Your project should be configured at least to generate Pekko gRPC client code.
+
+==== Configure dependencies for Akka based implementation
+
+**Coming soon**
+
+=== Setting HTTP gateway server
 
 Implement your gRPC services as per your need and run gRPC server. Gateway server can be build and run as follows:
+
+==== Netty based Gateway server
 
 [source, scala]
 ----
@@ -362,56 +553,103 @@ val server = GatewayServer(
 )
 ----
 
-`serviceHost`, `servicePort`, `gatewayPort`, `usePlainText` can be override via environment variables `GRPC_HOST`, `GRPC_SERVICE_PORT`, `REST_GATEWAY_PORT`, and `GRPC_USE_PLAIN_TEXT` respectively.
+Alternatively `serviceHost`, `servicePort`, `gatewayPort`, `usePlainText` can be overriden via environment variables `GRPC_HOST`, `GRPC_SERVICE_PORT`, `REST_GATEWAY_PORT`, and `GRPC_USE_PLAIN_TEXT` respectively.
 
-=== Set up your project
-
-To generate Scala classes for gateway handler and Swagger documentation add following in `plugin.sbt`:
-
-[source, sbt]
+[source, hocon]
 ----
-addSbtPlugin("com.thesamet" % "sbt-protoc" % "1.0.7")
+// rest-gateway config is defined as follows:
 
-libraryDependencies ++= Seq(
-  "com.thesamet.scalapb" %% "compilerplugin" % "0.11.17",
-  "io.github.sfali23" % "grpc-rest-gateway-code-gen" % "0.7.1"
-)
-resolvers += "Sonatype OSS" at "https://s01.oss.sonatype.org/content/groups/public/"
-----
-
-And following in the `build.sbt`:
-
-[source, sbt]
-----
-Compile / PB.targets := Seq(
-  scalapb.gen() -> (Compile / sourceManaged).value / "scalapb",
-  grpc_rest_gateway.gatewayGen() -> (Compile / sourceManaged).value / "scalapb",
-  grpc_rest_gateway.swaggerGen() -> (Compile / resourceDirectory).value / "scalapb"
-)
-
-// generate code for Scala 3
-Compile / PB.targets := Seq(
-  scalapb.gen(scala3Sources = true) -> (Compile / sourceManaged).value / "scalapb",
-  grpc_rest_gateway.gatewayGen(scala3Sources = true) -> (Compile / sourceManaged).value / "scalapb",
-  grpc_rest_gateway.swaggerGen() -> (Compile / resourceDirectory).value / "scalapb"
-)
-
-// add `**/resources/specs/**/*.yml` in your .gitignore to ignore generated yml files
-
-val ScalaPb: String = scalapb.compiler.Version.scalapbVersion
-val GrpcJava: String = scalapb.compiler.Version.grpcJavaVersion
-libraryDependencies ++= Seq(
-  "io.github.sfali23" %% "grpc-rest-gateway-runtime" % "0.7.1",
-  "com.thesamet.scalapb" %% "compilerplugin" % V.ScalaPb % "compile;protobuf",
-  "com.thesamet.scalapb" %% "scalapb-runtime" % V.ScalaPb % "compile;protobuf",
-  "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % V.ScalaPb,
-  "io.grpc" % "grpc-netty" % V.GrpcJava,
-  "com.thesamet.scalapb" %% "scalapb-json4s" % V.ScalaPbJson,
-  "com.thesamet.scalapb.common-protos" %% "proto-google-common-protos-scalapb_0.11" % "2.9.6-0" % "compile,protobuf"
-)
+rest-gateway {
+  host = "0.0.0.0"
+  host = ${?GRPC_HOST}
+  service-port = 8080
+  service-port = ${?GRPC_SERVICE_PORT}
+  gateway-port = 7070
+  gateway-port = ${?REST_GATEWAY_PORT}
+  use-plain-text = "true"
+  use-plain-text = ${?GRPC_USE_PLAIN_TEXT}
+}
 ----
 
-=== Run tests and sample app
+==== Pekko based Gateway server
+
+Providing Pekko gRPC client configuration is defined as follows:
+
+[source, hocon]
+----
+pekko {
+  grpc {
+    client {
+      pekko-gateway {
+        host = "0.0.0.0" // gRPC host
+        port = 8080 // grPC port
+        use-tls = false
+      }
+    }
+  }
+}
+
+// rest gateway config
+rest-gateway {
+  host = "0.0.0.0"
+  port = 7070 // Gateway port
+}
+----
+
+Gateway server can be initialized as follows:
+
+[source, scala]
+----
+implicit val system: ActorSystem[?] = ActorSystem[Nothing](Behaviors.empty, "grpc-rest-gateway-pekko")
+
+val settings = GrpcClientSettings.fromConfig("pekko-gateway")
+val config = system.settings.config
+GatewayServer(
+  config.getConfig("rest-gateway"),
+  TestServiceBGatewayHandler(settings)
+).run()
+----
+
+==== Akka based Gateway server
+
+Providing Akka gRPC client configuration is defined as follows:
+
+[source, hocon]
+----
+akka {
+  grpc {
+    client {
+      pekko-gateway {
+        host = "0.0.0.0" // gRPC host
+        port = 8080 // grPC port
+        use-tls = false
+      }
+    }
+  }
+}
+
+// rest gateway config
+rest-gateway {
+  host = "0.0.0.0"
+  port = 7070 // Gateway port
+}
+----
+
+Gateway server can be initialized as follows:
+
+[source, scala]
+----
+implicit val system: ActorSystem[?] = ActorSystem[Nothing](Behaviors.empty, "grpc-rest-gateway-pekko")
+
+val settings = GrpcClientSettings.fromConfig("pekko-gateway")
+val config = system.settings.config
+GatewayServer(
+  config.getConfig("rest-gateway"),
+  TestServiceBGatewayHandler(settings)
+).run()
+----
+
+== Run tests and sample app
 
 `e2e` module contains test code and a sample app.
 
@@ -422,6 +660,9 @@ Tests can be run as follows:
 sbt "nettyJVM212Test"
 sbt "nettyJVM213Test"
 sbt "nettyJVM3Test"
+sbt "pekkoJVM212Test"
+sbt "pekkoJVM213Test"
+sbt "pekkoJVM3Test"
 ----
 
 Sample app can be run as follows:
@@ -430,19 +671,22 @@ Sample app can be run as follows:
 ----
 # For Scala 2.12
 sbt "nettyJVM212Run"
+sbt "pekkoJVM212Run"
 
 # # For Scala 2.13
 sbt "nettyJVM213Run"
+sbt "pekkoJVM213Run"
 
 # For Scala 3
 sbt "nettyJVM3Run"
+sbt "pekkoJVM3Run"
 ----
 
 Open browser and paste following URL in address bar `http://localhost:7070`, you should see Open API specification for service.
 
 image::media/swagger.png[]
 
-=== Reference implementation using Apache Pekko
+== Reference implementation using Apache Pekko
 
 A reference implementation of https://petstore.swagger.io/[Swagger petstore] is attempted https://github.com/sfali/petstore-grpc[here].
 
