@@ -76,6 +76,14 @@ lazy val protocGenGrpcRestPekkoGatewayPlugin =
       scalaVersion := V.Scala212
     )
 
+lazy val protocGenGrpcRestAkkaGatewayPlugin =
+  protocGenProject("protoc-gen-grpc-rest-akka-gateway-plugin", codeGenJVM212)
+    .settings(assemblyOptions)
+    .settings(
+      Compile / mainClass := Some("com.improving.grpc_rest_gateway.compiler.AkkaGatewayGenerator"),
+      scalaVersion := V.Scala212
+    )
+
 lazy val `e2e-core` = (projectMatrix in file("e2e-core"))
   .configure(commonSettings)
   .defaultAxes()
@@ -221,6 +229,7 @@ lazy val `grpc-rest-gateway` =
     )
     .aggregate(protocGenGrpcRestNettyGatewayPlugin.agg)
     .aggregate(protocGenGrpcRestPekkoGatewayPlugin.agg)
+    .aggregate(protocGenGrpcRestAkkaGatewayPlugin.agg)
     .aggregate(
       (codeGen.projectRefs ++ `runtime-core`.projectRefs ++ `runtime-netty`.projectRefs ++ `runtime-pekko`.projectRefs)*
     )
