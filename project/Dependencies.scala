@@ -63,8 +63,7 @@ object Dependencies {
 
   val RuntimeAkkaDependencies: Seq[ModuleID] = Seq(
     "com.typesafe.akka" %% "akka-actor" % V.Akka % "provided",
-    "com.typesafe.akka" %% "akka-stream-typed" % V.Akka % "provided",
-    "com.typesafe.akka" %% "akka-http" % V.AkkaHttp % "provided"
+    "com.typesafe.akka" %% "akka-stream-typed" % V.Akka % "provided"
   )
 
   val E2ECore: Seq[ModuleID] = Seq(

@@ -40,6 +40,24 @@ lazy val `runtime-pekko` = (projectMatrix in file("runtime-pekko"))
   .jvmPlatform(scalaVersions = Seq(V.Scala212, V.Scala213, V.Scala3))
   .dependsOn(`runtime-core`)
 
+lazy val `runtime-akka` = (projectMatrix in file("runtime-akka"))
+  .configure(commonSettings)
+  .configure(configureBuildInfo("com.improving.grpc_rest_gateway.runtime_akka"))
+  .defaultAxes()
+  .settings(
+    name := "grpc-rest-gateway-runtime-akka",
+    libraryDependencies ++= {
+      Seq(
+        if (isScala3.value) "com.typesafe.akka" %% "akka-http" % V.AkkaHttp % "provided" cross CrossVersion.for3Use2_13
+        else "com.typesafe.akka" %% "akka-http" % V.AkkaHttp % "provided"
+      )
+    } ++ RuntimeAkkaDependencies,
+    scalacOptions ++= (if (isScala3.value) Seq("-source", "future", "-explain")
+                       else Seq("-Xsource:3"))
+  )
+  .jvmPlatform(scalaVersions = Seq(V.Scala212, V.Scala213, V.Scala3))
+  .dependsOn(`runtime-core`)
+
 lazy val codeGen = (projectMatrix in file("code-gen"))
   .configure(commonSettings)
   .configure(configureBuildInfo("com.improving.grpc_rest_gateway.compiler"))
@@ -219,7 +237,8 @@ lazy val `grpc-rest-gateway` =
     )
     .aggregate(protocGenGrpcRestGatewayPlugin.agg)
     .aggregate(
-      (codeGen.projectRefs ++ `runtime-core`.projectRefs ++ `runtime-netty`.projectRefs ++ `runtime-pekko`.projectRefs)*
+      (codeGen.projectRefs ++ `runtime-core`.projectRefs ++ `runtime-netty`.projectRefs ++
+        `runtime-pekko`.projectRefs ++ `runtime-akka`.projectRefs)*
     )
 
 addCommandAlias("nettyJVM212Test", "e2e-nettyJVM2_12 / clean; e2e-nettyJVM2_12 / test")
