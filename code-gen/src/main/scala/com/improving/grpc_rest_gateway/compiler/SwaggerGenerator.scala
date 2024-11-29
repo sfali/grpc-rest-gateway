@@ -8,7 +8,6 @@ import com.google.protobuf.Descriptors.FieldDescriptor.JavaType
 import com.google.protobuf.Descriptors.{Descriptor, FieldDescriptor, FileDescriptor, MethodDescriptor, ServiceDescriptor}
 import com.google.protobuf.ExtensionRegistry
 import com.google.protobuf.compiler.PluginProtos.CodeGeneratorResponse
-import protocbridge.Artifact
 import protocgen.{CodeGenApp, CodeGenRequest, CodeGenResponse}
 import scalapb.compiler.FunctionalPrinter.PrinterEndo
 import scalapb.compiler.{DescriptorImplicits, FunctionalPrinter, NameUtils, ProtobufGenerator}
@@ -23,15 +22,6 @@ object SwaggerGenerator extends CodeGenApp {
     Scalapb.registerAllExtensions(registry)
     AnnotationsProto.registerAllExtensions(registry)
   }
-
-  override def suggestedDependencies: Seq[Artifact] = Seq(
-    Artifact(
-      groupId = BuildInfo.organizationName,
-      artifactId = "grpc-rest-gateway-runtime",
-      version = BuildInfo.version,
-      crossVersion = true
-    ).asSbtPlugin(BuildInfo.scalaVersion, BuildInfo.sbtVersion)
-  )
 
   override def process(request: CodeGenRequest): CodeGenResponse =
     ProtobufGenerator.parseParameters(request.parameter) match {
@@ -56,7 +46,7 @@ private class SwaggerMessagePrinter(fd: FileDescriptor, implicits: DescriptorImp
 
   import implicits.*
 
-  private val services = fd.getServices.asScala.toSeq
+  private val services = fd.getServices.asScala.toList
 
   lazy val result: CodeGeneratorResponse.File = {
     val b = CodeGeneratorResponse.File.newBuilder()

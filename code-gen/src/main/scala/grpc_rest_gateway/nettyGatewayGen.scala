@@ -5,7 +5,7 @@ import protocbridge.{Artifact, SandboxedJvmGenerator}
 import scalapb.GeneratorOption
 import scalapb.GeneratorOption.Scala3Sources
 
-object gatewayGen {
+object nettyGatewayGen {
   def apply(options: GeneratorOption*): (SandboxedJvmGenerator, Seq[String]) =
     (
       SandboxedJvmGenerator.forModule(
@@ -15,8 +15,8 @@ object gatewayGen {
           s"${BuildInfo.name}_2.12",
           BuildInfo.version
         ),
-        "com.improving.grpc_rest_gateway.compiler.GatewayGenerator$",
-        com.improving.grpc_rest_gateway.compiler.GatewayGenerator.suggestedDependencies
+        "com.improving.grpc_rest_gateway.compiler.NettyGatewayGenerator$",
+        com.improving.grpc_rest_gateway.compiler.NettyGatewayGenerator.suggestedDependencies
       ),
       options.map(_.toString)
     )
