@@ -1,4 +1,3 @@
-import SettingsHelper.isScala3
 import sbt.*
 
 object Dependencies {
