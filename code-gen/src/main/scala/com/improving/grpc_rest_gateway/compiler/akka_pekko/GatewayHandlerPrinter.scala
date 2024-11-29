@@ -9,7 +9,8 @@ import compiler.utils.{Formatter, GenerateDelegateFunctions, GenerateImportState
 import scalapb.compiler.FunctionalPrinter.PrinterEndo
 import scalapb.compiler.{DescriptorImplicits, FunctionalPrinter}
 
-class GatewayHandlerPrinter(packageNamePrefix: String, service: ServiceDescriptor, implicits: DescriptorImplicits) {
+class GatewayHandlerPrinter(packageNamePrefix: String, service: ServiceDescriptor, implicits: DescriptorImplicits)
+    extends HandlerPrinter {
   import implicits.*
 
   private val extendedFileDescriptor = ExtendedFileDescriptor(service.getFile)

@@ -1,56 +1,19 @@
 package com.improving
 package grpc_rest_gateway
 package compiler
+package netty
 
 import com.google.api.{AnnotationsProto, HttpRule}
 import com.google.api.HttpRule.PatternCase
 import com.google.protobuf.Descriptors.{MethodDescriptor, ServiceDescriptor}
-import com.google.protobuf.ExtensionRegistry
 import com.google.protobuf.compiler.PluginProtos.CodeGeneratorResponse
-import compiler.utils.{Formatter, GenerateDelegateFunctions, GenerateImportStatements}
-import protocbridge.Artifact
-import protocgen.{CodeGenApp, CodeGenRequest, CodeGenResponse}
+import com.improving.grpc_rest_gateway.compiler.utils.{Formatter, GenerateDelegateFunctions, GenerateImportStatements}
 import scalapb.compiler.FunctionalPrinter.PrinterEndo
-import scalapb.compiler.{DescriptorImplicits, FunctionalPrinter, NameUtils, ProtobufGenerator}
-import scalapb.options.Scalapb
+import scalapb.compiler.{DescriptorImplicits, FunctionalPrinter, NameUtils}
 
 import scala.jdk.CollectionConverters.*
 
-object NettyGatewayGenerator extends CodeGenApp {
-
-  override def registerExtensions(registry: ExtensionRegistry): Unit = {
-    Scalapb.registerAllExtensions(registry)
-    AnnotationsProto.registerAllExtensions(registry)
-  }
-
-  override def suggestedDependencies: Seq[Artifact] = Seq(
-    Artifact(
-      groupId = BuildInfo.organizationName,
-      artifactId = "grpc-rest-gateway-runtime-netty",
-      version = BuildInfo.version,
-      crossVersion = true
-    ).asSbtPlugin(BuildInfo.scalaVersion, BuildInfo.sbtVersion)
-  )
-
-  override def process(request: CodeGenRequest): CodeGenResponse =
-    ProtobufGenerator.parseParameters(request.parameter) match {
-      case Right(params) =>
-        // Implicits gives you extension methods that provide ScalaPB names and types
-        // for protobuf entities.
-        val implicits = DescriptorImplicits.fromCodeGenRequest(params, request)
-
-        CodeGenResponse.succeed(
-          for {
-            file <- request.filesToGenerate
-            sd <- file.getServices.asScala
-          } yield new GatewayMessagePrinter(sd, implicits).result
-        )
-
-      case Left(error) => CodeGenResponse.fail(error)
-    }
-}
-
-private class GatewayMessagePrinter(service: ServiceDescriptor, implicits: DescriptorImplicits) {
+class GatewayHandlerPrinter(service: ServiceDescriptor, implicits: DescriptorImplicits) extends HandlerPrinter {
   import implicits.*
 
   private var ifStatementStarted = false
