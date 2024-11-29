@@ -14,6 +14,7 @@ object GatewayGenerator extends CodeGenApp {
 
   private val Netty = "netty"
   private val Pekko = "pekko"
+  private val Akka = "akka"
 
   override def registerExtensions(registry: ExtensionRegistry): Unit = {
     Scalapb.registerAllExtensions(registry)
@@ -24,19 +25,18 @@ object GatewayGenerator extends CodeGenApp {
     GeneratorParams.fromStringCollectUnrecognized(request.parameter) match {
       case Right((params, options)) =>
         val implementationType =
-          if (options.isEmpty) Some(Netty)
-          else
-            options
-              .collectFirst {
-                case option if option.startsWith("implementation_type:") =>
-                  val separator = option.indexOf(":")
-                  val value = option.substring(separator + 1)
-                  value match {
-                    case Pekko => value
-                    case _     => Netty
-                  }
-              }
-              .getOrElse(Netty)
+          (if (options.isEmpty) Some(Netty)
+           else
+             options
+               .collectFirst {
+                 case option if option.startsWith("implementation_type:") =>
+                   val separator = option.indexOf(":")
+                   val value = option.substring(separator + 1)
+                   value match {
+                     case Pekko | Akka => value
+                     case _            => Netty
+                   }
+               }).getOrElse(Netty)
 
         Console
           .out
@@ -53,8 +53,8 @@ object GatewayGenerator extends CodeGenApp {
             .flatMap(_.getServices.asScala)
             .map { sd =>
               implementationType match {
-                case Pekko => new akka_pekko.GatewayHandlerPrinter(Pekko, sd, implicits)
-                case _     => new netty.GatewayHandlerPrinter(sd, implicits)
+                case Pekko | Akka => new akka_pekko.GatewayHandlerPrinter(implementationType, sd, implicits)
+                case _            => new netty.GatewayHandlerPrinter(sd, implicits)
               }
             }
             .map(_.result)
