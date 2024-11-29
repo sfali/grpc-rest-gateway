@@ -26,7 +26,7 @@ Three different implementations are provided for runtime library:
 
 . Netty based runtime library &mdash; `grpc-rest-gateway-runtime-netty`.
 . https://pekko.apache.org/[Apache Pekko] based runtime library &mdash; `grpc-rest-gateway-runtime-pekko`.
-. https://akka.io/[Akka] based runtime library &mdash; `grpc-rest-gateway-runtime-akka`. **Coming Soon**
+. https://akka.io/[Akka] based runtime library &mdash; `grpc-rest-gateway-runtime-akka`.
 
 === Error handling and HTTP status code mapping
 
@@ -159,6 +159,8 @@ There are three different plugins to generate runtime handlers, namely:
 . `grpc_rest_gateway.gatewayGen(implementationType = "netty")` for Netty based implementation
 . `grpc_rest_gateway.gatewayGen(implementationType = "pekko")` for Pekko based implementation
 . `grpc_rest_gateway.gatewayGen(implementationType = "akka")` for Akka based implementation
+
+WARNING: `Akka` implementation hasn't been tested yet due version dependency eviction in e2e testing module.
 
 For example, for following Protobuf definition:
 
@@ -432,7 +434,7 @@ object TestServiceBGatewayHandler {
 
 === Generated Akka based `GrpcGatewayHandler`
 
-**Coming Soon**
+Should be similar to `Pekko` with `pekko` in import statement will be replaced by `akka`.
 
 == Set up your project
 
@@ -448,7 +450,7 @@ addSbtPlugin("com.thesamet" % "sbt-protoc" % "1.0.7")
 
 libraryDependencies ++= Seq(
   "com.thesamet.scalapb" %% "compilerplugin" % "0.11.17",
-  "io.github.sfali23" % "grpc-rest-gateway-code-gen" % "0.8.0"
+  "io.github.sfali23" % "grpc-rest-gateway-code-gen" % "0.8.1"
 )
 ----
 
@@ -482,7 +484,7 @@ Add following dependencies
 val ScalaPb: String = scalapb.compiler.Version.scalapbVersion
 val GrpcJava: String = scalapb.compiler.Version.grpcJavaVersion
 libraryDependencies ++= Seq(
-  "io.github.sfali23" %% "grpc-rest-gateway-runtime-netty" % "0.8.0",
+  "io.github.sfali23" %% "grpc-rest-gateway-runtime-netty" % "0.8.1",
   "com.thesamet.scalapb" %% "compilerplugin" % V.ScalaPb % "compile;protobuf",
   "com.thesamet.scalapb" %% "scalapb-runtime" % V.ScalaPb % "compile;protobuf",
   "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % V.ScalaPb,
@@ -501,7 +503,7 @@ Add following dependencies:
 val ScalaPb: String = scalapb.compiler.Version.scalapbVersion
 val GrpcJava: String = scalapb.compiler.Version.grpcJavaVersion
 libraryDependencies ++= Seq(
-  "io.github.sfali23" %% "grpc-rest-gateway-runtime-pekko" % "0.8.0",
+  "io.github.sfali23" %% "grpc-rest-gateway-runtime-pekko" % "0.8.1",
   "org.apache.pekko" %% "pekko-actor" % "1.1.2",
   "org.apache.pekko" %% "pekko-actor-typed" % "1.1.2",
   "org.apache.pekko" %% "pekko-stream-typed" % "1.1.2",
@@ -515,7 +517,7 @@ NOTE: Your project should be configured at least to generate Pekko gRPC client c
 
 ==== Configure dependencies for Akka based implementation
 
-**Coming soon**
+Should be similar to `Pekko` by replacing corresponding `Akka` dependencies.
 
 === Setting HTTP gateway server
 

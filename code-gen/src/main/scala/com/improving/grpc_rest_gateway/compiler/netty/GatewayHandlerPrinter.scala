@@ -108,7 +108,7 @@ class GatewayHandlerPrinter(service: ServiceDescriptor, implicits: DescriptorImp
         s"import $handlerClassName.$wildcardImport",
         s"""override val serviceName: String = "${service.getName}"""",
         s"""override val specificationName: String = "$specificationName"""",
-        s"private val client = $grpcService.stub(channel)"
+        s"private lazy val client = $grpcService.stub(channel)"
       )
       .call(generateHttpMethodToUrisMap)
       .newline

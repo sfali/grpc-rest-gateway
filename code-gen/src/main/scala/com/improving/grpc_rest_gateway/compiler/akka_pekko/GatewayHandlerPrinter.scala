@@ -68,7 +68,7 @@ class GatewayHandlerPrinter(packageNamePrefix: String, service: ServiceDescripto
       .newline
       .indent
       .add("private implicit val ec: ExecutionContext = sys.classicSystem.dispatcher")
-      .add(s"private val client = $clientClasName(settings)")
+      .add(s"private lazy val client = $clientClasName(settings)")
       .add(s"""override val specificationName: String = "$specificationName"""")
       .newline
       .call(RouteGenerator(implicits, methods))

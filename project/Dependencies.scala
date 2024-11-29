@@ -1,9 +1,11 @@
-import SettingsHelper.isScala3
 import sbt.*
 
 object Dependencies {
 
   object V {
+    val Akka = "2.6.20"
+    val AkkaGrpc = "2.1.6"
+    val AkkaHttp = "10.2.10"
     val CommonsIo = "2.18.0"
     val CommonProtos = "2.9.6-0"
     val GrpcJava: String = scalapb.compiler.Version.grpcJavaVersion
@@ -56,6 +58,11 @@ object Dependencies {
     "org.apache.pekko" %% "pekko-actor" % V.Pekko % "provided",
     "org.apache.pekko" %% "pekko-stream-typed" % V.Pekko % "provided",
     "org.apache.pekko" %% "pekko-http" % V.PekkoHttp % "provided"
+  )
+
+  val RuntimeAkkaDependencies: Seq[ModuleID] = Seq(
+    "com.typesafe.akka" %% "akka-actor" % V.Akka % "provided",
+    "com.typesafe.akka" %% "akka-stream-typed" % V.Akka % "provided"
   )
 
   val E2ECore: Seq[ModuleID] = Seq(
