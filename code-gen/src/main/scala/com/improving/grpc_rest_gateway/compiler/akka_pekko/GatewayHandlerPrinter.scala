@@ -9,7 +9,8 @@ import compiler.utils.{Formatter, GenerateDelegateFunctions, GenerateImportState
 import scalapb.compiler.FunctionalPrinter.PrinterEndo
 import scalapb.compiler.{DescriptorImplicits, FunctionalPrinter}
 
-class GatewayHandlerPrinter(packageNamePrefix: String, service: ServiceDescriptor, implicits: DescriptorImplicits) {
+class GatewayHandlerPrinter(packageNamePrefix: String, service: ServiceDescriptor, implicits: DescriptorImplicits)
+    extends HandlerPrinter {
   import implicits.*
 
   private val extendedFileDescriptor = ExtendedFileDescriptor(service.getFile)
@@ -21,13 +22,6 @@ class GatewayHandlerPrinter(packageNamePrefix: String, service: ServiceDescripto
   private val outputFileName = scalaPackageName.replace('.', '/') + "/" + handlerClassName + ".scala"
   private val wildcardImport = extendedFileDescriptor.V.WildcardImport
   private val methods = getUnaryCallsWithHttpExtension(service).toList
-
-  lazy val result: CodeGeneratorResponse.File = {
-    val b = CodeGeneratorResponse.File.newBuilder()
-    b.setName(outputFileName)
-    b.setContent(Formatter.format(content))
-    b.build()
-  }
 
   private lazy val content =
     new FunctionalPrinter()
@@ -58,6 +52,13 @@ class GatewayHandlerPrinter(packageNamePrefix: String, service: ServiceDescripto
       .newline
       .call(generateCompanionObject)
       .result()
+
+  override val result: CodeGeneratorResponse.File = {
+    val b = CodeGeneratorResponse.File.newBuilder()
+    b.setName(outputFileName)
+    b.setContent(Formatter.format(content))
+    b.build()
+  }
 
   private def generateService: PrinterEndo =
     _.add(s"class $handlerClassName(settings: GrpcClientSettings)(implicit sys: ClassicActorSystemProvider)")

@@ -81,6 +81,7 @@ object SettingsHelper {
   def assemblyOptions: Seq[Def.Setting[String => MergeStrategy]] = Seq(
     assembly / assemblyMergeStrategy := {
       case PathList("scala", "annotation", "nowarn.class" | "nowarn$.class") => MergeStrategy.first
+      case PathList("scala", "util", _*)                                     => MergeStrategy.first
       case PathList("scala-collection-compat.properties")                    => MergeStrategy.first
       case x => (assembly / assemblyMergeStrategy).value.apply(x)
     }
