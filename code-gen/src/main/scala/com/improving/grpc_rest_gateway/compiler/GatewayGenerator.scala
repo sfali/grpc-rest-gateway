@@ -28,7 +28,7 @@ object GatewayGenerator extends CodeGenApp {
           else
             options
               .collectFirst {
-                case option if option.startsWith("implementationType:") =>
+                case option if option.startsWith("implementation_type:") =>
                   val separator = option.indexOf(":")
                   val value = option.substring(separator + 1)
                   value match {

@@ -30,7 +30,7 @@ object gatewayGen {
     if (scala3Sources) {
       optionsBuilder += Scala3Sources.toString()
     }
-    optionsBuilder += s"implementationType:$implementationType"
+    optionsBuilder += s"implementation_type:$implementationType"
     apply(optionsBuilder.result())
   }
 }

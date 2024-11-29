@@ -123,7 +123,7 @@ lazy val `e2e-netty` = (projectMatrix in file("e2e-netty"))
     Compile / PB.targets := Seq(
       (
         genModule("com.improving.grpc_rest_gateway.compiler.GatewayGenerator$"),
-        Seq("scala3_sources", "implementationType:netty")
+        Seq("scala3_sources", "implementation_type:netty")
       ) -> (Compile / sourceManaged).value / "scalapb",
       genModule(
         "com.improving.grpc_rest_gateway.compiler.SwaggerGenerator$"
@@ -174,7 +174,7 @@ lazy val `e2e-pekko` = (projectMatrix in file("e2e-pekko"))
     Compile / PB.targets ++= Seq(
       (
         genModule("com.improving.grpc_rest_gateway.compiler.GatewayGenerator$"),
-        Seq("implementationType:pekko")
+        Seq("implementation_type:pekko")
       ) ->
         crossTarget.value / "pekko-grpc" / "main",
       (
