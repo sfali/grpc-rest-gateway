@@ -17,7 +17,7 @@ object Dependencies {
     val Scala213 = "2.13.15"
     val Scala212 = "2.12.20"
     val Scala3 = "3.5.2"
-    val ScalaFmt = "3.8.4-RC3"
+    val ScalaFmt = "3.2.1"
     val ScalaPb: String = scalapb.compiler.Version.scalapbVersion
     val ScalaPbJson = "0.12.1"
     val ScalaTest = "3.2.19"
