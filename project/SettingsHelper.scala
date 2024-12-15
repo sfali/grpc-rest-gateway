@@ -1,4 +1,5 @@
 import Dependencies.V.Scala213
+import com.awwsmm.sbt.DependencyUpdaterPlugin
 import org.scalafmt.sbt.ScalafmtPlugin
 import sbt.{Compile, Def, Project, ThisBuild, url, *}
 import sbt.Keys.*
@@ -20,7 +21,7 @@ object SettingsHelper {
 
   def commonSettings(project: Project): Project =
     project
-      .enablePlugins(ScalafmtPlugin)
+      .enablePlugins(ScalafmtPlugin, DependencyUpdaterPlugin)
       .settings(
         Global / onChangedBuildSource := ReloadOnSourceChanges,
         ThisBuild / organization := "io.github.sfali23",

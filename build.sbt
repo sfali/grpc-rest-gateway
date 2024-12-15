@@ -216,6 +216,7 @@ lazy val `grpc-rest-gateway` =
       publishArtifact := false,
       publish := {},
       publishLocal := {},
+      addUnReleasedCommitsToTagComment := true,
       releaseProcess := Seq[ReleaseStep](
         checkSnapshotDependencies,
         inquireVersions,
