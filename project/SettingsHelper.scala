@@ -28,7 +28,12 @@ object SettingsHelper {
         ThisBuild / scalaVersion := Scala213,
         ThisBuild / sonatypeRepository := "https://s01.oss.sonatype.org/service/local",
         ThisBuild / sonatypeCredentialHost := "s01.oss.sonatype.org",
-        ThisBuild / credentials += Credentials(Path.userHome / ".sbt" / "sonatype-credentials"),
+        ThisBuild / credentials += Credentials(
+          realm = "Sonatype Nexus Repository Manager",
+          host = "s01.oss.sonatype.org",
+          userName = System.getenv("SONATYPE_USERNAME"),
+          passwd = System.getenv("SONATYPE_PASSWORD")
+        ),
         ThisBuild / publishTo := sonatypePublishToBundle.value,
         ThisBuild / sonatypeProjectHosting := Some(
           GitHubHosting(
