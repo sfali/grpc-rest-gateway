@@ -1,0 +1,48 @@
+name: Release
+
+on: workflow_dispatch
+
+permissions:
+  contents: write
+
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  build:
+    name: Build and Release
+    env:
+      PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
+      SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+      SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        java: [temurin@17]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout current branch (full)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: '${{ github.token }}'
+
+      - name: Setup Java (temurin@17)
+        if: matrix.java == 'temurin@17'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: sbt
+
+      - name: Setup sbt
+        uses: sbt/setup-sbt@v1
+
+      - name: Import GPG key
+        uses: crazy-max/ghaction-import-gpg@v6
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.PGP_PASSPHRASE }}
+
+      - name: Run Release
+        run: sbt "release with-defaults"

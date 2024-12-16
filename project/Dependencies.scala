@@ -21,9 +21,9 @@ object Dependencies {
     val ScalaPb: String = scalapb.compiler.Version.scalapbVersion
     val ScalaPbJson = "0.12.1"
     val ScalaTest = "3.2.19"
-    val Slf4j = "2.0.12"
+    val Slf4j = "2.0.16"
     val Sttp = "3.10.1"
-    val SwaggerUi = "5.17.14"
+    val SwaggerUi = "5.18.2"
     val TypesafeConfig = "1.4.3"
     val Xerces = "2.12.2"
   }

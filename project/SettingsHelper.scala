@@ -1,4 +1,5 @@
 import Dependencies.V.Scala213
+import com.awwsmm.sbt.DependencyUpdaterPlugin
 import org.scalafmt.sbt.ScalafmtPlugin
 import sbt.{Compile, Def, Project, ThisBuild, url, *}
 import sbt.Keys.*
@@ -20,14 +21,19 @@ object SettingsHelper {
 
   def commonSettings(project: Project): Project =
     project
-      .enablePlugins(ScalafmtPlugin)
+      .enablePlugins(ScalafmtPlugin, DependencyUpdaterPlugin)
       .settings(
         Global / onChangedBuildSource := ReloadOnSourceChanges,
         ThisBuild / organization := "io.github.sfali23",
         ThisBuild / scalaVersion := Scala213,
         ThisBuild / sonatypeRepository := "https://s01.oss.sonatype.org/service/local",
         ThisBuild / sonatypeCredentialHost := "s01.oss.sonatype.org",
-        ThisBuild / credentials += Credentials(Path.userHome / ".sbt" / "sonatype-credentials"),
+        ThisBuild / credentials += Credentials(
+          realm = "Sonatype Nexus Repository Manager",
+          host = "s01.oss.sonatype.org",
+          userName = System.getenv("SONATYPE_USERNAME"),
+          passwd = System.getenv("SONATYPE_PASSWORD")
+        ),
         ThisBuild / publishTo := sonatypePublishToBundle.value,
         ThisBuild / sonatypeProjectHosting := Some(
           GitHubHosting(
