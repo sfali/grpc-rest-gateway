@@ -49,6 +49,7 @@ class GatewayHandlerPrinter(packageNamePrefix: String, service: ServiceDescripto
       .newline
       .call(generateService)
       .newline
+      .outdent
       .call(generateCompanionObject)
       .result()
 
@@ -67,6 +68,7 @@ class GatewayHandlerPrinter(packageNamePrefix: String, service: ServiceDescripto
       .outdent
       .newline
       .call(GenerateDelegateFunctions(implicits, "completeResponse", methods))
+      .outdent
       .add("}")
 
   private def generateCompanionObject: PrinterEndo = { printer =>
