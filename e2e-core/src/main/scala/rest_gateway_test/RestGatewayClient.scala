@@ -89,6 +89,20 @@ class RestGatewayClient(gatewayPort: Int) {
     getMessage(uri)
   }
 
+  def getMessageV3AdditionalBinding[Response <: GeneratedMessage: GeneratedMessageCompanion](
+    messageId: Int,
+    userId: String,
+    subField1: Double,
+    subField2: Option[Float] = None
+  ): Future[Try[Response]] = {
+    var uri = uri"$baseUrl/v1/test/messages/$messageId/users/$userId/sub/$subField1"
+    uri = subField2 match {
+      case Some(f2) => uri.withParams(("sub.sub_field2", f2.toString))
+      case _        => uri
+    }
+    getMessage(uri)
+  }
+
   def postMessage[Body <: GeneratedMessage, Response <: GeneratedMessage: GeneratedMessageCompanion](
     userId: String,
     messageId: Int,
