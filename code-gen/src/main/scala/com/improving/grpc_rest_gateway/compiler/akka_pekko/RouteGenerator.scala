@@ -3,11 +3,14 @@ package grpc_rest_gateway
 package compiler
 package akka_pekko
 
-import com.google.protobuf.Descriptors.MethodDescriptor
+import com.google.protobuf.Descriptors.FieldDescriptor.JavaType
+import com.google.protobuf.Descriptors.{Descriptor, MethodDescriptor}
 import com.improving.grpc_rest_gateway.compiler.utils.GenerateDelegateFunctions
 import compiler.utils.path_parser.{MethodInfo, PathParserUtils, TreeNode}
 import scalapb.compiler.DescriptorImplicits
 import scalapb.compiler.FunctionalPrinter.PrinterEndo
+
+import scala.annotation.tailrec
 
 private class RouteGenerator(implicits: DescriptorImplicits, methods: List[MethodDescriptor]) {
 
@@ -142,37 +145,44 @@ private class RouteGenerator(implicits: DescriptorImplicits, methods: List[Metho
   ) =
     pathVariables.foldLeft(result) { case (finalResult, pathName) =>
       val name = method.getName
-      if (pathName.contains("\\.")) {
-        throw new RuntimeException(s"""Path name contains ".",  methodName = $name, pathName = $pathName""")
-      } else {
-        val inputType = method.getInputType
-        val updatedMap =
-          Option(inputType.findFieldByName(pathName)) match {
-            case Some(fd) if fd.isMessage || fd.isMapField || fd.isRepeated =>
-              throw new RuntimeException(s"""Field "$pathName" is not a singular field.""")
+      val inputType = method.getInputType
+      val paths = pathName.split("\\.").toList
+      val updatedMap =
+        getFieldType(inputType, pathName, paths) match {
+          case Some(javaType) =>
+            val javaTypeName = javaType.name()
+            val pathMatcherName = javaTypeToPathMatcherMap(javaTypeName)
+            finalResult.get(fullPath) match {
+              case Some(valuesMap) =>
+                // same path can be used for multiple methods, a path variable should have same data type,
+                // if we don't then we have a problem, e.g., in get it is defined as String and in post it is defined as Long,
+                // in order to avoid compilation we keep String data type
+                valuesMap.get(pathName) match {
+                  case Some(value) if value.pathMatcherName == pathMatcherName || value.pathMatcherName == "Segment" =>
+                    valuesMap
+                  case _ => valuesMap + (pathName -> PathVariableInfo(pathName, pathMatcherName, javaTypeName))
+                }
 
-            case Some(fd) =>
-              val javaType = fd.getJavaType.name()
-              val pathMatcherName = javaTypeToPathMatcherMap(javaType)
-              finalResult.get(fullPath) match {
-                case Some(valuesMap) =>
-                  // same path can be used for multiple methods, a path variable should have same data type,
-                  // if we don't then we have a problem, e.g., in get it is defined as String and in post it is defined as Long,
-                  // in order to avoid compilation we keep String data type
-                  valuesMap.get(pathName) match {
-                    case Some(value)
-                        if value.pathMatcherName == pathMatcherName || value.pathMatcherName == "Segment" =>
-                      valuesMap
-                    case _ => valuesMap + (pathName -> PathVariableInfo(pathName, pathMatcherName, javaType))
-                  }
+              case None => Map(pathName -> PathVariableInfo(pathName, pathMatcherName, javaTypeName))
+            }
 
-                case None => Map(pathName -> PathVariableInfo(pathName, pathMatcherName, javaType))
-              }
+          case None => throw new RuntimeException(s"Could not find field: methodName = $name, pathName = $pathName")
+        }
+      finalResult + (fullPath -> updatedMap)
+    }
 
-            case None => throw new RuntimeException(s"Could not find field: methodName = $name, pathName = $pathName")
-          }
-        finalResult + (fullPath -> updatedMap)
-      }
+  @tailrec
+  private def getFieldType(descriptor: Descriptor, actualPath: String, paths: List[String]): Option[JavaType] =
+    paths match {
+      case Nil => None
+      case head :: tail =>
+        Option(descriptor.findFieldByName(head)) match {
+          case Some(fd) if fd.isRepeated || fd.isMapField =>
+            throw new RuntimeException(s"""Field "$actualPath" is not a singular field.""")
+          case Some(fd) if fd.isMessage => getFieldType(fd.getMessageType, actualPath, tail)
+          case Some(fd)                 => Option(fd.getJavaType)
+          case None                     => None
+        }
     }
 
   private def sanitizePath(path: String) = path.replaceAll("\\{", "").replaceAll("}", "")
@@ -206,9 +216,11 @@ private class RouteGenerator(implicits: DescriptorImplicits, methods: List[Metho
     pathVariableToFieldMap.get(fullPath) match {
       case Some(subMap) =>
         val mergedParameters =
-          subMap.foldLeft("") { case (result, (_, PathVariableInfo(variableName, _, javaType))) =>
-            val value = if (javaType == "STRING") s"List($variableName)" else s"List($variableName.toString)"
-            val mapPair = s""""$variableName" -> $value"""
+          subMap.foldLeft("") { case (result, (_, pathVariableInfo)) =>
+            val value =
+              if (pathVariableInfo.javaType == "STRING") s"List(${pathVariableInfo.variableName})"
+              else s"List(${pathVariableInfo.variableName}.toString)"
+            val mapPair = s""""${pathVariableInfo.pathName}" -> $value"""
             if (result.isEmpty) mapPair else result + s", $mapPair"
           }
         printer
@@ -258,12 +270,18 @@ object RouteGenerator {
   def apply(implicits: DescriptorImplicits, methods: List[MethodDescriptor]): PrinterEndo =
     new RouteGenerator(implicits, methods).generateRoute
 
-  /** @param variableName
-    *   This is name of the field defined in proto file, e.g., `message_id`.
+  /** @param pathName
+    *   This is name of the field defined in proto file, e.g., `message_id` or `sub.sub_field1`.
     * @param pathMatcherName
     *   This Akka / Pekko path matcher, one of IntNumber, LongNumber, DoubleNumber, or Segment.
     * @param javaType
     *   Java type, one of INT, LONG, DOUBLE, or String.
     */
-  private case class PathVariableInfo(variableName: String, pathMatcherName: String, javaType: String)
+  private case class PathVariableInfo(pathName: String, pathMatcherName: String, javaType: String) {
+
+    /** The variable name to be used in path prefix, if pathName contains "." then variable name will be surrounded by
+      * "``".
+      */
+    val variableName: String = if (pathName.contains(".")) s"`$pathName`" else pathName
+  }
 }
