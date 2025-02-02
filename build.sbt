@@ -221,13 +221,6 @@ lazy val `grpc-rest-gateway` =
         checkSnapshotDependencies,
         inquireVersions,
         runClean,
-        releaseStepCommand("test"),
-        releaseStepCommand("nettyJVM212Test"),
-        releaseStepCommand("nettyJVM213Test"),
-        releaseStepCommand("nettyJVM3Test"),
-        releaseStepCommand("pekkoJVM212Test"),
-        releaseStepCommand("pekkoJVM213Test"),
-        releaseStepCommand("pekkoJVM3Test"),
         setReleaseVersion,
         tagRelease,
         publishArtifacts,
@@ -239,7 +232,7 @@ lazy val `grpc-rest-gateway` =
     .aggregate(protocGenGrpcRestGatewayPlugin.agg)
     .aggregate(
       (codeGen.projectRefs ++ `runtime-core`.projectRefs ++ `runtime-netty`.projectRefs ++
-        `runtime-pekko`.projectRefs ++ `runtime-akka`.projectRefs)*
+        `runtime-pekko`.projectRefs ++ `runtime-akka`.projectRefs) *
     )
 
 addCommandAlias("nettyJVM212Test", "e2e-nettyJVM2_12 / clean; e2e-nettyJVM2_12 / test")

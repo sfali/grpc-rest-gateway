@@ -48,11 +48,10 @@ class GenerateDelegateFunctions private[utils] (
     val name = method.getName
     val methodName = name.charAt(0).toLower + name.substring(1)
     val delegateFunctionName = generateDelegateFunctionName(name)
-    val serviceFunctionName = method.getInputType.getName
+    val serviceFunctionName = method.getInputType.scalaType.fullName
     httpMethod match {
       case PatternCase.GET | PatternCase.DELETE | PatternCase.PATCH =>
         printer
-          .indent
           .add(s"""private def $delegateFunctionName(parameters: Map[String, Seq[String]]) = {""")
           .indent
           .add("val input = Try {")
@@ -63,7 +62,6 @@ class GenerateDelegateFunctions private[utils] (
           .add(s"$dispatchFunctionName(input, client.$methodName)")
           .outdent
           .add("}")
-          .outdent
           .newline
       case PatternCase.PUT | PatternCase.POST =>
         printer.call(
@@ -116,7 +114,6 @@ class GenerateDelegateFunctions private[utils] (
     if (body.nonEmpty) {
       if (body == "*") {
         printer
-          .indent
           .add(s"""private def $delegateFunctionName(body: String) = {""")
           .indent
           .add(
@@ -125,7 +122,6 @@ class GenerateDelegateFunctions private[utils] (
           .add(s"$dispatchFunctionName(input, client.$methodName)")
           .outdent
           .add("}")
-          .outdent
           .newline
       } else {
         val inputTypeDescriptor = method.getInputType
@@ -133,12 +129,11 @@ class GenerateDelegateFunctions private[utils] (
         maybeDescriptor match {
           case Some(descriptor) =>
             val fd = ExtendedFieldDescriptor(descriptor)
-            val bodyFullType = descriptor.getMessageType.getName
+            val bodyFullType = descriptor.getMessageType.scalaType.fullName
             val optional = !fd.noBox // this is an Option in parent type
             val args =
               inputTypeDescriptor.getFields.asScala.map(f => s"${f.getJsonName} = ${f.getJsonName}").mkString(", ")
             printer
-              .indent
               .add(s"""private def $delegateFunctionName(body: String, parameters: Map[String, Seq[String]]) = {""")
               .indent
               .when(optional)(_.add(s"val parsedBody = parseBodyOptional[$bodyFullType](body)"))
@@ -153,7 +148,6 @@ class GenerateDelegateFunctions private[utils] (
               .add(s"$dispatchFunctionName(input, client.$methodName)")
               .outdent
               .add("}")
-              .outdent
               .newline
           case None =>
             throw new RuntimeException(

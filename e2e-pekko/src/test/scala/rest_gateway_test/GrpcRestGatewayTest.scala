@@ -181,6 +181,24 @@ class GrpcRestGatewayTest extends AnyWordSpec with Matchers with BeforeAndAfterA
           .getOrElse(GetMessageResponse.defaultInstance)
     }
 
+    "getMessageV3 with sub field1 as path parameter" in {
+      val request = GetMessageRequestV2(
+        messageId = 16,
+        userId = "super_user",
+        sub = Some(GetMessageRequestV2.SubMessage(subField1 = 5.3, subField2 = 2.9f))
+      )
+      serviceAClient.getMessageV3(request).futureValue shouldBe
+        restClient
+          .getMessageV3AdditionalBinding[GetMessageResponse](
+            request.messageId,
+            request.userId,
+            request.sub.map(_.subField1).getOrElse(0.0),
+            request.sub.map(_.subField2)
+          )
+          .futureValue
+          .getOrElse(GetMessageResponse.defaultInstance)
+    }
+
     "post message" in {
       val request = GetMessageRequestV2(
         messageId = 23,
