@@ -8,7 +8,7 @@ import org.scalafmt.interfaces.Scalafmt
 import java.nio.file.{Files, Paths}
 import scala.util.Try
 
-object Formatter {
+class Formatter {
 
   def format(content: String): String = {
     val config = Paths.get(".scalafmt.conf")
@@ -23,4 +23,8 @@ object Formatter {
       }.getOrElse(content)
     } else content
   }
+}
+
+object Formatter {
+  def apply(): Formatter = new Formatter
 }
