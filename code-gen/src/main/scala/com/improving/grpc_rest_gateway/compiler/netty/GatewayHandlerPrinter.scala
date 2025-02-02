@@ -6,7 +6,7 @@ package netty
 import com.google.api.{AnnotationsProto, HttpRule}
 import com.google.api.HttpRule.PatternCase
 import com.google.protobuf.Descriptors.{MethodDescriptor, ServiceDescriptor}
-import com.improving.grpc_rest_gateway.compiler.utils.{GenerateDelegateFunctions, GenerateImportStatements}
+import com.improving.grpc_rest_gateway.compiler.utils.GenerateDelegateFunctions
 import scalapb.compiler.FunctionalPrinter.PrinterEndo
 import scalapb.compiler.{DescriptorImplicits, FunctionalPrinter, NameUtils}
 
@@ -42,7 +42,6 @@ class GatewayHandlerPrinter(service: ServiceDescriptor, implicits: DescriptorImp
         s"import runtime.core.$wildcardImport",
         s"import runtime.handlers.$wildcardImport"
       )
-      .call(GenerateImportStatements(scalaPackageName, implicits, methods))
       .newline
       .add(
         "import scala.concurrent.{ExecutionContext, Future}",

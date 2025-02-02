@@ -48,7 +48,7 @@ class GenerateDelegateFunctions private[utils] (
     val name = method.getName
     val methodName = name.charAt(0).toLower + name.substring(1)
     val delegateFunctionName = generateDelegateFunctionName(name)
-    val serviceFunctionName = method.getInputType.getName
+    val serviceFunctionName = method.getInputType.scalaType.fullName
     httpMethod match {
       case PatternCase.GET | PatternCase.DELETE | PatternCase.PATCH =>
         printer
@@ -129,7 +129,7 @@ class GenerateDelegateFunctions private[utils] (
         maybeDescriptor match {
           case Some(descriptor) =>
             val fd = ExtendedFieldDescriptor(descriptor)
-            val bodyFullType = descriptor.getMessageType.getName
+            val bodyFullType = descriptor.getMessageType.scalaType.fullName
             val optional = !fd.noBox // this is an Option in parent type
             val args =
               inputTypeDescriptor.getFields.asScala.map(f => s"${f.getJsonName} = ${f.getJsonName}").mkString(", ")
