@@ -4,7 +4,7 @@ package compiler
 package akka_pekko
 
 import com.google.protobuf.Descriptors.ServiceDescriptor
-import compiler.utils.{GenerateDelegateFunctions, GenerateImportStatements}
+import compiler.utils.GenerateDelegateFunctions
 import scalapb.compiler.FunctionalPrinter.PrinterEndo
 import scalapb.compiler.{DescriptorImplicits, FunctionalPrinter}
 
@@ -32,7 +32,6 @@ class GatewayHandlerPrinter(packageNamePrefix: String, service: ServiceDescripto
         s"import runtime.core.$wildcardImport",
         s"import runtime.handlers.GrpcGatewayHandler"
       )
-      .call(GenerateImportStatements(scalaPackageName, implicits, methods))
       .newline
       .when(packageNamePrefix == "pekko")(_.add("import org.apache.pekko"))
       .add(

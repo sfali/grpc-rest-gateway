@@ -8,10 +8,10 @@ import com.google.protobuf.WireFormat.JavaType
 import scalapb.compiler.DescriptorImplicits
 import scalapb.compiler.FunctionalPrinter.PrinterEndo
 
-import scala.annotation.tailrec
+import scala.annotation.{tailrec, unused}
 import scala.jdk.CollectionConverters.*
 
-class GenerateImportStatements private[utils] (
+private class GenerateImportStatements private[utils] (
   currentPackageName: String,
   implicits: DescriptorImplicits,
   methods: List[MethodDescriptor]) {
@@ -81,6 +81,7 @@ class GenerateImportStatements private[utils] (
   }
 }
 
+@unused
 object GenerateImportStatements {
   def apply(currentPackageName: String, implicits: DescriptorImplicits, methods: List[MethodDescriptor]): PrinterEndo =
     new GenerateImportStatements(currentPackageName, implicits, methods).createImportStatements
