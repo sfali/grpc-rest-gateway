@@ -26,6 +26,7 @@ object SettingsHelper {
         Global / onChangedBuildSource := ReloadOnSourceChanges,
         ThisBuild / organization := "io.github.sfali23",
         ThisBuild / scalaVersion := Scala213,
+        ThisBuild / versionScheme := Some("semver-spec"),
         ThisBuild / sonatypeRepository := "https://s01.oss.sonatype.org/service/local",
         ThisBuild / sonatypeCredentialHost := "s01.oss.sonatype.org",
         ThisBuild / credentials += Credentials(
