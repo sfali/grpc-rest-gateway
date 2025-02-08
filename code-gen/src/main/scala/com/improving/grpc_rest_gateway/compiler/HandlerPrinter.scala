@@ -13,7 +13,7 @@ trait HandlerPrinter {
   lazy val result: CodeGeneratorResponse.File = {
     val b = CodeGeneratorResponse.File.newBuilder()
     b.setName(outputFileName)
-    b.setContent(Formatter().format(content))
+    b.setContent(Formatter.format(content))
     b.build()
   }
 }
