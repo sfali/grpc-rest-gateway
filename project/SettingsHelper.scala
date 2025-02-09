@@ -1,9 +1,8 @@
 import Dependencies.V.Scala213
 import com.awwsmm.sbt.DependencyUpdaterPlugin
 import org.scalafmt.sbt.ScalafmtPlugin
-import sbt.{Compile, Def, Project, ThisBuild, url, *}
+import sbt.{Compile, Def, Global, Project, ThisBuild, url}
 import sbt.Keys.*
-import sbt.io.Path
 import sbt.librarymanagement.ivy.Credentials
 import sbt.librarymanagement.{CrossVersion, Developer, ScmInfo}
 import sbt.nio.Keys.{ReloadOnSourceChanges, onChangedBuildSource}
