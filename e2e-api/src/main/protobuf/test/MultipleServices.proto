@@ -18,10 +18,10 @@ option (scalapb.options) = {
   package_name: "rest_gateway_test.api.scala_api"
 };
 
-// Test service C
-service TestServiceC {
+// Test service D
+service TestServiceD {
 
-  // Get request for service C
+  // Get request for service D
   rpc GetRequest (Request) returns (Response) {
     option (google.api.http) = {
       get: "/restgateway/c/testservice"
@@ -29,15 +29,22 @@ service TestServiceC {
   }
 }
 
-// Test service D
-service TestServiceD {
+// Test service E
+service TestServiceE {
 
-  // Get request for service D
+  // Get request for service E
   rpc GetRequest (Request) returns (Response) {
     option (google.api.http) = {
       get: "/restgateway/d/testservice"
     };
   }
+}
+
+// Test service F
+service TestServiceF {
+
+  // Get request for service D
+  rpc GetRequest (Request) returns (Response);
 }
 
 message Request {

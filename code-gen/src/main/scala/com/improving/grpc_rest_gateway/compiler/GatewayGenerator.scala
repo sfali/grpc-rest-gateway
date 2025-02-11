@@ -51,6 +51,7 @@ object GatewayGenerator extends CodeGenApp {
           request
             .filesToGenerate
             .flatMap(_.getServices.asScala)
+            .filterNot(getUnaryCallsWithHttpExtension(_).isEmpty)
             .map { sd =>
               implementationType match {
                 case Pekko | Akka => new akka_pekko.GatewayHandlerPrinter(implementationType, sd, implicits)
