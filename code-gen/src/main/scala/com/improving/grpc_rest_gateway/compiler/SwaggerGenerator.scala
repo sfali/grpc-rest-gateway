@@ -33,7 +33,11 @@ object SwaggerGenerator extends CodeGenApp {
         CodeGenResponse.succeed(
           request
             .filesToGenerate
-            .filter(_.getServices.asScala.nonEmpty)
+            .flatMap { fd =>
+              val services = fd.getServices.asScala
+              if (services.isEmpty || services.forall(getUnaryCallsWithHttpExtension(_).isEmpty)) None
+              else Some(fd)
+            }
             .map(fd => new SwaggerMessagePrinter(fd, implicits))
             .map(_.result)
         )
@@ -64,7 +68,7 @@ private class SwaggerMessagePrinter(fd: FileDescriptor, implicits: DescriptorImp
         s"title: '${fd.getFullName}'"
       )
       .add("tags:")
-      .call(generateTags)
+      .print(services) { case (p, service) => generateTag(service)(p) }
       .add("schemes:")
       .addIndented("- http", "- https")
       .add("consumes:")
@@ -81,23 +85,29 @@ private class SwaggerMessagePrinter(fd: FileDescriptor, implicits: DescriptorImp
       .outdent
       .result()
 
-  private def generateTags: PrinterEndo = { printer =>
-    def generateTag(sd: ExtendedServiceDescriptor): PrinterEndo = { printer =>
+  private def generateTag(service: ServiceDescriptor): PrinterEndo = { printer =>
+    if (getUnaryCallsWithHttpExtension(service).isEmpty) printer
+    else {
+      val esd = ExtendedServiceDescriptor(service)
       printer
         .indent
-        .add(s"- name: ${sd.name}")
-        .add(s"  description: ${sd.comment.map(_.trim).getOrElse(sd.name)}")
+        .add(s"- name: ${esd.name}")
+        .add(s"  description: ${esd.comment.map(_.trim).getOrElse(esd.name)}")
         .outdent
     }
-    printer.print(services.map(s => ExtendedServiceDescriptor(s))) { case (p, sd) => generateTag(sd)(p) }
   }
 
-  private def generatePaths(service: ServiceDescriptor): PrinterEndo =
-    _.print(getPaths(service)) { case (p, (path, pathMethods)) => generatePath(path, pathMethods)(p) }
+  private def generatePaths(service: ServiceDescriptor): PrinterEndo = { printer =>
+    if (getUnaryCallsWithHttpExtension(service).isEmpty) printer
+    else printer.print(getPaths(service)) { case (p, (path, pathMethods)) => generatePath(path, pathMethods)(p) }
+  }
 
   private def generateDefinitions(services: Seq[ServiceDescriptor]): PrinterEndo = { printer =>
-    val definitions = services.flatMap(getDefinitions).toSet
-    printer.print(definitions) { case (p, definition) => generateDefinition(definition)(p) }
+    if (services.forall(getUnaryCallsWithHttpExtension(_).isEmpty)) printer
+    else {
+      val definitions = services.flatMap(getDefinitions).toSet
+      printer.print(definitions) { case (p, definition) => generateDefinition(definition)(p) }
+    }
   }
 
   private def getMethods(service: ServiceDescriptor) =

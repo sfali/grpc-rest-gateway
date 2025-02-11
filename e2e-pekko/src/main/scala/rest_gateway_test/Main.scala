@@ -4,8 +4,8 @@ import com.improving.grpc_rest_gateway.runtime.server.GatewayServer
 import rest_gateway_test.api.scala_api.{
   TestServiceAGatewayHandler,
   TestServiceBGatewayHandler,
-  TestServiceCGatewayHandler,
-  TestServiceDGatewayHandler
+  TestServiceDGatewayHandler,
+  TestServiceEGatewayHandler
 }
 import org.apache.pekko.actor.typed.ActorSystem
 import org.apache.pekko.actor.typed.scaladsl.Behaviors
@@ -28,8 +28,8 @@ object Main {
       7070,
       TestServiceAGatewayHandler(settings),
       TestServiceBGatewayHandler(settings),
-      TestServiceCGatewayHandler(settings),
-      TestServiceDGatewayHandler(settings)
+      TestServiceDGatewayHandler(settings),
+      TestServiceEGatewayHandler(settings)
     ).run()
 
     println("Server now online. \nPress RETURN to stop...")

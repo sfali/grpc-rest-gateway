@@ -3,7 +3,7 @@ package rest_gateway_test.server
 import com.improving.grpc_rest_gateway.runtime.server.GatewayServer
 import io.grpc.{ManagedChannel, ManagedChannelBuilder, Server, ServerBuilder}
 import org.slf4j.LoggerFactory
-import rest_gateway_test.api.scala_api.{TestServiceCGatewayHandler, TestServiceDGatewayHandler}
+import rest_gateway_test.api.scala_api.{TestServiceDGatewayHandler, TestServiceEGatewayHandler}
 import rest_gateway_test.api.scala_api.{TestServiceAGatewayHandler, TestServiceAGrpc}
 import rest_gateway_test.api.scala_api.{TestServiceBGatewayHandler, TestServiceBGrpc}
 import rest_gateway_test.server.GrpcServer.GrpcPort
@@ -73,8 +73,8 @@ object GrpcServer {
         Seq(
           TestServiceAGatewayHandler(channel),
           TestServiceBGatewayHandler(channel),
-          TestServiceCGatewayHandler(channel),
-          TestServiceDGatewayHandler(channel)
+          TestServiceDGatewayHandler(channel),
+          TestServiceEGatewayHandler(channel)
         ),
       executor = Some(executorService)
     )
