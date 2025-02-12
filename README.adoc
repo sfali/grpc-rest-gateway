@@ -40,7 +40,7 @@ addSbtPlugin("com.thesamet" % "sbt-protoc" % "1.0.7")
 
 libraryDependencies ++= Seq(
   "com.thesamet.scalapb" %% "compilerplugin" % "0.11.17",
-  "io.github.sfali23" %% "grpc-rest-gateway-code-gen" % "0.8.4"
+  "io.github.sfali23" %% "grpc-rest-gateway-code-gen" % "0.8.5"
 )
 ----
 
@@ -77,7 +77,7 @@ Add following dependencies
 val ScalaPb: String = scalapb.compiler.Version.scalapbVersion
 val GrpcJava: String = scalapb.compiler.Version.grpcJavaVersion
 libraryDependencies ++= Seq(
-  "io.github.sfali23" %% "grpc-rest-gateway-runtime-netty" % "0.8.4",
+  "io.github.sfali23" %% "grpc-rest-gateway-runtime-netty" % "0.8.5",
   "com.thesamet.scalapb" %% "compilerplugin" % V.ScalaPb % "compile;protobuf",
   "com.thesamet.scalapb" %% "scalapb-runtime" % V.ScalaPb % "compile;protobuf",
   "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % V.ScalaPb,
@@ -95,18 +95,32 @@ Add following dependencies:
 ----
 val ScalaPb: String = scalapb.compiler.Version.scalapbVersion
 val GrpcJava: String = scalapb.compiler.Version.grpcJavaVersion
-libraryDependencies ++= Seq(
-  "io.github.sfali23" %% "grpc-rest-gateway-runtime-pekko" % "0.8.4",
-  "org.apache.pekko" %% "pekko-actor" % "1.1.2",
-  "org.apache.pekko" %% "pekko-actor-typed" % "1.1.2",
-  "org.apache.pekko" %% "pekko-stream-typed" % "1.1.2",
-  "org.apache.pekko" %% "pekko-http" % "1.1.0",
-  "org.apache.pekko" %% "pekko-grpc-runtime" % "1.1.1",
-  "com.thesamet.scalapb.common-protos" %% "proto-google-common-protos-scalapb_0.11" % "2.9.6-0" % "compile,protobuf"
-)
-----
 
-NOTE: Your project should be configured at least to generate Pekko gRPC client code.
+lazy val root = project
+  .in(file("."))
+  .enablePlugins(PekkoGrpcPlugin)
+  .settings(
+      libraryDependencies ++= Seq(
+        "io.github.sfali23" %% "grpc-rest-gateway-runtime-pekko" % "0.8.5",
+        "org.apache.pekko" %% "pekko-actor" % "1.1.2",
+        "org.apache.pekko" %% "pekko-actor-typed" % "1.1.2",
+        "org.apache.pekko" %% "pekko-stream-typed" % "1.1.2",
+        "org.apache.pekko" %% "pekko-http" % "1.1.0",
+        "org.apache.pekko" %% "pekko-grpc-runtime" % "1.1.1",
+        "com.thesamet.scalapb.common-protos" %% "proto-google-common-protos-scalapb_0.11" % "2.9.6-0" % "compile,protobuf"
+      ),
+      pekkoGrpcGeneratedSources := generatedSource,
+      pekkoGrpcCodeGeneratorSettings := Seq("grpc", "single_line_to_proto_string"),
+      Compile / PB.targets ++= Seq(
+        grpc_rest_gateway
+          .gatewayGen(
+              scala3Sources = true,
+              implementationType = grpc_rest_gateway.ImplementationType.Pekko
+           ) -> crossTarget.value / "pekko-grpc" / "main",
+          grpc_rest_gateway.swaggerGen() -> (Compile / resourceDirectory).value / "specs"
+      )
+  )
+----
 
 === Configure dependencies for Akka based implementation
 
