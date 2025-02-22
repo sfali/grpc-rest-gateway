@@ -17,7 +17,10 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.CollectionConverters.*
 
 @Sharable
-abstract class GrpcGatewayHandler(channel: ManagedChannel)(implicit ec: ExecutionContext)
+abstract class GrpcGatewayHandler(
+  channel: ManagedChannel
+)(implicit
+  ec: ExecutionContext)
     extends ChannelInboundHandlerAdapter
     with PathMatchingSupport {
 

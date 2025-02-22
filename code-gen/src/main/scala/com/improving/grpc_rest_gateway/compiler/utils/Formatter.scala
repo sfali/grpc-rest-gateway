@@ -70,7 +70,7 @@ object Formatter {
     val fmt = Scalafmt.create(classLoader)
     val reporterClass = classLoader.loadClass("org.scalafmt.dynamic.ConsoleScalafmtReporter")
     val constructor = reporterClass.getConstructor(classOf[PrintStream]);
-    val reporter: ScalafmtReporter = constructor.newInstance(System.err).asInstanceOf[ScalafmtReporter]
+    val reporter = constructor.newInstance(System.err).asInstanceOf[ScalafmtReporter]
     fmt.withReporter(reporter)
   }
 }
