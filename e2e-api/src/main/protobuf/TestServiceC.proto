@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package rest_gateway_test.api;
+
+import "scalapb/scalapb.proto";
+import "common.proto";
+
+option java_multiple_files = false;
+option java_package = "rest_gateway_test.api.java_api";
+option java_outer_classname = "TestServiceCProto";
+option objc_class_prefix = "TS2P";
+
+option (scalapb.options) = {
+  single_file: true
+  lenses: true
+  retain_source_code_info: true
+  flat_package: true
+  package_name: "rest_gateway_test.api.scala_api"
+};
+
+// Test service C
+service TestServiceC {
+  rpc GetRequest (rest_gateway_test.api.model.TestRequestB) returns (rest_gateway_test.api.model.TestResponseB);
+  rpc Process (rest_gateway_test.api.model.TestRequestB) returns (rest_gateway_test.api.model.TestResponseB);
+}

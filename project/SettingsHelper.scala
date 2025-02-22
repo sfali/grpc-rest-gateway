@@ -1,9 +1,8 @@
 import Dependencies.V.Scala213
 import com.awwsmm.sbt.DependencyUpdaterPlugin
 import org.scalafmt.sbt.ScalafmtPlugin
-import sbt.{Compile, Def, Project, ThisBuild, url, *}
+import sbt.{Compile, Def, Global, Project, ThisBuild, url}
 import sbt.Keys.*
-import sbt.io.Path
 import sbt.librarymanagement.ivy.Credentials
 import sbt.librarymanagement.{CrossVersion, Developer, ScmInfo}
 import sbt.nio.Keys.{ReloadOnSourceChanges, onChangedBuildSource}
@@ -26,6 +25,7 @@ object SettingsHelper {
         Global / onChangedBuildSource := ReloadOnSourceChanges,
         ThisBuild / organization := "io.github.sfali23",
         ThisBuild / scalaVersion := Scala213,
+        ThisBuild / versionScheme := Some("semver-spec"),
         ThisBuild / sonatypeRepository := "https://s01.oss.sonatype.org/service/local",
         ThisBuild / sonatypeCredentialHost := "s01.oss.sonatype.org",
         ThisBuild / credentials += Credentials(

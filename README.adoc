@@ -40,7 +40,7 @@ addSbtPlugin("com.thesamet" % "sbt-protoc" % "1.0.7")
 
 libraryDependencies ++= Seq(
   "com.thesamet.scalapb" %% "compilerplugin" % "0.11.17",
-  "io.github.sfali23" %% "grpc-rest-gateway-code-gen" % "0.8.3"
+  "io.github.sfali23" %% "grpc-rest-gateway-code-gen" % "0.8.5"
 )
 ----
 
@@ -50,11 +50,12 @@ And following in the `build.sbt`:
 ----
 Compile / PB.targets := Seq(
   scalapb.gen() -> (Compile / sourceManaged).value / "scalapb",
-  grpc_rest_gateway.gatewayGen(implementationType = "netty") -> (Compile / sourceManaged).value / "scalapb",
+  grpc_rest_gateway.gatewayGen(implementationType = grpc_rest_gateway.ImplementationType.Netty) -> (Compile / sourceManaged).value / "scalapb",
   grpc_rest_gateway.swaggerGen() -> (Compile / resourceDirectory).value / "specs"
 )
 
-// change value of "implementationType" parameter to "pekko" or "akka" to generate Pekko or Akka based implementation
+// change value of "implementationType" parameter to `grpc_rest_gateway.ImplementationType.Pekko` or
+// `grpc_rest_gateway.ImplementationType.Akka` to generate Pekko or Akka based implementation
 
 // generate code for Scala 3
 Compile / PB.targets := Seq(
@@ -76,7 +77,7 @@ Add following dependencies
 val ScalaPb: String = scalapb.compiler.Version.scalapbVersion
 val GrpcJava: String = scalapb.compiler.Version.grpcJavaVersion
 libraryDependencies ++= Seq(
-  "io.github.sfali23" %% "grpc-rest-gateway-runtime-netty" % "0.8.3",
+  "io.github.sfali23" %% "grpc-rest-gateway-runtime-netty" % "0.8.5",
   "com.thesamet.scalapb" %% "compilerplugin" % V.ScalaPb % "compile;protobuf",
   "com.thesamet.scalapb" %% "scalapb-runtime" % V.ScalaPb % "compile;protobuf",
   "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % V.ScalaPb,
@@ -94,18 +95,32 @@ Add following dependencies:
 ----
 val ScalaPb: String = scalapb.compiler.Version.scalapbVersion
 val GrpcJava: String = scalapb.compiler.Version.grpcJavaVersion
-libraryDependencies ++= Seq(
-  "io.github.sfali23" %% "grpc-rest-gateway-runtime-pekko" % "0.8.1",
-  "org.apache.pekko" %% "pekko-actor" % "1.1.2",
-  "org.apache.pekko" %% "pekko-actor-typed" % "1.1.2",
-  "org.apache.pekko" %% "pekko-stream-typed" % "1.1.2",
-  "org.apache.pekko" %% "pekko-http" % "1.1.0",
-  "org.apache.pekko" %% "pekko-grpc-runtime" % "1.1.1",
-  "com.thesamet.scalapb.common-protos" %% "proto-google-common-protos-scalapb_0.11" % "2.9.6-0" % "compile,protobuf"
-)
-----
 
-NOTE: Your project should be configured at least to generate Pekko gRPC client code.
+lazy val root = project
+  .in(file("."))
+  .enablePlugins(PekkoGrpcPlugin)
+  .settings(
+      libraryDependencies ++= Seq(
+        "io.github.sfali23" %% "grpc-rest-gateway-runtime-pekko" % "0.8.5",
+        "org.apache.pekko" %% "pekko-actor" % "1.1.2",
+        "org.apache.pekko" %% "pekko-actor-typed" % "1.1.2",
+        "org.apache.pekko" %% "pekko-stream-typed" % "1.1.2",
+        "org.apache.pekko" %% "pekko-http" % "1.1.0",
+        "org.apache.pekko" %% "pekko-grpc-runtime" % "1.1.1",
+        "com.thesamet.scalapb.common-protos" %% "proto-google-common-protos-scalapb_0.11" % "2.9.6-0" % "compile,protobuf"
+      ),
+      pekkoGrpcGeneratedSources := generatedSource,
+      pekkoGrpcCodeGeneratorSettings := Seq("grpc", "single_line_to_proto_string"),
+      Compile / PB.targets ++= Seq(
+        grpc_rest_gateway
+          .gatewayGen(
+              scala3Sources = true,
+              implementationType = grpc_rest_gateway.ImplementationType.Pekko
+           ) -> crossTarget.value / "pekko-grpc" / "main",
+          grpc_rest_gateway.swaggerGen() -> (Compile / resourceDirectory).value / "specs"
+      )
+  )
+----
 
 === Configure dependencies for Akka based implementation
 
@@ -117,9 +132,9 @@ Code generation library is responsible for reading given Protobuf files and gene
 
 There are three different plugins to generate runtime handlers, namely:
 
-. `grpc_rest_gateway.gatewayGen(implementationType = "netty")` for Netty based implementation
-. `grpc_rest_gateway.gatewayGen(implementationType = "pekko")` for Pekko based implementation
-. `grpc_rest_gateway.gatewayGen(implementationType = "akka")` for Akka based implementation
+. `grpc_rest_gateway.gatewayGen(implementationType = grpc_rest_gateway.ImplementationType.Netty)` for Netty based implementation
+. `grpc_rest_gateway.gatewayGen(implementationType = grpc_rest_gateway.ImplementationType.Pekko)` for Pekko based implementation
+. `grpc_rest_gateway.gatewayGen(implementationType = grpc_rest_gateway.ImplementationType.Akka)` for Akka based implementation
 
 WARNING: `Akka` implementation hasn't been tested yet due version dependency eviction in e2e testing module.
 

@@ -1,6 +1,7 @@
 package grpc_rest_gateway
 
 import com.improving.grpc_rest_gateway.compiler.BuildInfo
+import grpc_rest_gateway.ImplementationType.Netty
 import protocbridge.{Artifact, SandboxedJvmGenerator}
 import scalapb.GeneratorOption.{FlatPackage, Scala3Sources}
 
@@ -25,7 +26,7 @@ object gatewayGen {
   def apply(
     flatPackage: Boolean = false,
     scala3Sources: Boolean = false,
-    implementationType: String = "netty"
+    implementationType: ImplementationType = Netty
   ): (SandboxedJvmGenerator, Seq[String]) = {
     val optionsBuilder = Set.newBuilder[String]
     if (flatPackage) {
