@@ -23,6 +23,11 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Setup scalafmt
+        uses: coursier/setup-action@v1
+        with:
+          apps: scalafmt
+
       - name: Setup Java (temurin@17)
         if: matrix.java == 'temurin@17'
         uses: actions/setup-java@v4

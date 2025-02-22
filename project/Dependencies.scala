@@ -8,16 +8,17 @@ object Dependencies {
     val AkkaHttp = "10.2.10"
     val CommonsIo = "2.18.0"
     val CommonProtos = "2.9.6-0"
+    val Coursier = "1.0.28"
     val GrpcJava: String = scalapb.compiler.Version.grpcJavaVersion
     val JavaActivation = "1.1.1"
     val Logback = "1.5.12"
     val Pekko = "1.1.2"
     val PekkoGrpc = "1.1.1"
     val PekkoHttp = "1.1.0"
-    val Scala213 = "2.13.15"
+    val Scala213 = "2.13.16"
     val Scala212 = "2.12.20"
     val Scala3 = "3.5.2"
-    val ScalaFmt = "3.8.4-RC3"
+    val ScalaFmt = "3.9.1"
     val ScalaPb: String = scalapb.compiler.Version.scalapbVersion
     val ScalaPbJson = "0.12.1"
     val ScalaTest = "3.2.19"
@@ -31,6 +32,7 @@ object Dependencies {
   val CodegenDependencies: Seq[ModuleID] = Seq(
     "com.thesamet.scalapb" %% "compilerplugin" % V.ScalaPb,
     "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % V.ScalaPb,
+    "io.get-coursier" % "interface" % V.Coursier,
     "org.scalameta" % "scalafmt-interfaces" % V.ScalaFmt,
     "xerces" % "xercesImpl" % V.Xerces,
     "org.scalatest" %% "scalatest" % V.ScalaTest % Test
