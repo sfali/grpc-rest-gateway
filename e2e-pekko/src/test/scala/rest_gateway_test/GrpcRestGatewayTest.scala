@@ -33,6 +33,7 @@ import rest_gateway_test.api.scala_api.{
 import rest_gateway_test.server.GrpcServer
 
 import scala.util.Random
+import scala.concurrent.duration._
 
 class GrpcRestGatewayTest extends AnyWordSpec with Matchers with BeforeAndAfterAll with ScalaFutures {
 
@@ -55,6 +56,7 @@ class GrpcRestGatewayTest extends AnyWordSpec with Matchers with BeforeAndAfterA
     GatewayServer(
       "localhost",
       gatewayPort,
+      10.seconds,
       TestServiceAGatewayHandler(settings),
       TestServiceBGatewayHandler(settings)
     ).run()

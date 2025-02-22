@@ -13,6 +13,7 @@ import org.apache.pekko.grpc.GrpcClientSettings
 import rest_gateway_test.server.GrpcServer
 
 import scala.io.StdIn
+import scala.concurrent.duration._
 
 object Main {
 
@@ -26,6 +27,7 @@ object Main {
     GatewayServer(
       "0.0.0.0",
       7070,
+      10.seconds,
       TestServiceAGatewayHandler(settings),
       TestServiceBGatewayHandler(settings),
       TestServiceDGatewayHandler(settings),
