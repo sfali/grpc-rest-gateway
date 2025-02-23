@@ -5,30 +5,36 @@ package server
 
 import com.typesafe.config.Config
 import runtime.handlers.{GrpcGatewayHandler, SwaggerHandler}
+import runtime.core.HttpSettings
 import org.apache.pekko
 import org.slf4j.LoggerFactory
 import pekko.actor.ClassicActorSystemProvider
 import pekko.http.scaladsl.Http
 import pekko.http.scaladsl.server.Directives.*
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
 class GatewayServer(
   host: String,
   port: Int,
+  hardTerminationDeadLine: FiniteDuration,
   handlers: GrpcGatewayHandler*
 )(implicit
   sys: ClassicActorSystemProvider) {
 
   private val logger = LoggerFactory.getLogger(classOf[GatewayServer])
 
-  def run(): Unit = {
+  def run(): Future[Http.ServerBinding] = {
     implicit val ec: ExecutionContext = sys.classicSystem.dispatcher
     val routes = SwaggerHandler(handlers).route +: handlers.map(_.route)
-    Http()
+    val eventualBinding = Http()
       .newServerAt(host, port)
       .bind(concat(routes*))
+      .map(_.addToCoordinatedShutdown(hardTerminationDeadline = hardTerminationDeadLine))
+
+    eventualBinding
       .onComplete {
         case Failure(ex) =>
           logger.warn(
@@ -42,6 +48,8 @@ class GatewayServer(
           val localAddress = binding.localAddress
           logger.info("Http server started at http://{}:{}", localAddress.getHostString, localAddress.getPort)
       }
+
+    eventualBinding
   }
 
 }
@@ -50,15 +58,23 @@ object GatewayServer {
   def apply(
     host: String,
     port: Int,
+    hardTerminationDeadLine: FiniteDuration,
     handlers: GrpcGatewayHandler*
   )(implicit
     sys: ClassicActorSystemProvider
-  ): GatewayServer = new GatewayServer(host, port, handlers*)
+  ): GatewayServer = new GatewayServer(host, port, hardTerminationDeadLine, handlers*)
+
+  def apply(
+    httpSettings: HttpSettings,
+    handlers: GrpcGatewayHandler*
+  )(implicit
+    sys: ClassicActorSystemProvider
+  ): GatewayServer = GatewayServer(httpSettings.host, httpSettings.port, httpSettings.hardTerminationDeadline, handlers*)
 
   def apply(
     config: Config,
     handlers: GrpcGatewayHandler*
   )(implicit
     sys: ClassicActorSystemProvider
-  ): GatewayServer = GatewayServer(config.getString("host"), config.getInt("port"), handlers*)
+  ): GatewayServer = GatewayServer(HttpSettings(config), handlers*)
 }

@@ -24,8 +24,7 @@ object Main {
 
     val settings = GrpcClientSettings.fromConfig("pekko-gateway")
     GatewayServer(
-      "0.0.0.0",
-      7070,
+      system.settings.config.getConfig("rest-gateway"),
       TestServiceAGatewayHandler(settings),
       TestServiceBGatewayHandler(settings),
       TestServiceDGatewayHandler(settings),
