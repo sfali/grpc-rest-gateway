@@ -49,9 +49,7 @@ class SwaggerHandler(handlers: Seq[GrpcGatewayHandler]) {
       case Some(is) =>
         val contentType =
           ContentType.parse(mimeTypes.getContentType(unixPath)) match {
-            case Left(value) =>
-              println(s"CT: $value")
-              ContentTypes.`application/octet-stream`
+            case Left(_)            => ContentTypes.`application/octet-stream`
             case Right(contentType) => contentType
           }
         HttpResponse(
