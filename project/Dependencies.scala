@@ -11,7 +11,7 @@ object Dependencies {
     val GrpcJava: String = scalapb.compiler.Version.grpcJavaVersion
     val JavaActivation = "1.1.1"
     val Logback = "1.5.12"
-    val Pekko = "1.1.3"
+    val Pekko = "1.1.2"
     val PekkoGrpc = "1.1.1"
     val PekkoHttp = "1.1.0"
     val Scala213 = "2.13.16"
