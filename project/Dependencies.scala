@@ -3,9 +3,9 @@ import sbt.*
 object Dependencies {
 
   object V {
-    val Akka = "2.8.8"
+    val Akka = "2.6.20"
     val AkkaGrpc = "2.1.6"
-    val AkkaHttp = "10.5.3"
+    val AkkaHttp = "10.2.10"
     val CommonsIo = "2.18.0"
     val CommonProtos = "2.9.6-0"
     val GrpcJava: String = scalapb.compiler.Version.grpcJavaVersion
