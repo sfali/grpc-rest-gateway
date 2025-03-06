@@ -3,27 +3,27 @@ import sbt.*
 object Dependencies {
 
   object V {
-    val Akka = "2.6.20"
+    val Akka = "2.8.8"
     val AkkaGrpc = "2.1.6"
-    val AkkaHttp = "10.2.10"
+    val AkkaHttp = "10.5.3"
     val CommonsIo = "2.18.0"
     val CommonProtos = "2.9.6-0"
     val GrpcJava: String = scalapb.compiler.Version.grpcJavaVersion
     val JavaActivation = "1.1.1"
     val Logback = "1.5.12"
-    val Pekko = "1.1.2"
+    val Pekko = "1.1.3"
     val PekkoGrpc = "1.1.1"
     val PekkoHttp = "1.1.0"
-    val Scala213 = "2.13.15"
+    val Scala213 = "2.13.16"
     val Scala212 = "2.12.20"
     val Scala3 = "3.5.2"
-    val ScalaFmt = "3.8.4-RC3"
+    val ScalaFmt = "3.9.2"
     val ScalaPb: String = scalapb.compiler.Version.scalapbVersion
     val ScalaPbJson = "0.12.1"
     val ScalaTest = "3.2.19"
     val Slf4j = "2.0.16"
     val Sttp = "3.10.1"
-    val SwaggerUi = "5.18.2"
+    val SwaggerUi = "5.20.0"
     val TypesafeConfig = "1.4.3"
     val Xerces = "2.12.2"
   }
