@@ -17,7 +17,6 @@ object Dependencies {
     val Scala213 = "2.13.16"
     val Scala212 = "2.12.20"
     val Scala3 = "3.5.2"
-    val ScalaFmt = "3.9.2"
     val ScalaPb: String = scalapb.compiler.Version.scalapbVersion
     val ScalaPbJson = "0.12.1"
     val ScalaTest = "3.2.19"
@@ -25,14 +24,11 @@ object Dependencies {
     val Sttp = "3.10.1"
     val SwaggerUi = "5.20.0"
     val TypesafeConfig = "1.4.3"
-    val Xerces = "2.12.2"
   }
 
   val CodegenDependencies: Seq[ModuleID] = Seq(
     "com.thesamet.scalapb" %% "compilerplugin" % V.ScalaPb,
     "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % V.ScalaPb,
-    "org.scalameta" % "scalafmt-interfaces" % V.ScalaFmt,
-    "xerces" % "xercesImpl" % V.Xerces,
     "org.scalatest" %% "scalatest" % V.ScalaTest % Test
   )
 
