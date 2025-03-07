@@ -78,7 +78,6 @@ object SettingsHelper {
         scalaVersion,
         sbtVersion,
         "scalaPartialVersion" -> CrossVersion.partialVersion(scalaVersion.value),
-        "scalafmtVersion" -> Dependencies.V.ScalaFmt,
         "swaggerUiVersion" -> Dependencies.V.SwaggerUi,
         Compile / allDependencies
       )
