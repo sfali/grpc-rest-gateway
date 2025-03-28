@@ -329,7 +329,16 @@ private class SwaggerMessagePrinter(fd: FileDescriptor, implicits: DescriptorImp
         _.add("properties: ")
           .indent
           .print(d.getFields.asScala) { case (printer, field) =>
-            if (field.isRepeated) {
+            if (field.isMapField) {
+              printer
+                .add(s"${field.getName}:")
+                .indent
+                .add("type: object", "additionalProperties:")
+                .indent
+                .call(generateDefinitionType(field))
+                .outdent
+                .outdent
+            } else if (field.isRepeated) {
               printer
                 .add(field.getName + ":")
                 .indent

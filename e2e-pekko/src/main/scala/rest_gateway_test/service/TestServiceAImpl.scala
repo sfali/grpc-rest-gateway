@@ -10,6 +10,7 @@ import rest_gateway_test.api.model.{
   GetMessageRequestV3,
   GetMessageRequestV4,
   GetMessageResponse,
+  GetMessageResponseV1,
   TestRequestA,
   TestResponseA
 }
@@ -91,6 +92,14 @@ class TestServiceAImpl extends TestServiceA {
                                             | longs: ${request.longs.mkString("[", ", ", "]")},
                                             | booleans: ${request.booleans.mkString("[", ", ", "]")}
                                             |""".stripMargin))
+
+  override def getMessageV6(in: GetMessageRequest): Future[GetMessageResponseV1] =
+    Future.successful(
+      GetMessageResponseV1(
+        mapObject = Map(in.userId -> GetMessageResponseV1.SubMessageV1(in.messageId.toString)),
+        mapObject1 = Map(in.messageId -> in.userId)
+      )
+    )
 
   private def validateRequestId(requestId: Long) =
     if (requestId <= 0) {

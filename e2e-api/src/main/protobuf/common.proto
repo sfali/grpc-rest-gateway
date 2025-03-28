@@ -76,3 +76,11 @@ message GetMessageRequestV4 {
     repeated int64 longs = 4;
     repeated bool booleans = 5;
 }
+
+message GetMessageResponseV1 {
+    message SubMessageV1 {
+        string sub_field1 = 1;
+    }
+    map<string, SubMessageV1> map_object = 1;
+    map<int32, string> map_object_1 = 2;
+}
