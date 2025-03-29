@@ -174,22 +174,28 @@ class GenerateDelegateFunctions private[utils] (
       f.getJavaType match {
         case JavaType.MESSAGE if ignoreFieldName == inputName => p
         case JavaType.MESSAGE =>
-          val required = f.noBox
-          val optional = !required
-          p.when(required)(_.add(s"""val $jsonName = {"""))
-            .when(optional)(_.add(s"""val $jsonName = Try {"""))
-            .indent
-            .call(
-              generateInputFromQueryString(
-                d = f.getMessageType,
-                fullName = f.singleScalaTypeName,
-                required = required,
-                prefix = if (prefix.isBlank) s"$inputName." else s"$prefix.$inputName."
+          val fullScalaTypeName = f.getMessageType.scalaType.fullName
+          if (fullScalaTypeName.startsWith("com.google.protobuf.wrappers")) {
+            // Google primitive type wrapper has special handling
+            generatePrimitiveTypeWrappers(f.getMessageType.getFields.asScala.head, s"$prefix$inputName", jsonName)(p)
+          } else {
+            val required = f.noBox
+            val optional = !required
+            p.when(required)(_.add(s"""val $jsonName = {"""))
+              .when(optional)(_.add(s"""val $jsonName = Try {"""))
+              .indent
+              .call(
+                generateInputFromQueryString(
+                  d = f.getMessageType,
+                  fullName = f.singleScalaTypeName,
+                  required = required,
+                  prefix = if (prefix.isBlank) s"$inputName." else s"$prefix.$inputName."
+                )
               )
-            )
-            .outdent
-            .when(required)(_.add("}"))
-            .when(optional)(_.add("}.toOption"))
+              .outdent
+              .when(required)(_.add("}"))
+              .when(optional)(_.add("}.toOption"))
+          }
 
         case JavaType.ENUM =>
           p.when(f.isRepeated)(
@@ -241,6 +247,40 @@ class GenerateDelegateFunctions private[utils] (
   private def getInputName(d: FieldDescriptor, prefix: String = ""): String = {
     val name = prefix.split(".").filter(_.nonEmpty).map(s => s.charAt(0).toUpper + s.substring(1)).mkString + d.getName
     name.charAt(0).toLower + name.substring(1)
+  }
+
+  private def generatePrimitiveTypeWrappers(
+    fd: FieldDescriptor,
+    variableName: String,
+    parentFieldName: String
+  ): PrinterEndo = { printer =>
+    fd.getJavaType match {
+      case JavaType.INT =>
+        printer.add(
+          s"""val $variableName = Try(parameters.toIntValue("$parentFieldName.${fd.getName}", "")).toOption"""
+        )
+      case JavaType.LONG =>
+        printer.add(
+          s"""val $variableName = Try(parameters.toLongValue("$parentFieldName.${fd.getName}", "")).toOption"""
+        )
+      case JavaType.FLOAT =>
+        printer.add(
+          s"""val $variableName = Try(parameters.toFloatValue("$parentFieldName.${fd.getName}", "")).toOption"""
+        )
+      case JavaType.DOUBLE =>
+        printer.add(
+          s"""val $variableName = Try(parameters.toDoubleValue("$parentFieldName.${fd.getName}", "")).toOption"""
+        )
+      case JavaType.BOOLEAN =>
+        printer.add(
+          s"""val $variableName = Try(parameters.toBooleanValue("$parentFieldName.${fd.getName}", "")).toOption"""
+        )
+      case JavaType.STRING =>
+        printer.add(
+          s"""val $variableName = Try(parameters.toStringValue("$parentFieldName.${fd.getName}", "")).toOption"""
+        )
+      case _ => printer
+    }
   }
 }
 

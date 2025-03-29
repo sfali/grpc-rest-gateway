@@ -18,7 +18,9 @@ import rest_gateway_test.api.model.{
   GetMessageRequestV2,
   GetMessageRequestV3,
   GetMessageRequestV4,
+  GetMessageRequestV5,
   GetMessageResponse,
+  GetMessageResponseV5,
   TestRequestA,
   TestRequestB,
   TestResponseA,
@@ -282,6 +284,22 @@ class GrpcRestGatewayTest extends AnyWordSpec with Matchers with BeforeAndAfterA
           .futureValue
           .getOrElse(GetMessageResponse.defaultInstance)
     }
+
+    "ProcessMessageV5" in {
+      testProcessMessageV5(Some(5))
+      testProcessMessageV5(Some(-23))
+      testProcessMessageV5(Some(0))
+      testProcessMessageV5(None)
+    }
+  }
+
+  private def testProcessMessageV5(value: Option[Int]) = {
+    val request = GetMessageRequestV5(value)
+    serviceAClient.processMessageV5(request).futureValue shouldBe
+      restClient
+        .processMessageV5[GetMessageResponseV5](value)
+        .futureValue
+        .get
   }
 
   override protected def afterAll(): Unit = {
