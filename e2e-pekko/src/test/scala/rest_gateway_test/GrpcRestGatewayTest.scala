@@ -21,6 +21,7 @@ import rest_gateway_test.api.model.{
   GetMessageRequestV5,
   GetMessageResponse,
   GetMessageResponseV5,
+  GetMessageResponseV6,
   TestRequestA,
   TestRequestB,
   TestResponseA,
@@ -290,6 +291,12 @@ class GrpcRestGatewayTest extends AnyWordSpec with Matchers with BeforeAndAfterA
       testProcessMessageV5(Some(-23))
       testProcessMessageV5(Some(0))
       testProcessMessageV5(None)
+    }
+
+    "processMessageV6" in {
+      val request = GetMessageRequest(messageId = 1000, userId = "mnbvggg")
+      serviceAClient.processMessageV6(request).futureValue shouldBe
+        restClient.processMessageV6[GetMessageResponseV6](request.messageId, request.userId).futureValue.get
     }
   }
 

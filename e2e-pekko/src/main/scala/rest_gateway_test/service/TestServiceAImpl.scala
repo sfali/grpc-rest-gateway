@@ -12,7 +12,7 @@ import rest_gateway_test.api.model.{
   GetMessageRequestV5,
   GetMessageResponse,
   GetMessageResponseV5,
-  GetMessageResponseV1,
+  GetMessageResponseV6,
   TestRequestA,
   TestResponseA
 }
@@ -95,14 +95,6 @@ class TestServiceAImpl extends TestServiceA {
                                             | booleans: ${request.booleans.mkString("[", ", ", "]")}
                                             |""".stripMargin))
 
-  override def getMessageV6(in: GetMessageRequest): Future[GetMessageResponseV1] =
-    Future.successful(
-      GetMessageResponseV1(
-        mapObject = Map(in.userId -> GetMessageResponseV1.SubMessageV1(in.messageId.toString)),
-        mapObject1 = Map(in.messageId -> in.userId)
-      )
-    )
-
   override def processMessageV5(in: GetMessageRequestV5): Future[GetMessageResponseV5] =
     Future.successful(
       in.intValue
@@ -114,6 +106,14 @@ class TestServiceAImpl extends TestServiceA {
           )
         }
         .getOrElse(GetMessageResponseV5(stringValue = None, boolValue = None, intValue = None))
+    )
+
+  override def processMessageV6(in: GetMessageRequest): Future[GetMessageResponseV6] =
+    Future.successful(
+      GetMessageResponseV6(
+        mapObject = Map(in.userId -> GetMessageResponseV6.SubMessageV1(in.messageId.toString)),
+        mapObject1 = Map(in.messageId -> in.userId)
+      )
     )
 
   private def validateRequestId(requestId: Long) =
