@@ -13,6 +13,7 @@ import scalapb.compiler.FunctionalPrinter.PrinterEndo
 import scalapb.compiler.{DescriptorImplicits, FunctionalPrinter, NameUtils, ProtobufGenerator}
 import scalapb.options.Scalapb
 
+import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.jdk.CollectionConverters.*
 
@@ -284,9 +285,7 @@ private class SwaggerMessagePrinter(fd: FileDescriptor, implicits: DescriptorImp
           .outdent
       case JavaType.MESSAGE =>
         val p = if (prefix.isEmpty) s"${field.getName}." else s"$prefix.${field.getName}."
-        printer.call(
-          generateParameters(field.getMessageType, pathElements, p)
-        )
+        printer.call(generateParameters(field.getMessageType, pathElements, p))
       case JavaType.ENUM =>
         printer
           .add(s"- name: $prefix${field.getName}")
@@ -321,46 +320,46 @@ private class SwaggerMessagePrinter(fd: FileDescriptor, implicits: DescriptorImp
     }
   }
 
-  private def generateDefinition(d: Descriptor): PrinterEndo =
-    _.add(d.getName + ":")
-      .indent
-      .add("type: object")
-      .when(d.getFields.asScala.nonEmpty)(
-        _.add("properties: ")
-          .indent
-          .print(d.getFields.asScala) { case (printer, field) =>
-            if (field.isMapField) {
-              printer
-                .add(s"${field.getName}:")
-                .indent
-                .add("type: object", "additionalProperties:")
-                .indent
-                .call(generateDefinitionType(field))
-                .outdent
-                .outdent
-            } else if (field.isRepeated) {
-              printer
-                .add(field.getName + ":")
-                .indent
-                .add("type: array", "items:")
-                .indent
-                .call(generateDefinitionType(field))
-                .outdent
-                .outdent
-            } else {
-              printer
-                .add(field.getName + ":")
-                .indent
-                .call(generateDefinitionType(field))
-                .outdent
+  private def generateDefinition(d: Descriptor): PrinterEndo = { printer =>
+    val fields = d.getFields.asScala
+    // no need to generate definition for wrapper type
+    if (d.scalaType.fullName.startsWith("com.google.protobuf.wrappers")) printer
+    else
+      printer
+        .add(d.getName + ":")
+        .indent
+        .add("type: object")
+        .when(fields.nonEmpty)(
+          _.add("properties: ")
+            .indent
+            .print(fields) { case (printer, field) =>
+              if (field.isRepeated) {
+                printer
+                  .add(field.getName + ":")
+                  .indent
+                  .add("type: array", "items:")
+                  .indent
+                  .call(generateDefinitionType(field))
+                  .outdent
+                  .outdent
+              } else {
+                printer
+                  .add(field.getName + ":")
+                  .indent
+                  .call(generateDefinitionType(field))
+                  .outdent
+              }
             }
-          }
-          .outdent
-      )
-      .outdent
+            .outdent
+        )
+        .outdent
+  }
 
+  @tailrec
   private def generateDefinitionType(field: FieldDescriptor): PrinterEndo =
     field.getJavaType match {
+      case JavaType.MESSAGE if field.getMessageType.scalaType.fullName.startsWith("com.google.protobuf.wrappers") =>
+        generateDefinitionType(field.getMessageType.getFields.asScala.head)
       case JavaType.MESSAGE => _.add(s"""$$ref: "#/definitions/${field.getMessageType.getName}"""")
       case JavaType.ENUM =>
         _.add("type: string", "enum:").add(

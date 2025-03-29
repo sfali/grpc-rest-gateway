@@ -9,7 +9,9 @@ import rest_gateway_test.api.model.{
   GetMessageRequestV2,
   GetMessageRequestV3,
   GetMessageRequestV4,
+  GetMessageRequestV5,
   GetMessageResponse,
+  GetMessageResponseV5,
   GetMessageResponseV1,
   TestRequestA,
   TestResponseA
@@ -99,6 +101,19 @@ class TestServiceAImpl extends TestServiceA {
         mapObject = Map(in.userId -> GetMessageResponseV1.SubMessageV1(in.messageId.toString)),
         mapObject1 = Map(in.messageId -> in.userId)
       )
+    )
+
+  override def processMessageV5(in: GetMessageRequestV5): Future[GetMessageResponseV5] =
+    Future.successful(
+      in.intValue
+        .map { v =>
+          GetMessageResponseV5(
+            stringValue = Some(v.toString),
+            boolValue = if (v == 0) None else Some(v > 0),
+            intValue = Some(v)
+          )
+        }
+        .getOrElse(GetMessageResponseV5(stringValue = None, boolValue = None, intValue = None))
     )
 
   private def validateRequestId(requestId: Long) =

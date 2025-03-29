@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package rest_gateway_test.api.model;
 
+import "google/protobuf/wrappers.proto";
 import "scalapb/scalapb.proto";
 
 option (scalapb.options) = {
@@ -75,6 +76,16 @@ message GetMessageRequestV4 {
     repeated float floats = 3;
     repeated int64 longs = 4;
     repeated bool booleans = 5;
+}
+
+message GetMessageRequestV5 {
+    google.protobuf.Int32Value intValue = 1;
+}
+
+message GetMessageResponseV5 {
+    google.protobuf.StringValue stringValue = 1;
+    google.protobuf.BoolValue boolValue = 2;
+    google.protobuf.Int32Value intValue = 3;
 }
 
 message GetMessageResponseV1 {

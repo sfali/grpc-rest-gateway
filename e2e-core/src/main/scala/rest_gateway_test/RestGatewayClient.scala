@@ -161,6 +161,14 @@ class RestGatewayClient(gatewayPort: Int) {
     getMessage(uri)
   }
 
+  def processMessageV5[Response <: GeneratedMessage: GeneratedMessageCompanion](
+    intValue: Option[Int]
+  ): Future[Try[Response]] = {
+    val params = intValue.map(v => "intValue.value" -> v.toString).toMap
+    val uri = uri"$baseUrl/v1/test/processMessageV5".withParams(params)
+    getMessage(uri)
+  }
+
   private def getMessage[Response <: GeneratedMessage: GeneratedMessageCompanion](uri: Uri): Future[Try[Response]] =
     basicRequest.get(uri).response(asString).send(backend).map { response =>
       response.body match {
