@@ -9,7 +9,9 @@ import rest_gateway_test.api.model.{
   GetMessageRequestV2,
   GetMessageRequestV3,
   GetMessageRequestV4,
+  GetMessageRequestV5,
   GetMessageResponse,
+  GetMessageResponseV5,
   TestRequestA,
   TestResponseA
 }
@@ -91,6 +93,19 @@ class TestServiceAImpl extends TestServiceA {
                                             | longs: ${request.longs.mkString("[", ", ", "]")},
                                             | booleans: ${request.booleans.mkString("[", ", ", "]")}
                                             |""".stripMargin))
+
+  override def processMessageV5(in: GetMessageRequestV5): Future[GetMessageResponseV5] =
+    Future.successful(
+      in.intValue
+        .map { v =>
+          GetMessageResponseV5(
+            stringValue = Some(v.toString),
+            boolValue = if (v == 0) None else Some(v > 0),
+            intValue = Some(v)
+          )
+        }
+        .getOrElse(GetMessageResponseV5(stringValue = None, boolValue = None, intValue = None))
+    )
 
   private def validateRequestId(requestId: Long) =
     if (requestId <= 0) {
