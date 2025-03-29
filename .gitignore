@@ -31,4 +31,3 @@ sbt-cache/**
 .toDelete
 **/buf*.yaml
 *.dylib
-**/resources/specs/**/*.yml
