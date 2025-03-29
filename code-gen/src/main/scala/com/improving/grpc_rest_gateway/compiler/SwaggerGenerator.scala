@@ -376,7 +376,7 @@ private class SwaggerMessagePrinter(fd: FileDescriptor, implicits: DescriptorImp
         generateDefinitionType(field.getMessageType.getFields.asScala.head)
       case JavaType.MESSAGE => _.add(s"""$$ref: "#/definitions/${field.getMessageType.getName}"""")
       case JavaType.ENUM =>
-        _.add("type: string", "enum:").add(field.getEnumType.getValues.asScala.map(v => s"- ${v.getName}")*)
+        _.add("type: string", "enum:").add(field.getEnumType.getValues.asScala.toSeq.map(v => s"- ${v.getName}")*)
       case JavaType.INT    => _.add("type: integer", "format: int32")
       case JavaType.LONG   => _.add("type: integer", "format: int64")
       case JavaType.DOUBLE => _.add("type: number", "format: double")
