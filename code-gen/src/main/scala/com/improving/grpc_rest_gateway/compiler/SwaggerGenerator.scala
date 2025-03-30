@@ -273,7 +273,8 @@ private class SwaggerMessagePrinter(fd: FileDescriptor, implicits: DescriptorImp
     prefix: String = "",
     bodyParam: String = ""
   ): PrinterEndo = { printer =>
-    val inPath = pathElements.contains(field.upperScalaName)
+    val fullPathName = NameUtils.snakeCaseToCamelCase(s"$prefix${field.upperScalaName}", upperInitial = true)
+    val inPath = pathElements.contains(fullPathName)
     field.getJavaType match {
       case JavaType.MESSAGE if field.getName == bodyParam =>
         printer
@@ -289,7 +290,7 @@ private class SwaggerMessagePrinter(fd: FileDescriptor, implicits: DescriptorImp
       case JavaType.ENUM =>
         printer
           .add(s"- name: $prefix${field.getName}")
-          .when(inPath)(_.addIndented("in: query", "required: true", "type: string", "enum:"))
+          .when(inPath)(_.addIndented("in: path", "required: true", "type: string", "enum:"))
           .when(!inPath)(_.addIndented("in: query", "type: string", "enum:"))
           .addIndented(field.getEnumType.getValues.asScala.toSeq.map(v => s"- ${v.getName}")*)
       case JavaType.INT =>
