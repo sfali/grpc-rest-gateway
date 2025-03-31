@@ -40,7 +40,7 @@ addSbtPlugin("com.thesamet" % "sbt-protoc" % "1.0.7")
 
 libraryDependencies ++= Seq(
   "com.thesamet.scalapb" %% "compilerplugin" % "0.11.17",
-  "io.github.sfali23" %% "grpc-rest-gateway-code-gen" % "0.8.8"
+  "io.github.sfali23" %% "grpc-rest-gateway-code-gen" % "0.8.9"
 )
 ----
 
@@ -77,7 +77,7 @@ Add following dependencies
 val ScalaPb: String = scalapb.compiler.Version.scalapbVersion
 val GrpcJava: String = scalapb.compiler.Version.grpcJavaVersion
 libraryDependencies ++= Seq(
-  "io.github.sfali23" %% "grpc-rest-gateway-runtime-netty" % "0.8.8",
+  "io.github.sfali23" %% "grpc-rest-gateway-runtime-netty" % "0.8.9",
   "com.thesamet.scalapb" %% "compilerplugin" % V.ScalaPb % "compile;protobuf",
   "com.thesamet.scalapb" %% "scalapb-runtime" % V.ScalaPb % "compile;protobuf",
   "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % V.ScalaPb,
@@ -101,7 +101,7 @@ lazy val root = project
   .enablePlugins(PekkoGrpcPlugin)
   .settings(
       libraryDependencies ++= Seq(
-        "io.github.sfali23" %% "grpc-rest-gateway-runtime-pekko" % "0.8.8",
+        "io.github.sfali23" %% "grpc-rest-gateway-runtime-pekko" % "0.8.9",
         "org.apache.pekko" %% "pekko-actor" % "1.1.2",
         "org.apache.pekko" %% "pekko-actor-typed" % "1.1.2",
         "org.apache.pekko" %% "pekko-stream-typed" % "1.1.2",

@@ -97,6 +97,12 @@ service TestServiceA {
       get: "/v1/test/processMessageV5"
     };
   }
+
+  rpc ProcessMessageV6 (rest_gateway_test.api.model.GetMessageRequest) returns (rest_gateway_test.api.model.GetMessageResponseV6) {
+    option (google.api.http) = {
+      get: "/v1/test/messages/{message_id}/map"
+    };
+  }
 }
 
 

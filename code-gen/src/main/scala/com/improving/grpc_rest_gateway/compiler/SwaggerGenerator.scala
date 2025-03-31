@@ -273,7 +273,8 @@ private class SwaggerMessagePrinter(fd: FileDescriptor, implicits: DescriptorImp
     prefix: String = "",
     bodyParam: String = ""
   ): PrinterEndo = { printer =>
-    val inPath = pathElements.contains(field.upperScalaName)
+    val fullPathName = NameUtils.snakeCaseToCamelCase(s"$prefix${field.upperScalaName}", upperInitial = true)
+    val inPath = pathElements.contains(fullPathName)
     field.getJavaType match {
       case JavaType.MESSAGE if field.getName == bodyParam =>
         printer
@@ -289,7 +290,7 @@ private class SwaggerMessagePrinter(fd: FileDescriptor, implicits: DescriptorImp
       case JavaType.ENUM =>
         printer
           .add(s"- name: $prefix${field.getName}")
-          .when(inPath)(_.addIndented("in: query", "required: true", "type: string", "enum:"))
+          .when(inPath)(_.addIndented("in: path", "required: true", "type: string", "enum:"))
           .when(!inPath)(_.addIndented("in: query", "type: string", "enum:"))
           .addIndented(field.getEnumType.getValues.asScala.toSeq.map(v => s"- ${v.getName}")*)
       case JavaType.INT =>
@@ -324,6 +325,8 @@ private class SwaggerMessagePrinter(fd: FileDescriptor, implicits: DescriptorImp
     val fields = d.getFields.asScala
     // no need to generate definition for wrapper type
     if (d.scalaType.fullName.startsWith("com.google.protobuf.wrappers")) printer
+    // no need to print map entry
+    else if (d.isMapEntry) printer
     else
       printer
         .add(d.getName + ":")
@@ -333,7 +336,19 @@ private class SwaggerMessagePrinter(fd: FileDescriptor, implicits: DescriptorImp
           _.add("properties: ")
             .indent
             .print(fields) { case (printer, field) =>
-              if (field.isRepeated) {
+              if (field.isMapField) {
+                val messageType = field.getMessageType
+                val mapValue = messageType.getFields.asScala.last
+                val mapValueType = mapValue.getJavaType
+                printer
+                  .add(s"${field.getName}:")
+                  .indent
+                  .add("type: object", "additionalProperties:")
+                  .indent
+                  .call(generateMapValueType(mapValue, mapValueType))
+                  .outdent
+                  .outdent
+              } else if (field.isRepeated) {
                 printer
                   .add(field.getName + ":")
                   .indent
@@ -362,13 +377,23 @@ private class SwaggerMessagePrinter(fd: FileDescriptor, implicits: DescriptorImp
         generateDefinitionType(field.getMessageType.getFields.asScala.head)
       case JavaType.MESSAGE => _.add(s"""$$ref: "#/definitions/${field.getMessageType.getName}"""")
       case JavaType.ENUM =>
-        _.add("type: string", "enum:").add(
-          field.getEnumType.getValues.asScala.toSeq.map(v => s"- ${v.getName}")*
-        )
+        _.add("type: string", "enum:").add(field.getEnumType.getValues.asScala.toSeq.map(v => s"- ${v.getName}")*)
       case JavaType.INT    => _.add("type: integer", "format: int32")
       case JavaType.LONG   => _.add("type: integer", "format: int64")
       case JavaType.DOUBLE => _.add("type: number", "format: double")
       case JavaType.FLOAT  => _.add("type: number", "format: float")
       case t               => _.add(s"type: ${t.name.toLowerCase}")
     }
+
+  private def generateMapValueType(fd: FieldDescriptor, valueJavaType: JavaType): PrinterEndo = { printer =>
+    valueJavaType match {
+      case JavaType.INT     => printer.add("type: integer", "format: int32")
+      case JavaType.LONG    => printer.add("type: integer", "format: int64")
+      case JavaType.FLOAT   => printer.add("type: number", "format: float")
+      case JavaType.DOUBLE  => printer.add("type: number", "format: double")
+      case JavaType.STRING  => printer.add("type: string")
+      case JavaType.MESSAGE => printer.add(s"""$$ref: "#/definitions/${fd.getMessageType.getName}"""")
+      case t                => printer.add(s"type: ${t.name.toLowerCase}")
+    }
+  }
 }

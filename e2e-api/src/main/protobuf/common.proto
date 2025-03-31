@@ -87,3 +87,11 @@ message GetMessageResponseV5 {
     google.protobuf.BoolValue boolValue = 2;
     google.protobuf.Int32Value intValue = 3;
 }
+
+message GetMessageResponseV6 {
+    message SubMessageV1 {
+        string sub_field1 = 1;
+    }
+    map<string, SubMessageV1> map_object = 1;
+    map<int32, string> map_object_1 = 2;
+}
