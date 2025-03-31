@@ -32,7 +32,7 @@ function in gRPC service.
 
 === Configure plugin for compiler fo code generation
 
-To generate Scala classes for gateway handler and Swagger documentation add following in `plugin.sbt`:
+To generate Scala classes for gateway handler and OpenApi documentation add following in `plugin.sbt`:
 
 [source, sbt]
 ----
@@ -51,7 +51,7 @@ And following in the `build.sbt`:
 Compile / PB.targets := Seq(
   scalapb.gen() -> (Compile / sourceManaged).value / "scalapb",
   grpc_rest_gateway.gatewayGen(implementationType = grpc_rest_gateway.ImplementationType.Netty) -> (Compile / sourceManaged).value / "scalapb",
-  grpc_rest_gateway.swaggerGen() -> (Compile / resourceDirectory).value / "specs"
+  grpc_rest_gateway.openApiGen() -> (Compile / resourceManaged).value / "specs"
 )
 
 // change value of "implementationType" parameter to `grpc_rest_gateway.ImplementationType.Pekko` or
@@ -61,11 +61,13 @@ Compile / PB.targets := Seq(
 Compile / PB.targets := Seq(
   scalapb.gen(scala3Sources = true) -> (Compile / sourceManaged).value / "scalapb",
   grpc_rest_gateway.gatewayGen(scala3Sources = true, implementationType = "netty") -> (Compile / sourceManaged).value / "scalapb",
-  grpc_rest_gateway.swaggerGen() -> (Compile / resourceDirectory).value / "specs"
+  grpc_rest_gateway.openApiGen() -> (Compile / resourceManaged).value / "specs"
 )
 
-// TODO: generate resource files in target and add resource path
-// add `**/resources/specs/**/*.yml` in your .gitignore to ignore generated yml files
+// Add following in order to add openapi specs into class path
+Compile / resourceGenerators += (Compile / PB.generate)
+      .map(_.filter(_.getName.endsWith("yml")))
+      .taskValue
 ----
 
 === Configure dependencies for Netty based implementation
@@ -117,8 +119,11 @@ lazy val root = project
               scala3Sources = true,
               implementationType = grpc_rest_gateway.ImplementationType.Pekko
            ) -> crossTarget.value / "pekko-grpc" / "main",
-          grpc_rest_gateway.swaggerGen() -> (Compile / resourceDirectory).value / "specs"
-      )
+          grpc_rest_gateway.openApiGen() -> (Compile / resourceManaged).value / "specs"
+      ),
+      Compile / resourceGenerators += (Compile / PB.generate)
+      .map(_.filter(_.getName.endsWith("yml")))
+      .taskValue
   )
 ----
 
@@ -185,78 +190,70 @@ service TestServiceB {
 
 [source, yaml]
 ----
-swagger: '2.0'
+openapi: 3.1.0
 info:
-  version: 3.1.0
-  description: 'REST API generated from TestServiceB.proto'
-  title: 'TestServiceB.proto'
+  version: 0.1.0-SNAPSHOT
+  description: "REST API generated from TestServiceB.proto"
+  title: "TestServiceB.proto"
 tags:
   - name: TestServiceB
     description: Test service B
-schemes:
-  - http
-  - https
-consumes:
-  - 'application/json'
-produces:
-  - 'application/json'
 paths:
   /restgateway/test/testserviceb:
     get:
       tags:
-        - TestServiceB
-      summary:
-        'GetRequest'
-      description:
-        'Generated from rest_gateway_test.api.TestServiceB.GetRequest'
-      produces:
-        ['application/json']
-      responses:
-        200:
-          description: 'Normal response'
-          schema:
-            $ref: "#/definitions/TestResponseB"
+        - GetRequest
+      description: Generated from GetRequest
       parameters:
-      - name: requestId
-        in: query
-        type: integer
-        format: int64
+        - name: requestId
+          in: query
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TestResponseB"
     post:
       tags:
-        - TestServiceB
-      summary:
-        'Process'
-      description:
-        'Generated from rest_gateway_test.api.TestServiceB.Process'
-      produces:
-        ['application/json']
+        - Process
+      description: Generated from Process
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TestRequestB"
       responses:
-        200:
-          description: 'Normal response'
-          schema:
-            $ref: "#/definitions/TestResponseB"
-      parameters:
-        - in: 'body'
-          name: body
-          schema:
-            $ref: "#/definitions/TestRequestB"
-definitions:
-  TestRequestB:
-    type: object
-    properties:
-      requestId:
-        type: integer
-        format: int64
-  TestResponseB:
-    type: object
-    properties:
-      success:
-        type: boolean
-      request_id:
-        type: integer
-        format: int64
-      result:
-        type: string
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TestResponseB"
+components:
+  schemas:
+    TestRequestB:
+      type: object
+      properties:
+        requestId:
+          type: integer
+          format: int64
+          description: requestId
+    TestResponseB:
+      type: object
+      properties:
+        success:
+          type: boolean
+        request_id:
+          type: integer
+          format: int64
+          description: request_id
+        result:
+          type: string
+          description: result
 ----
 
 === Generated Netty based `GrpcGatewayHandler`

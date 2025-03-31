@@ -10,7 +10,7 @@ object Dependencies {
     val CommonProtos = "2.9.6-0"
     val GrpcJava: String = scalapb.compiler.Version.grpcJavaVersion
     val JavaActivation = "1.1.1"
-    val Logback = "1.5.12"
+    val Logback = "1.5.18"
     val Pekko = "1.1.2"
     val PekkoGrpc = "1.1.1"
     val PekkoHttp = "1.1.0"
@@ -20,9 +20,9 @@ object Dependencies {
     val ScalaPb: String = scalapb.compiler.Version.scalapbVersion
     val ScalaPbJson = "0.12.1"
     val ScalaTest = "3.2.19"
-    val Slf4j = "2.0.16"
-    val Sttp = "3.10.1"
-    val SwaggerUi = "5.20.0"
+    val Slf4j = "2.0.17"
+    val Sttp = "3.10.3"
+    val SwaggerUi = "5.20.1"
     val TypesafeConfig = "1.4.3"
   }
 
