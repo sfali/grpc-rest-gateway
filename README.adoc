@@ -51,7 +51,7 @@ And following in the `build.sbt`:
 Compile / PB.targets := Seq(
   scalapb.gen() -> (Compile / sourceManaged).value / "scalapb",
   grpc_rest_gateway.gatewayGen(implementationType = grpc_rest_gateway.ImplementationType.Netty) -> (Compile / sourceManaged).value / "scalapb",
-  grpc_rest_gateway.swaggerGen() -> (Compile / resourceDirectory).value / "specs"
+  grpc_rest_gateway.openApiGen() -> (Compile / resourceDirectory).value / "specs"
 )
 
 // change value of "implementationType" parameter to `grpc_rest_gateway.ImplementationType.Pekko` or
@@ -61,7 +61,7 @@ Compile / PB.targets := Seq(
 Compile / PB.targets := Seq(
   scalapb.gen(scala3Sources = true) -> (Compile / sourceManaged).value / "scalapb",
   grpc_rest_gateway.gatewayGen(scala3Sources = true, implementationType = "netty") -> (Compile / sourceManaged).value / "scalapb",
-  grpc_rest_gateway.swaggerGen() -> (Compile / resourceDirectory).value / "specs"
+  grpc_rest_gateway.openApiGen() -> (Compile / resourceDirectory).value / "specs"
 )
 
 // TODO: generate resource files in target and add resource path
@@ -117,7 +117,7 @@ lazy val root = project
               scala3Sources = true,
               implementationType = grpc_rest_gateway.ImplementationType.Pekko
            ) -> crossTarget.value / "pekko-grpc" / "main",
-          grpc_rest_gateway.swaggerGen() -> (Compile / resourceDirectory).value / "specs"
+          grpc_rest_gateway.openApiGen() -> (Compile / resourceDirectory).value / "specs"
       )
   )
 ----
