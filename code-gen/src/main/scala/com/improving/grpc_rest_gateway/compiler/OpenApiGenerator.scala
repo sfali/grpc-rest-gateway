@@ -212,7 +212,6 @@ object OpenApiGenerator extends CodeGenApp {
       val indexOfSeparator = description.indexOf(".")
       val summary = if (indexOfSeparator > 0) description.substring(0, indexOfSeparator) else ""
       _.add("tags:")
-        .addIndented(s"- ${m.getService.getName}")
         .addIndented(s"- ${m.getName}")
         .when(summary.nonEmpty && summary.length <= 15)(_.add(s"summary: $summary"))
         .add(s"description: $description")
