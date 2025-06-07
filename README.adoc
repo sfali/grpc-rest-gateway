@@ -2,6 +2,9 @@
 :sectnums:
 :toc:
 :toclevels: 4
+:app-version: 0.8.10
+:scalapb-version: 0.11.8
+:sbt-protoc-version: 1.0.8
 
 gRPC to REST gateway generates a reverse-proxy server which converts REST HTTP API into gRPC. This project is based on work done by https://github.com/btlines/grpcgateway[grpcgateway].
 
@@ -15,16 +18,15 @@ This project has two main modules:
 
 == Runtime implementations
 
-Three different implementations are provided for runtime library:
+Three different implementations are provided for a runtime library:
 
-. Netty based runtime library &mdash; `grpc-rest-gateway-runtime-netty`.
+. Netty-based runtime library &mdash; `grpc-rest-gateway-runtime-netty`.
 . https://pekko.apache.org/[Apache Pekko] based runtime library &mdash; `grpc-rest-gateway-runtime-pekko`.
 . https://akka.io/[Akka] based runtime library &mdash; `grpc-rest-gateway-runtime-akka`.
 
-There are three main classes in each runtime implementations along with server classes to build REST server:
+There are three main classes in each runtime implementation along with server classes to build REST server:
 
-. `GrpcGatewayHandler` &mdash; base abstract class / trait responsible for dispatching given HTTP request to corresponding
-function in gRPC service.
+. `GrpcGatewayHandler` &mdash; base abstract class / trait responsible for dispatching given HTTP request to the corresponding function in gRPC service.
 . `SwaggerHandler` &mdash; responsible for Open API yaml files and generate Swagger UI.
 . `GatewayServer` &mdash; responsible for starting HTTP server at the given host and port.
 
@@ -34,19 +36,19 @@ function in gRPC service.
 
 To generate Scala classes for gateway handler and OpenApi documentation add following in `plugin.sbt`:
 
-[source, sbt]
+[source, sbt, subs="normal,attributes"]
 ----
-addSbtPlugin("com.thesamet" % "sbt-protoc" % "1.0.7")
+addSbtPlugin("com.thesamet" % "sbt-protoc" % "{sbt-protoc-version}")
 
 libraryDependencies ++= Seq(
-  "com.thesamet.scalapb" %% "compilerplugin" % "0.11.17",
-  "io.github.sfali23" %% "grpc-rest-gateway-code-gen" % "0.8.9"
+  "com.thesamet.scalapb" %% "compilerplugin" % "{scalapb-version}",
+  "io.github.sfali23" %% "grpc-rest-gateway-code-gen" % "{app-version}"
 )
 ----
 
 And following in the `build.sbt`:
 
-[source, sbt]
+[source, sbt, subs="normal,attributes"]
 ----
 Compile / PB.targets := Seq(
   scalapb.gen() -> (Compile / sourceManaged).value / "scalapb",
@@ -54,7 +56,7 @@ Compile / PB.targets := Seq(
   grpc_rest_gateway.openApiGen() -> (Compile / resourceManaged).value / "specs"
 )
 
-// change value of "implementationType" parameter to `grpc_rest_gateway.ImplementationType.Pekko` or
+// change the value of "implementationType" parameter to `grpc_rest_gateway.ImplementationType.Pekko` or
 // `grpc_rest_gateway.ImplementationType.Akka` to generate Pekko or Akka based implementation
 
 // generate code for Scala 3
@@ -64,37 +66,40 @@ Compile / PB.targets := Seq(
   grpc_rest_gateway.openApiGen() -> (Compile / resourceManaged).value / "specs"
 )
 
-// Add following in order to add openapi specs into class path
+// Add the following to add openapi specs into the classpath
 Compile / resourceGenerators += (Compile / PB.generate)
       .map(_.filter(_.getName.endsWith("yml")))
       .taskValue
 ----
 
-=== Configure dependencies for Netty based implementation
+=== Configure dependencies for Netty-based implementation
 
-Add following dependencies
+Add the following dependencies
 
-[source, sbt]
+[source, sbt, subs="normal,attributes"]
 ----
+val AppVersion = "{app-version}"
 val ScalaPb: String = scalapb.compiler.Version.scalapbVersion
 val GrpcJava: String = scalapb.compiler.Version.grpcJavaVersion
+val ScalaPbJson = "0.12.1"
 libraryDependencies ++= Seq(
-  "io.github.sfali23" %% "grpc-rest-gateway-runtime-netty" % "0.8.9",
-  "com.thesamet.scalapb" %% "compilerplugin" % V.ScalaPb % "compile;protobuf",
-  "com.thesamet.scalapb" %% "scalapb-runtime" % V.ScalaPb % "compile;protobuf",
-  "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % V.ScalaPb,
-  "io.grpc" % "grpc-netty" % V.GrpcJava,
-  "com.thesamet.scalapb" %% "scalapb-json4s" % V.ScalaPbJson,
+  "io.github.sfali23" %% "grpc-rest-gateway-runtime-netty" % AppVersion,
+  "com.thesamet.scalapb" %% "compilerplugin" % ScalaPb % "compile;protobuf",
+  "com.thesamet.scalapb" %% "scalapb-runtime" % ScalaPb % "compile;protobuf",
+  "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % ScalaPb,
+  "io.grpc" % "grpc-netty" % GrpcJava,
+  "com.thesamet.scalapb" %% "scalapb-json4s" % ScalaPbJson,
   "com.thesamet.scalapb.common-protos" %% "proto-google-common-protos-scalapb_0.11" % "2.9.6-0" % "compile,protobuf"
 )
 ----
 
 === Configure dependencies for Pekko based implementation
 
-Add following dependencies:
+Add the following dependencies:
 
-[source, sbt]
+[source, sbt, subs="normal,attributes"]
 ----
+val AppVersion = "{app-version}"
 val ScalaPb: String = scalapb.compiler.Version.scalapbVersion
 val GrpcJava: String = scalapb.compiler.Version.grpcJavaVersion
 
@@ -103,7 +108,7 @@ lazy val root = project
   .enablePlugins(PekkoGrpcPlugin)
   .settings(
       libraryDependencies ++= Seq(
-        "io.github.sfali23" %% "grpc-rest-gateway-runtime-pekko" % "0.8.9",
+        "io.github.sfali23" %% "grpc-rest-gateway-runtime-pekko" % AppVersion,
         "org.apache.pekko" %% "pekko-actor" % "1.1.2",
         "org.apache.pekko" %% "pekko-actor-typed" % "1.1.2",
         "org.apache.pekko" %% "pekko-stream-typed" % "1.1.2",
@@ -143,7 +148,7 @@ There are three different plugins to generate runtime handlers, namely:
 
 WARNING: `Akka` implementation hasn't been tested yet due version dependency eviction in e2e testing module.
 
-For example, for following Protobuf definition:
+For example, the following Protobuf definition:
 
 [source, protobuf]
 ----
@@ -413,7 +418,7 @@ Should be similar to `Pekko` with `pekko` in import statement will be replaced b
 
 Implement your gRPC services as per your need and run gRPC server. Gateway server can be build and run as follows:
 
-=== Netty based Gateway server
+=== Netty-based Gateway server
 
 [source, scala]
 ----
