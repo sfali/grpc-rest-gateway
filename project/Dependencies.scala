@@ -6,7 +6,7 @@ object Dependencies {
     val Akka = "2.6.20"
     val AkkaGrpc = "2.1.6"
     val AkkaHttp = "10.2.10"
-    val CommonsIo = "2.18.0"
+    val CommonsIo = "2.19.0"
     val CommonProtos = "2.9.6-0"
     val GrpcJava: String = scalapb.compiler.Version.grpcJavaVersion
     val JavaActivation = "1.1.1"
@@ -22,7 +22,7 @@ object Dependencies {
     val ScalaTest = "3.2.19"
     val Slf4j = "2.0.17"
     val Sttp = "3.10.3"
-    val SwaggerUi = "5.20.1"
+    val SwaggerUi = "5.22.0"
     val TypesafeConfig = "1.4.3"
   }
 
