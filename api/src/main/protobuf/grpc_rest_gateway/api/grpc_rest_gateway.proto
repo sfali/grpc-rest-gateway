@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+import "google/protobuf/descriptor.proto";
+
+package grpc_rest_gateway.api;
+
+option java_multiple_files = false;
+option java_package = "com.improving.grpc_rest_gateway.api";
+option java_outer_classname = "GrpcRestGatewayProto";
+
+message StatusDescription {
+  int32 status = 1; // Valid HTTP status code
+  string description = 2; // optional, description of given status
+}
+
+message Statuses {
+  StatusDescription successStatus = 1; // Default success status, default value is '200'
+  repeated StatusDescription otherStatus = 2; // Other status and their descriptions
+}
+
+extend google.protobuf.MethodOptions {
+  Statuses statuses = 50000;
+}
