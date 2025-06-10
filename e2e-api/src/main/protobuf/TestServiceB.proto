@@ -4,7 +4,9 @@ package rest_gateway_test.api;
 
 import "scalapb/scalapb.proto";
 import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
 import "common.proto";
+import "grpc_rest_gateway/api/grpc_rest_gateway.proto";
 
 option java_multiple_files = false;
 option java_package = "rest_gateway_test.api.java_api";
@@ -32,6 +34,20 @@ service TestServiceB {
     option (google.api.http) = {
       post: "/restgateway/test/testserviceb"
       body: "*"
+    };
+  }
+
+  rpc Update (rest_gateway_test.api.model.TestRequestB) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      put: "/restgateway/test/testserviceb/update"
+      body: "*"
+    };
+
+    option (grpc_rest_gateway.api.statuses) = {
+      successStatus: {
+        status: 201
+        description: "Update resource"
+      }
     };
   }
 }

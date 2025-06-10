@@ -2,19 +2,14 @@ import SettingsHelper.*
 import Dependencies.*
 import ReleaseTransformations.*
 
-lazy val api = (projectMatrix in file("api"))
+lazy val api = (project in file("api"))
   .configure(commonSettings)
-  .defaultAxes()
   .settings(
-    name := "grpc-rest-gateway-api",
-    libraryDependencies ++= ApiDependencies,
+    name := "grpc-rest-gateway-api-proto",
+    publish / skip := true,
     scalacOptions ++= (if (isScala3.value) Seq("future", "-explain")
-                       else Seq("-Xsource:3")),
-    Compile / PB.targets := Seq(
-      PB.gens.java(V.Protobuf) -> (Compile / sourceManaged).value
-    )
+                       else Seq("-Xsource:3"))
   )
-  .jvmPlatform(scalaVersions = Seq(V.Scala212, V.Scala213, V.Scala3))
 
 lazy val `runtime-core` = (projectMatrix in file("runtime-core"))
   .configure(commonSettings)
@@ -72,6 +67,19 @@ lazy val `runtime-akka` = (projectMatrix in file("runtime-akka"))
   .jvmPlatform(scalaVersions = Seq(V.Scala212, V.Scala213, V.Scala3))
   .dependsOn(`runtime-core`)
 
+lazy val annotations = (projectMatrix in file("annotations"))
+  .configure(commonSettings)
+  .defaultAxes()
+  .settings(
+    name := "grpc-rest-gateway-annotations",
+    libraryDependencies ++= ApiDependencies,
+    (Compile / PB.protoSources) += (api / baseDirectory).value / "src" / "main" / "protobuf",
+    Compile / PB.targets := Seq(
+      PB.gens.java(V.Protobuf) -> (Compile / sourceManaged).value
+    )
+  )
+  .jvmPlatform(scalaVersions = Seq(V.Scala212, V.Scala213, V.Scala3))
+
 lazy val codeGen = (projectMatrix in file("code-gen"))
   .configure(commonSettings)
   .configure(configureBuildInfo("com.improving.grpc_rest_gateway.compiler"))
@@ -83,7 +91,7 @@ lazy val codeGen = (projectMatrix in file("code-gen"))
                        else Seq("-Xsource:3"))
   )
   .jvmPlatform(scalaVersions = Seq(V.Scala212, V.Scala213, V.Scala3))
-  .dependsOn(api)
+  .dependsOn(annotations)
 
 lazy val codeGenJVM212 = codeGen.jvm(V.Scala212)
 
@@ -107,12 +115,9 @@ lazy val `e2e-core` = (projectMatrix in file("e2e-core"))
   )
   .jvmPlatform(scalaVersions = Seq(V.Scala212, V.Scala213, V.Scala3))
 
-lazy val `e2e-api` = (projectMatrix in file("e2e-api"))
-  .defaultAxes()
+lazy val `e2e-api` = (project in file("e2e-api"))
   .configure(commonSettings)
-  .dependsOn(api)
   .settings(publish / skip := true)
-  .jvmPlatform(scalaVersions = Seq(V.Scala212, V.Scala213, V.Scala3))
 
 lazy val `e2e-netty` = (projectMatrix in file("e2e-netty"))
   .configure(commonSettings)
@@ -123,7 +128,6 @@ lazy val `e2e-netty` = (projectMatrix in file("e2e-netty"))
     scalaVersions = Seq(V.Scala212),
     axisValues = Seq(VirtualAxis.jvm),
     settings = Seq(
-      (Compile / PB.protoSources) += (`e2e-api`.projectRefs.head / baseDirectory).value / "src" / "main" / "protobuf",
       Test / unmanagedSourceDirectories += (Test / scalaSource).value.getParentFile / "jvm-2.12",
       Compile / PB.targets ++= Seq(scalapb.gen() -> (Compile / sourceManaged).value / "scalapb")
     )
@@ -132,7 +136,6 @@ lazy val `e2e-netty` = (projectMatrix in file("e2e-netty"))
     scalaVersions = Seq(V.Scala213),
     axisValues = Seq(VirtualAxis.jvm),
     settings = Seq(
-      (Compile / PB.protoSources) += (`e2e-api`.projectRefs(1) / baseDirectory).value / "src" / "main" / "protobuf",
       Test / unmanagedSourceDirectories += (Test / scalaSource).value.getParentFile / "jvm-2.13",
       Compile / PB.targets ++= Seq(scalapb.gen(scala3Sources = true) -> (Compile / sourceManaged).value / "scalapb")
     )
@@ -141,7 +144,6 @@ lazy val `e2e-netty` = (projectMatrix in file("e2e-netty"))
     scalaVersions = Seq(V.Scala3),
     axisValues = Seq(VirtualAxis.jvm),
     settings = Seq(
-      (Compile / PB.protoSources) += (`e2e-api`.projectRefs.last / baseDirectory).value / "src" / "main" / "protobuf",
       Test / unmanagedSourceDirectories += (Test / scalaSource).value.getParentFile / "jvm-3",
       Compile / PB.targets ++= Seq(scalapb.gen(scala3Sources = true) -> (Compile / sourceManaged).value / "scalapb")
     )
@@ -152,6 +154,8 @@ lazy val `e2e-netty` = (projectMatrix in file("e2e-netty"))
     libraryDependencies ++= E2ENettyDependencies,
     scalacOptions ++= (if (isScala3.value) Seq("-source", "future")
                        else Seq("-Xsource:3")),
+    (Compile / PB.protoSources) += (api / baseDirectory).value / "src" / "main" / "protobuf",
+    (Compile / PB.protoSources) += (`e2e-api` / baseDirectory).value / "src" / "main" / "protobuf",
     Compile / PB.targets := Seq(
       (
         genModule("com.improving.grpc_rest_gateway.compiler.GatewayGenerator$"),
@@ -173,7 +177,6 @@ lazy val `e2e-pekko` = (projectMatrix in file("e2e-pekko"))
     scalaVersions = Seq(V.Scala212),
     axisValues = Seq(VirtualAxis.jvm),
     settings = Seq(
-      (Compile / PB.protoSources) += (`e2e-api`.projectRefs.head / baseDirectory).value / "src" / "main" / "protobuf",
       Test / unmanagedSourceDirectories += (Test / scalaSource).value.getParentFile / "jvm-2.12"
     )
   )
@@ -181,7 +184,6 @@ lazy val `e2e-pekko` = (projectMatrix in file("e2e-pekko"))
     scalaVersions = Seq(V.Scala213),
     axisValues = Seq(VirtualAxis.jvm),
     settings = Seq(
-      (Compile / PB.protoSources) += (`e2e-api`.projectRefs(1) / baseDirectory).value / "src" / "main" / "protobuf",
       Test / unmanagedSourceDirectories += (Test / scalaSource).value.getParentFile / "jvm-2.13"
     )
   )
@@ -189,7 +191,6 @@ lazy val `e2e-pekko` = (projectMatrix in file("e2e-pekko"))
     scalaVersions = Seq(V.Scala3),
     axisValues = Seq(VirtualAxis.jvm),
     settings = Seq(
-      (Compile / PB.protoSources) += (`e2e-api`.projectRefs.last / baseDirectory).value / "src" / "main" / "protobuf",
       Test / unmanagedSourceDirectories += (Test / scalaSource).value.getParentFile / "jvm-3"
     )
   )
@@ -199,6 +200,8 @@ lazy val `e2e-pekko` = (projectMatrix in file("e2e-pekko"))
     libraryDependencies ++= E2EPekkoDependencies,
     /*scalacOptions ++= (if (isScala3.value) Seq("-source", "future")
                        else Seq("-Xsource:3")),*/
+    (Compile / PB.protoSources) += (api / baseDirectory).value / "src" / "main" / "protobuf",
+    (Compile / PB.protoSources) += (`e2e-api` / baseDirectory).value / "src" / "main" / "protobuf",
     pekkoGrpcGeneratedLanguages := Seq(PekkoGrpc.Scala),
     pekkoGrpcGeneratedSources := Seq(PekkoGrpc.Client, PekkoGrpc.Server),
     pekkoGrpcCodeGeneratorSettings := Seq("grpc", "single_line_to_proto_string"),
@@ -248,9 +251,9 @@ lazy val `grpc-rest-gateway` =
         pushChanges
       )
     )
-    .aggregate(protocGenGrpcRestGatewayPlugin.agg)
+    .aggregate(api, protocGenGrpcRestGatewayPlugin.agg)
     .aggregate(
-      (codeGen.projectRefs ++ api.projectRefs ++ `runtime-core`.projectRefs ++ `runtime-netty`.projectRefs ++
+      (annotations.projectRefs ++ codeGen.projectRefs ++ `runtime-core`.projectRefs ++ `runtime-netty`.projectRefs ++
         `runtime-pekko`.projectRefs ++ `runtime-akka`.projectRefs)*
     )
 

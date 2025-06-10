@@ -5,7 +5,7 @@ package akka_pekko
 
 import com.google.protobuf.Descriptors.FieldDescriptor.JavaType
 import com.google.protobuf.Descriptors.{Descriptor, MethodDescriptor}
-import com.improving.grpc_rest_gateway.compiler.utils.GenerateDelegateFunctions
+import com.improving.grpc_rest_gateway.compiler.utils.GenerateDelegateFunctions.generateDelegateFunctionName
 import compiler.utils.path_parser.{MethodInfo, PathParserUtils, TreeNode}
 import scalapb.compiler.DescriptorImplicits
 import scalapb.compiler.FunctionalPrinter.PrinterEndo
@@ -98,11 +98,12 @@ private class RouteGenerator(implicits: DescriptorImplicits, methods: List[Metho
     currentIndex: Int,
     totalMethods: Int
   ): PrinterEndo = { printer =>
+    val statusCode = getSuccessStatusCode(methodInfo.source)
     val isLastMethod = totalMethods == (currentIndex + 1)
     printer
       .add(s"${methodInfo.method} {")
       .indent
-      .call(generateParametersIfApplicable(methodInfo.fullPath, methodInfo.body, methodInfo.source.getName))
+      .call(generateParametersIfApplicable(methodInfo.fullPath, methodInfo.body, methodInfo.source.getName, statusCode))
       .outdent
       .when(isLastMethod)(_.add("}"))
       .when(!isLastMethod)(_.add("},"))
@@ -192,7 +193,8 @@ private class RouteGenerator(implicits: DescriptorImplicits, methods: List[Metho
   private def generateParametersIfApplicable(
     fullPath: String,
     body: String,
-    methodName: String
+    methodName: String,
+    statusCode: Int
   ): PrinterEndo = { printer =>
     val hasParameters = body.isBlank || body != "*"
     if (hasParameters) {
@@ -200,17 +202,18 @@ private class RouteGenerator(implicits: DescriptorImplicits, methods: List[Metho
         .indent
         .add("parameterMultiMap { queryParameters =>")
         .indent
-        .call(mergeParameters(fullPath, body, methodName, hasParameters))
+        .call(mergeParameters(fullPath, body, methodName, statusCode, hasParameters))
         .outdent
         .add("}")
         .outdent
-    } else printer.indent.call(generateBodyIfApplicable(body, methodName, "", hasParameters)).outdent
+    } else printer.indent.call(generateBodyIfApplicable(body, methodName, "", statusCode, hasParameters)).outdent
   }
 
   private def mergeParameters(
     fullPath: String,
     body: String,
     methodName: String,
+    statusCode: Int,
     hasParameters: Boolean
   ): PrinterEndo = { printer =>
     pathVariableToFieldMap.get(fullPath) match {
@@ -225,9 +228,10 @@ private class RouteGenerator(implicits: DescriptorImplicits, methods: List[Metho
           }
         printer
           .add(s"val parameters = Map($mergedParameters) ++ queryParameters")
-          .call(generateBodyIfApplicable(body, methodName, "parameters", hasParameters))
+          .call(generateBodyIfApplicable(body, methodName, "parameters", statusCode, hasParameters))
 
-      case None => printer.call(generateBodyIfApplicable(body, methodName, "queryParameters", hasParameters))
+      case None =>
+        printer.call(generateBodyIfApplicable(body, methodName, "queryParameters", statusCode, hasParameters))
     }
   }
 
@@ -235,15 +239,32 @@ private class RouteGenerator(implicits: DescriptorImplicits, methods: List[Metho
     body: String,
     methodName: String,
     queryParameterVariableName: String,
+    statusCode: Int,
     hasParameters: Boolean
   ): PrinterEndo = { printer =>
     if (body.isBlank)
-      printer.call(generateCallToDelegateFunction(methodName, queryParameterVariableName, hasParameters, hasBody = false))
+      printer.call(
+        generateCallToDelegateFunction(
+          methodName,
+          queryParameterVariableName,
+          statusCode,
+          hasParameters,
+          hasBody = false
+        )
+      )
     else
       printer
         .add("entity(as[String]) { body =>")
         .indent
-        .call(generateCallToDelegateFunction(methodName, queryParameterVariableName, hasParameters, hasBody = true))
+        .call(
+          generateCallToDelegateFunction(
+            methodName,
+            queryParameterVariableName,
+            statusCode,
+            hasParameters,
+            hasBody = true
+          )
+        )
         .outdent
         .add("}")
   }
@@ -251,17 +272,18 @@ private class RouteGenerator(implicits: DescriptorImplicits, methods: List[Metho
   private def generateCallToDelegateFunction(
     methodName: String,
     queryParameterVariableName: String,
+    statusCode: Int,
     hasParameters: Boolean,
     hasBody: Boolean
   ): PrinterEndo = { printer =>
-    val delegateFunctionName = GenerateDelegateFunctions.generateDelegateFunctionName(methodName)
+    val delegateFunctionName = generateDelegateFunctionName(methodName)
     val parameters =
       if (hasBody && hasParameters) s"body, $queryParameterVariableName"
       else if (hasBody && !hasParameters) "body"
       else if (hasParameters) s"$queryParameterVariableName"
       else ""
     printer
-      .when(!parameters.isBlank)(_.add(s"$delegateFunctionName($parameters)"))
+      .when(!parameters.isBlank)(_.add(s"$delegateFunctionName($statusCode, $parameters)"))
       .when(parameters.isBlank)(_.add("???"))
   }
 }

@@ -46,13 +46,16 @@ trait GrpcGatewayHandler {
     )
   }
 
+  private def getStatusCode(value: Int): StatusCode = StatusCodes.getForKey(value).getOrElse(StatusCodes.OK)
+
   protected def completeResponse[IN <: GeneratedMessage, OUT <: GeneratedMessage](
     in: Try[IN],
     dispatchCall: IN => Future[OUT],
-    statusCode: StatusCode = StatusCodes.OK
+    statusCodeValue: Int
   )(implicit
     ec: ExecutionContext
   ): Route = {
+    val statusCode = getStatusCode(statusCodeValue)
     val eventualResponse =
       toResponse(in, dispatchCall)
         .map(toHttpResponse(statusCode))
@@ -63,10 +66,19 @@ trait GrpcGatewayHandler {
   }
 
   private def toHttpResponse[M <: GeneratedMessage](statusCode: StatusCode)(msg: M): HttpResponse =
-    HttpResponse(
-      status = statusCode,
-      entity = HttpEntity(contentType = ContentTypes.`application/json`, bytes = JsonFormat.toJsonString(msg).getBytes)
-    )
+    statusCode match {
+      case StatusCodes.NoContent =>
+        HttpResponse(
+          status = statusCode,
+          entity = HttpEntity(contentType = ContentTypes.`application/json`, bytes = Array.empty[Byte])
+        )
+      case _ =>
+        HttpResponse(
+          status = statusCode,
+          entity =
+            HttpEntity(contentType = ContentTypes.`application/json`, bytes = JsonFormat.toJsonString(msg).getBytes)
+        )
+    }
 
   val specificationName: String
   val route: Route
