@@ -45,9 +45,19 @@ service TestServiceB {
 
     option (grpc_rest_gateway.api.statuses) = {
       successStatus: {
-        status: 201
+        status: 204
         description: "Update resource"
-      }
+      },
+      otherStatus: [
+        {
+          status: 400
+          description: "Bad request"
+        },
+        {
+          status: 404
+          description: "Not found"
+        }
+      ]
     };
   }
 }

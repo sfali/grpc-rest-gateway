@@ -68,7 +68,7 @@ class GrpcRestGatewayTest extends AnyWordSpec with Matchers with BeforeAndAfterA
     "simple PUT call to service B" in {
       val requestId = 2L
       val actualCode = restClient.updateServiceB[TestRequestB](TestRequestB(requestId)).futureValue
-      actualCode shouldBe 201
+      actualCode shouldBe 204
     }
 
     "test status 404 (NOT_FOUND)" in {

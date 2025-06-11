@@ -46,6 +46,7 @@ package object compiler {
     }
 
   def getSuccessStatusCode(md: MethodDescriptor): Int = {
+    getStatusDescriptions(md).head.getStatus
     val statusDescription =
       if (md.getOptions.hasExtension(GrpcRestGatewayProto.statuses)) {
         val statuses = md.getOptions.getExtension(GrpcRestGatewayProto.statuses)
@@ -56,5 +57,20 @@ package object compiler {
 
     val value = statusDescription.getStatus
     if (value <= 0) 200 else value
+  }
+
+  def getStatusDescriptions(md: MethodDescriptor): Seq[StatusDescription] = {
+    lazy val defaultSuccessStatus =
+      StatusDescription.newBuilder().setStatus(200).setDescription("successful operation").build()
+
+    if (md.getOptions.hasExtension(GrpcRestGatewayProto.statuses)) {
+      val statuses = md.getOptions.getExtension(GrpcRestGatewayProto.statuses)
+      val successStatus =
+        if (statuses.hasSuccessStatus) {
+          statuses.getSuccessStatus
+        } else defaultSuccessStatus
+
+      successStatus +: statuses.getOtherStatusList.asScala.toList
+    } else Seq(defaultSuccessStatus)
   }
 }
