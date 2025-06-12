@@ -1,5 +1,6 @@
 syntax = "proto3";
 
+import "scalapb/scalapb.proto";
 import "google/protobuf/descriptor.proto";
 
 package grpc_rest_gateway.api;
@@ -7,6 +8,14 @@ package grpc_rest_gateway.api;
 option java_multiple_files = false;
 option java_package = "com.improving.grpc_rest_gateway.api";
 option java_outer_classname = "GrpcRestGatewayProto";
+
+option (scalapb.options) = {
+  flat_package: true
+  single_file: true
+  retain_source_code_info: true
+  preserve_unknown_fields: false
+  package_name: "com.improving.grpc_rest_gateway.api"
+};
 
 message StatusDescription {
   int32 status = 1; // Valid HTTP status code

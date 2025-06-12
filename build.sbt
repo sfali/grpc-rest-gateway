@@ -75,7 +75,8 @@ lazy val annotations = (projectMatrix in file("annotations"))
     libraryDependencies ++= ApiDependencies,
     (Compile / PB.protoSources) += (api / baseDirectory).value / "src" / "main" / "protobuf",
     Compile / PB.targets := Seq(
-      PB.gens.java(V.Protobuf) -> (Compile / sourceManaged).value
+      PB.gens.java(V.Protobuf) -> (Compile / sourceManaged).value,
+      scalapb.gen() -> (Compile / sourceManaged).value
     )
   )
   .jvmPlatform(scalaVersions = Seq(V.Scala212, V.Scala213, V.Scala3))
@@ -154,7 +155,6 @@ lazy val `e2e-netty` = (projectMatrix in file("e2e-netty"))
     libraryDependencies ++= E2ENettyDependencies,
     scalacOptions ++= (if (isScala3.value) Seq("-source", "future")
                        else Seq("-Xsource:3")),
-    (Compile / PB.protoSources) += (api / baseDirectory).value / "src" / "main" / "protobuf",
     (Compile / PB.protoSources) += (`e2e-api` / baseDirectory).value / "src" / "main" / "protobuf",
     Compile / PB.targets := Seq(
       (
