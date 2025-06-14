@@ -62,7 +62,7 @@ class GenerateDelegateFunctions private[utils] (
           .add(s"$responseFunctionName(input, client.$methodName, statusCode)")
           .outdent
           .add("}")
-          .newline
+      // .newline
       case PatternCase.PUT | PatternCase.POST =>
         printer.call(
           generateBodyParam(
@@ -114,6 +114,7 @@ class GenerateDelegateFunctions private[utils] (
     if (body.nonEmpty) {
       if (body == "*") {
         printer
+          .newline
           .add(s"""private def $delegateFunctionName(statusCode: Int, body: String) = {""")
           .indent
           .add(
@@ -122,7 +123,6 @@ class GenerateDelegateFunctions private[utils] (
           .add(s"$responseFunctionName(input, client.$methodName, statusCode)")
           .outdent
           .add("}")
-          .newline
       } else {
         val inputTypeDescriptor = method.getInputType
         val maybeDescriptor = inputTypeDescriptor.getFields.asScala.find(_.getName == body)
@@ -134,6 +134,7 @@ class GenerateDelegateFunctions private[utils] (
             val args =
               inputTypeDescriptor.getFields.asScala.map(f => s"${f.getJsonName} = ${f.getJsonName}").mkString(", ")
             printer
+              .newline
               .add(
                 s"""private def $delegateFunctionName(statusCode: Int, body: String, parameters: Map[String, Seq[String]]) = {"""
               )
@@ -150,7 +151,6 @@ class GenerateDelegateFunctions private[utils] (
               .add(s"$responseFunctionName(input, client.$methodName, statusCode)")
               .outdent
               .add("}")
-              .newline
           case None =>
             throw new RuntimeException(
               s"Unable to determine body type for input: $serviceFunctionName, body: $body, method: $methodName"

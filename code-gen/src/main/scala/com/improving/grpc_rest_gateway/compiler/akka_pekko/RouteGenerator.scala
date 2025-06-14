@@ -86,10 +86,10 @@ private class RouteGenerator(implicits: DescriptorImplicits, methods: List[Metho
         .indent
         .when(totalMethods > 1)(_.add("concat(").indent)
         .print(methods) { case (p, (methodInfo, index)) => generateMethod(methodInfo, index, totalMethods)(p) }
-        .when(totalMethods > 1)(_.add(")").outdent)
-        .outdent
+        .when(totalMethods > 1)(_.outdent.add(")"))
         .when(hasChildPaths)(_.add("},"))
         .when(!hasChildPaths)(_.add("}"))
+        .outdent
 
   }
 

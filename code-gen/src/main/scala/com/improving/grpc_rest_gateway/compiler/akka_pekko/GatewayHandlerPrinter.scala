@@ -48,7 +48,6 @@ class GatewayHandlerPrinter(packageNamePrefix: String, service: ServiceDescripto
       .newline
       .call(generateService)
       .newline
-      .outdent
       .call(generateCompanionObject)
       .result()
 
@@ -56,7 +55,6 @@ class GatewayHandlerPrinter(packageNamePrefix: String, service: ServiceDescripto
     _.add(s"class $handlerClassName(settings: GrpcClientSettings)(implicit sys: ClassicActorSystemProvider)")
       .indent
       .add("extends GrpcGatewayHandler {")
-      .outdent
       .newline
       .indent
       .add("private implicit val ec: ExecutionContext = sys.classicSystem.dispatcher")
@@ -66,7 +64,9 @@ class GatewayHandlerPrinter(packageNamePrefix: String, service: ServiceDescripto
       .call(RouteGenerator(implicits, methods))
       .outdent
       .newline
+      .outdent
       .call(GenerateDelegateFunctions(implicits, "completeResponse", methods))
+      .outdent
       .outdent
       .add("}")
 
