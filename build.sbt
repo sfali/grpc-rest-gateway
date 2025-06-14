@@ -122,7 +122,7 @@ lazy val `e2e-api` = (project in file("e2e-api"))
 
 lazy val `e2e-netty` = (projectMatrix in file("e2e-netty"))
   .configure(commonSettings)
-  .dependsOn(`runtime-netty`, `e2e-core`)
+  .dependsOn(annotations, `runtime-netty`, `e2e-core`)
   .enablePlugins(LocalCodeGenPlugin)
   .defaultAxes()
   .customRow(
@@ -170,7 +170,7 @@ lazy val `e2e-netty` = (projectMatrix in file("e2e-netty"))
 
 lazy val `e2e-pekko` = (projectMatrix in file("e2e-pekko"))
   .configure(commonSettings)
-  .dependsOn(`runtime-pekko`, `e2e-core`)
+  .dependsOn(annotations, `runtime-pekko`, `e2e-core`)
   .enablePlugins(PekkoGrpcPlugin, LocalCodeGenPlugin)
   .defaultAxes()
   .customRow(
