@@ -1,5 +1,6 @@
 package rest_gateway_test
 
+import com.google.protobuf.empty.Empty
 import com.google.rpc.Code
 import com.improving.grpc_rest_gateway.runtime.server.GatewayServer
 import io.grpc.StatusRuntimeException
@@ -68,10 +69,16 @@ class GrpcRestGatewayTest extends AnyWordSpec with Matchers with BeforeAndAfterA
   "GrpcRestGateway" should {
     "simple GET call to service B" in {
       val requestId = 1L
-      val grpcResponse = serviceBClient.process(TestRequestB(requestId)).futureValue
+      val grpcResponse = serviceBClient.getRequest(TestRequestB(requestId)).futureValue
       val restResponse =
         restClient.getRequestServiceB[TestResponseB](requestId).futureValue.getOrElse(TestResponseB.defaultInstance)
       restResponse shouldBe grpcResponse
+    }
+
+    "simple PUT call to service B" in {
+      val requestId = 2L
+      val actualCode = restClient.updateServiceB[TestRequestB](TestRequestB(requestId)).futureValue
+      actualCode shouldBe 204
     }
 
     "test status 404 (NOT_FOUND)" in {

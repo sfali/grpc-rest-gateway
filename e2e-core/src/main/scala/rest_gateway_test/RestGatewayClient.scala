@@ -58,6 +58,16 @@ class RestGatewayClient(gatewayPort: Int) {
         }
     }
 
+  def updateServiceB[Request <: GeneratedMessage](
+    body: Request
+  ): Future[Int] =
+    basicRequest
+      .put(uri"$serviceBUri/update")
+      .body(JsonFormat.toJsonString(body))
+      .response(asString)
+      .send(backend)
+      .map(_.code.code)
+
   def getMessageV1[Response <: GeneratedMessage: GeneratedMessageCompanion](
     messageId: Int,
     userId: String

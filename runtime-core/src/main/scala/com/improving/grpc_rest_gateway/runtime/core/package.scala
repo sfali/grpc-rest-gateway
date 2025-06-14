@@ -43,13 +43,17 @@ package object core {
 
   def toResponse[IN <: GeneratedMessage, OUT <: GeneratedMessage](
     in: Try[IN],
-    dispatchCall: IN => Future[OUT]
+    dispatchCall: IN => Future[OUT],
+    statusCode: Int
   )(implicit
     ec: ExecutionContext
-  ): Future[OUT] =
+  ): Future[(Int, OUT)] =
     Future
       .fromTry(in)
       .flatMap(dispatchCall)
+      .map { result =>
+        (statusCode, result)
+      }
       .recoverWith { case ex: StatusRuntimeException =>
         Future.failed(ex.toGatewayException)
       }
