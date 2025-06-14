@@ -112,7 +112,7 @@ class GatewayHandlerPrinter(service: ServiceDescriptor, implicits: DescriptorImp
 
   private def generateDispatchCall: PrinterEndo =
     _.add(
-      s"override protected def dispatchCall(method: HttpMethod, uri: String, body: String): Future[GeneratedMessage] = {"
+      s"override protected def dispatchCall(method: HttpMethod, uri: String, body: String): Future[(Int, GeneratedMessage)] = {"
     )
       .indent
       .add(
@@ -140,6 +140,7 @@ class GatewayHandlerPrinter(service: ServiceDescriptor, implicits: DescriptorImp
   }
 
   private def generateMethodHandler(method: MethodDescriptor, http: HttpRule): PrinterEndo = { printer =>
+    val statusCode = getSuccessStatusCode(method)
     val body = http.getBody
     val delegateFunctionName = GenerateDelegateFunctions.generateDelegateFunctionName(method.getName)
     http.getPatternCase match {
@@ -152,7 +153,7 @@ class GatewayHandlerPrinter(service: ServiceDescriptor, implicits: DescriptorImp
             ifStatementStarted = true
             printer.add(s"""if (isSupportedCall(HttpMethod.GET.name, $constantName, methodName, path))""")
           }
-        p1.indent.add(s"$delegateFunctionName(mergeParameters($constantName, queryString))").outdent
+        p1.indent.add(s"$delegateFunctionName($statusCode, mergeParameters($constantName, queryString))").outdent
 
       case PatternCase.PUT =>
         val constantName = pathsToConstantMap((PatternCase.PUT, http.getPut))
@@ -164,8 +165,10 @@ class GatewayHandlerPrinter(service: ServiceDescriptor, implicits: DescriptorImp
             printer.add(s"""if (isSupportedCall(HttpMethod.PUT.name, $constantName, methodName, path))""")
           }
         p1.indent
-          .when(body == "*")(_.add(s"$delegateFunctionName(body)"))
-          .when(body != "*")(_.add(s"$delegateFunctionName(body, mergeParameters($constantName, queryString))"))
+          .when(body == "*")(_.add(s"$delegateFunctionName($statusCode, body)"))
+          .when(body != "*")(
+            _.add(s"$delegateFunctionName($statusCode, body, mergeParameters($constantName, queryString))")
+          )
           .outdent
 
       case PatternCase.POST =>
@@ -179,8 +182,10 @@ class GatewayHandlerPrinter(service: ServiceDescriptor, implicits: DescriptorImp
             printer.add(s"""if (isSupportedCall(HttpMethod.POST.name, $constantName, methodName, path))""")
           }
         p1.indent
-          .when(body == "*")(_.add(s"$delegateFunctionName(body)"))
-          .when(body != "*")(_.add(s"$delegateFunctionName(body, mergeParameters($constantName, queryString))"))
+          .when(body == "*")(_.add(s"$delegateFunctionName($statusCode, body)"))
+          .when(body != "*")(
+            _.add(s"$delegateFunctionName($statusCode, body, mergeParameters($constantName, queryString))")
+          )
           .outdent
 
       case PatternCase.DELETE =>
@@ -192,7 +197,7 @@ class GatewayHandlerPrinter(service: ServiceDescriptor, implicits: DescriptorImp
             ifStatementStarted = true
             printer.add(s"""if (isSupportedCall(HttpMethod.DELETE.name, $constantName", methodName, path))""")
           }
-        p1.indent.add(s"$delegateFunctionName(mergeParameters($constantName, queryString))").outdent
+        p1.indent.add(s"$delegateFunctionName($statusCode, mergeParameters($constantName, queryString))").outdent
 
       case PatternCase.PATCH =>
         val constantName = pathsToConstantMap((PatternCase.PATCH, http.getPatch))
@@ -203,7 +208,7 @@ class GatewayHandlerPrinter(service: ServiceDescriptor, implicits: DescriptorImp
             ifStatementStarted = true
             printer.add(s"""if (isSupportedCall(HttpMethod.PATCH.name, $constantName, methodName, path))""")
           }
-        p1.indent.add(s"$delegateFunctionName(mergeParameters($constantName, queryString))").outdent
+        p1.indent.add(s"$delegateFunctionName($statusCode, mergeParameters($constantName, queryString))").outdent
 
       case _ => printer
     }

@@ -4,6 +4,7 @@ package compiler
 
 import com.google.api.AnnotationsProto
 import com.google.protobuf.ExtensionRegistry
+import com.improving.grpc_rest_gateway.api.GrpcRestGatewayProto
 import protocgen.{CodeGenApp, CodeGenRequest, CodeGenResponse}
 import scalapb.compiler.{DescriptorImplicits, GeneratorParams}
 import scalapb.options.Scalapb
@@ -19,6 +20,7 @@ object GatewayGenerator extends CodeGenApp {
   override def registerExtensions(registry: ExtensionRegistry): Unit = {
     Scalapb.registerAllExtensions(registry)
     AnnotationsProto.registerAllExtensions(registry)
+    GrpcRestGatewayProto.registerAllExtensions(registry)
   }
 
   override def process(request: CodeGenRequest): CodeGenResponse =

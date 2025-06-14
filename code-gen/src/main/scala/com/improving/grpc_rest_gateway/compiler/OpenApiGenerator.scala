@@ -13,6 +13,8 @@ import com.google.protobuf.Descriptors.{
 }
 import com.google.protobuf.ExtensionRegistry
 import com.google.protobuf.compiler.PluginProtos.CodeGeneratorResponse
+import com.improving.grpc_rest_gateway.api.GrpcRestGatewayProto
+import com.improving.grpc_rest_gateway.api.GrpcRestGatewayProto.StatusDescription
 import protocgen.{CodeGenApp, CodeGenRequest, CodeGenResponse}
 import scalapb.compiler.FunctionalPrinter.PrinterEndo
 import scalapb.compiler.{DescriptorImplicits, FunctionalPrinter, NameUtils, ProtobufGenerator}
@@ -27,6 +29,7 @@ object OpenApiGenerator extends CodeGenApp {
   override def registerExtensions(registry: ExtensionRegistry): Unit = {
     Scalapb.registerAllExtensions(registry)
     AnnotationsProto.registerAllExtensions(registry)
+    GrpcRestGatewayProto.registerAllExtensions(registry)
   }
 
   override def process(request: CodeGenRequest): CodeGenResponse =
@@ -146,7 +149,8 @@ object OpenApiGenerator extends CodeGenApp {
         .indent
         .print(pathMethods) { case (p, (patternCase, methodDescriptor)) =>
           val printer = generateMethod(patternCase, path, methodDescriptor)(p)
-          generateResponses(methodDescriptor.getOutputType)(printer)
+          val statusDescriptions = getStatusDescriptions(methodDescriptor)
+          generateResponses(methodDescriptor.getOutputType, statusDescriptions)(printer)
         }
         .outdent
 
@@ -345,26 +349,54 @@ object OpenApiGenerator extends CodeGenApp {
         .outdent
         .outdent
 
-    private def generateResponses(outType: Descriptor, prefix: String = ""): PrinterEndo =
-      _.indent
+    private def generateResponses(
+      outType: Descriptor,
+      statusDescription: Seq[StatusDescription],
+      prefix: String = ""
+    ): PrinterEndo = { printer =>
+      val successStatus = statusDescription.head
+      val refName = outType.getName
+      printer
+        .indent
         .add("responses:")
         .indent
-        .add(""""200":""")
+        .add(s""""${successStatus.getStatus}":""")
         .indent
-        .add("description: successful operation")
-        .add("content:")
+        .add(s"description: ${successStatus.getDescription}")
+        .when(successStatus.getStatus != 204 || refName != "Empty")(
+          _.add("content:")
+            .indent
+            .add("application/json:")
+            .indent
+            .add("schema:")
+            .indent
+            .add(s"""$$ref: "#/components/schemas/$refName"""")
+            .outdent
+            .outdent
+            .outdent
+        )
+        .outdent
+        .print(statusDescription.tail) { case (p, statusDescription) => printStatus(statusDescription)(p) }
+        .add("default:")
         .indent
-        .add("application/json:")
-        .indent
-        .add("schema:")
-        .indent
-        .add(s"""$$ref: "#/components/schemas/${outType.getName}"""")
+        .add("description: Unexpected error")
         .outdent
         .outdent
         .outdent
-        .outdent
-        .outdent
-        .outdent
+    }
+
+    private def printStatus(statusDescription: StatusDescription): PrinterEndo = { printer =>
+      val status = statusDescription.getStatus
+      val description = statusDescription.getDescription
+      printer
+        .add(s""""$status":""")
+        .when(description.nonEmpty)(
+          _.indent.add(s"description: $description").outdent
+        )
+        .when(description.isEmpty)(
+          _.indent.add(s"description: Handle $status").outdent
+        )
+    }
 
     private def extractPathElements(path: String) =
       if (path.isBlank) Seq.empty[String]

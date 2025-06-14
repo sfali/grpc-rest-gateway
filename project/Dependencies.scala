@@ -14,6 +14,7 @@ object Dependencies {
     val Pekko = "1.1.2"
     val PekkoGrpc = "1.1.1"
     val PekkoHttp = "1.1.0"
+    val Protobuf: String = scalapb.compiler.Version.protobufVersion
     val Scala213 = "2.13.16"
     val Scala212 = "2.12.20"
     val Scala3 = "3.5.2"
@@ -30,6 +31,11 @@ object Dependencies {
     "com.thesamet.scalapb" %% "compilerplugin" % V.ScalaPb,
     "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % V.ScalaPb,
     "org.scalatest" %% "scalatest" % V.ScalaTest % Test
+  )
+
+  val ApiDependencies: Seq[ModuleID] = Seq(
+    "com.google.protobuf" % "protobuf-java" % V.Protobuf,
+    "com.thesamet.scalapb" %% "scalapb-runtime" % V.ScalaPb % "protobuf"
   )
 
   val RuntimeCoreDependencies: Seq[ModuleID] = Seq(
