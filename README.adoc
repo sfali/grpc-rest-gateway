@@ -16,126 +16,6 @@ This project has two main modules:
 
 . Code generation module which generates runtime handler(s) from given `protobuf` definition.
 
-== Runtime implementations
-
-Three different implementations are provided for a runtime library:
-
-. Netty-based runtime library &mdash; `grpc-rest-gateway-runtime-netty`.
-. https://pekko.apache.org/[Apache Pekko] based runtime library &mdash; `grpc-rest-gateway-runtime-pekko`.
-. https://akka.io/[Akka] based runtime library &mdash; `grpc-rest-gateway-runtime-akka`.
-
-There are three main classes in each runtime implementation along with server classes to build REST server:
-
-. `GrpcGatewayHandler` &mdash; base abstract class / trait responsible for dispatching given HTTP request to the corresponding function in gRPC service.
-. `SwaggerHandler` &mdash; responsible for Open API yaml files and generate Swagger UI.
-. `GatewayServer` &mdash; responsible for starting HTTP server at the given host and port.
-
-== Set up your project
-
-=== Configure plugin for compiler fo code generation
-
-To generate Scala classes for gateway handler and OpenApi documentation add following in `plugin.sbt`:
-
-[source, sbt, subs="normal,attributes"]
-----
-addSbtPlugin("com.thesamet" % "sbt-protoc" % "{sbt-protoc-version}")
-
-libraryDependencies ++= Seq(
-  "com.thesamet.scalapb" %% "compilerplugin" % "{scalapb-version}",
-  "io.github.sfali23" %% "grpc-rest-gateway-code-gen" % "{app-version}"
-)
-----
-
-And following in the `build.sbt`:
-
-[source, sbt, subs="normal,attributes"]
-----
-Compile / PB.targets := Seq(
-  scalapb.gen() -> (Compile / sourceManaged).value / "scalapb",
-  grpc_rest_gateway.gatewayGen(implementationType = grpc_rest_gateway.ImplementationType.Netty) -> (Compile / sourceManaged).value / "scalapb",
-  grpc_rest_gateway.openApiGen() -> (Compile / resourceManaged).value / "specs"
-)
-
-// change the value of "implementationType" parameter to `grpc_rest_gateway.ImplementationType.Pekko` or
-// `grpc_rest_gateway.ImplementationType.Akka` to generate Pekko or Akka based implementation
-
-// generate code for Scala 3
-Compile / PB.targets := Seq(
-  scalapb.gen(scala3Sources = true) -> (Compile / sourceManaged).value / "scalapb",
-  grpc_rest_gateway.gatewayGen(scala3Sources = true, implementationType = "netty") -> (Compile / sourceManaged).value / "scalapb",
-  grpc_rest_gateway.openApiGen() -> (Compile / resourceManaged).value / "specs"
-)
-
-// Add the following to add openapi specs into the classpath
-Compile / resourceGenerators += (Compile / PB.generate)
-      .map(_.filter(_.getName.endsWith("yml")))
-      .taskValue
-----
-
-=== Configure dependencies for Netty-based implementation
-
-Add the following dependencies
-
-[source, sbt, subs="normal,attributes"]
-----
-val AppVersion = "{app-version}"
-val ScalaPb: String = scalapb.compiler.Version.scalapbVersion
-val GrpcJava: String = scalapb.compiler.Version.grpcJavaVersion
-val ScalaPbJson = "0.12.1"
-libraryDependencies ++= Seq(
-  "io.github.sfali23" %% "grpc-rest-gateway-runtime-netty" % AppVersion,
-  "com.thesamet.scalapb" %% "compilerplugin" % ScalaPb % "compile;protobuf",
-  "com.thesamet.scalapb" %% "scalapb-runtime" % ScalaPb % "compile;protobuf",
-  "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % ScalaPb,
-  "io.grpc" % "grpc-netty" % GrpcJava,
-  "com.thesamet.scalapb" %% "scalapb-json4s" % ScalaPbJson,
-  "com.thesamet.scalapb.common-protos" %% "proto-google-common-protos-scalapb_0.11" % "2.9.6-0" % "compile,protobuf"
-)
-----
-
-=== Configure dependencies for Pekko based implementation
-
-Add the following dependencies:
-
-[source, sbt, subs="normal,attributes"]
-----
-val AppVersion = "{app-version}"
-val ScalaPb: String = scalapb.compiler.Version.scalapbVersion
-val GrpcJava: String = scalapb.compiler.Version.grpcJavaVersion
-
-lazy val root = project
-  .in(file("."))
-  .enablePlugins(PekkoGrpcPlugin)
-  .settings(
-      libraryDependencies ++= Seq(
-        "io.github.sfali23" %% "grpc-rest-gateway-runtime-pekko" % AppVersion,
-        "org.apache.pekko" %% "pekko-actor" % "1.1.2",
-        "org.apache.pekko" %% "pekko-actor-typed" % "1.1.2",
-        "org.apache.pekko" %% "pekko-stream-typed" % "1.1.2",
-        "org.apache.pekko" %% "pekko-http" % "1.1.0",
-        "org.apache.pekko" %% "pekko-grpc-runtime" % "1.1.1",
-        "com.thesamet.scalapb.common-protos" %% "proto-google-common-protos-scalapb_0.11" % "2.9.6-0" % "compile,protobuf"
-      ),
-      pekkoGrpcGeneratedSources := generatedSource,
-      pekkoGrpcCodeGeneratorSettings := Seq("grpc", "single_line_to_proto_string"),
-      Compile / PB.targets ++= Seq(
-        grpc_rest_gateway
-          .gatewayGen(
-              scala3Sources = true,
-              implementationType = grpc_rest_gateway.ImplementationType.Pekko
-           ) -> crossTarget.value / "pekko-grpc" / "main",
-          grpc_rest_gateway.openApiGen() -> (Compile / resourceManaged).value / "specs"
-      ),
-      Compile / resourceGenerators += (Compile / PB.generate)
-      .map(_.filter(_.getName.endsWith("yml")))
-      .taskValue
-  )
-----
-
-=== Configure dependencies for Akka based implementation
-
-Should be similar to `Pekko` by replacing corresponding `Akka` dependencies.
-
 == Adding gRPC-Rest-Gateway annotation to a protobuf file
 
 Each RPC must define the HTTP method and path using the https://buf.build/googleapis/googleapis/file/main:google/api/http.proto[google.api.http] annotation, which can be done by importing https://buf.build/googleapis/googleapis/file/main:google/api/annotations.proto[google/api/annotations.proto].
@@ -225,16 +105,131 @@ option (grpc_rest_gateway.api.statuses) = {
 };
 ----
 
-Add the following dependencies to use this annotaion:
+== Runtime implementations
 
-[source, sbt]
+Three different implementations are provided for a runtime library:
+
+. Netty-based runtime library &mdash; `grpc-rest-gateway-runtime-netty`.
+. https://pekko.apache.org/[Apache Pekko] based runtime library &mdash; `grpc-rest-gateway-runtime-pekko`.
+. https://akka.io/[Akka] based runtime library &mdash; `grpc-rest-gateway-runtime-akka`.
+
+There are three main classes in each runtime implementation along with server classes to build REST server:
+
+. `GrpcGatewayHandler` &mdash; base abstract class / trait responsible for dispatching given HTTP request to the corresponding function in gRPC service.
+. `SwaggerHandler` &mdash; responsible for Open API yaml files and generate Swagger UI.
+. `GatewayServer` &mdash; responsible for starting HTTP server at the given host and port.
+
+== Set up your project
+
+=== Configure plugin for compiler fo code generation
+
+To generate Scala classes for gateway handler and OpenApi documentation, add following in `plugin.sbt`:
+
+[source, sbt, subs="normal,attributes"]
+----
+addSbtPlugin("com.thesamet" % "sbt-protoc" % "{sbt-protoc-version}")
+
+libraryDependencies ++= Seq(
+  "com.thesamet.scalapb" %% "compilerplugin" % "{scalapb-version}",
+  "io.github.sfali23" %% "grpc-rest-gateway-code-gen" % "{app-version}"
+)
+----
+
+And following in the `build.sbt`:
+
+[source, sbt, subs="normal,attributes"]
+----
+Compile / PB.targets := Seq(
+  scalapb.gen() -> (Compile / sourceManaged).value / "scalapb",
+  grpc_rest_gateway.gatewayGen(implementationType = grpc_rest_gateway.ImplementationType.Netty) -> (Compile / sourceManaged).value / "scalapb",
+  grpc_rest_gateway.openApiGen() -> (Compile / resourceManaged).value / "specs"
+)
+
+// change the value of "implementationType" parameter to `grpc_rest_gateway.ImplementationType.Pekko` or
+// `grpc_rest_gateway.ImplementationType.Akka` to generate Pekko or Akka based implementation
+
+// generate code for Scala 3
+Compile / PB.targets := Seq(
+  scalapb.gen(scala3Sources = true) -> (Compile / sourceManaged).value / "scalapb",
+  grpc_rest_gateway.gatewayGen(scala3Sources = true, implementationType = "netty") -> (Compile / sourceManaged).value / "scalapb",
+  grpc_rest_gateway.openApiGen() -> (Compile / resourceManaged).value / "specs"
+)
+
+// Add the following to add openapi specs into the classpath
+Compile / resourceGenerators += (Compile / PB.generate)
+      .map(_.filter(_.getName.endsWith("yml")))
+      .taskValue
+----
+
+=== Configure dependencies for Netty-based implementation
+
+Add the following dependencies
+
+[source, sbt, subs="normal,attributes"]
 ----
 val AppVersion = "{app-version}"
+val ScalaPb: String = scalapb.compiler.Version.scalapbVersion
+val GrpcJava: String = scalapb.compiler.Version.grpcJavaVersion
+val ScalaPbJson = "0.12.1"
 libraryDependencies ++= Seq(
+  "io.github.sfali23" %% "grpc-rest-gateway-runtime-netty" % AppVersion,
+  "com.thesamet.scalapb" %% "compilerplugin" % ScalaPb % "compile;protobuf",
+  "com.thesamet.scalapb" %% "scalapb-runtime" % ScalaPb % "compile;protobuf",
+  "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % ScalaPb,
+  "io.grpc" % "grpc-netty" % GrpcJava,
+  "com.thesamet.scalapb" %% "scalapb-json4s" % ScalaPbJson,
+  "com.thesamet.scalapb.common-protos" %% "proto-google-common-protos-scalapb_0.11" % "2.9.6-0" % "compile,protobuf",
+  // optional if using custom annotation
   "io.github.sfali23" %% "grpc-rest-gateway-annotations" % AppVersion,
   "io.github.sfali23" %% "grpc-rest-gateway-annotations" % AppVersion % "protobuf"
 )
 ----
+
+=== Configure dependencies for Pekko based implementation
+
+Add the following dependencies:
+
+[source, sbt, subs="normal,attributes"]
+----
+val AppVersion = "{app-version}"
+val ScalaPb: String = scalapb.compiler.Version.scalapbVersion
+val GrpcJava: String = scalapb.compiler.Version.grpcJavaVersion
+
+lazy val root = project
+  .in(file("."))
+  .enablePlugins(PekkoGrpcPlugin)
+  .settings(
+      libraryDependencies ++= Seq(
+        "io.github.sfali23" %% "grpc-rest-gateway-runtime-pekko" % AppVersion,
+        "org.apache.pekko" %% "pekko-actor" % "1.1.2",
+        "org.apache.pekko" %% "pekko-actor-typed" % "1.1.2",
+        "org.apache.pekko" %% "pekko-stream-typed" % "1.1.2",
+        "org.apache.pekko" %% "pekko-http" % "1.1.0",
+        "org.apache.pekko" %% "pekko-grpc-runtime" % "1.1.1",
+        "com.thesamet.scalapb.common-protos" %% "proto-google-common-protos-scalapb_0.11" % "2.9.6-0" % "compile,protobuf",
+        // optional if using custom annotation
+        "io.github.sfali23" %% "grpc-rest-gateway-annotations" % AppVersion,
+        "io.github.sfali23" %% "grpc-rest-gateway-annotations" % AppVersion % "protobuf"
+      ),
+      pekkoGrpcGeneratedSources := generatedSource,
+      pekkoGrpcCodeGeneratorSettings := Seq("grpc", "single_line_to_proto_string"),
+      Compile / PB.targets ++= Seq(
+        grpc_rest_gateway
+          .gatewayGen(
+              scala3Sources = true,
+              implementationType = grpc_rest_gateway.ImplementationType.Pekko
+           ) -> crossTarget.value / "pekko-grpc" / "main",
+          grpc_rest_gateway.openApiGen() -> (Compile / resourceManaged).value / "specs"
+      ),
+      Compile / resourceGenerators += (Compile / PB.generate)
+      .map(_.filter(_.getName.endsWith("yml")))
+      .taskValue
+  )
+----
+
+=== Configure dependencies for Akka based implementation
+
+Should be similar to `Pekko` by replacing corresponding `Akka` dependencies.
 
 == Code generation library &mdash; `grpc-rest-gateway-code-gen`
 
