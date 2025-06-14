@@ -24,7 +24,7 @@ message StatusDescription {
 
 message Statuses {
   StatusDescription successStatus = 1; // Default success status, default value is '200'
-  repeated StatusDescription otherStatus = 2; // Other status and their descriptions
+  repeated StatusDescription otherStatus = 2; // Other status and their descriptions, this will be used in OpenApi documentation
 }
 
 extend google.protobuf.MethodOptions {

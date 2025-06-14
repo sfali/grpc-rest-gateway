@@ -45,9 +45,10 @@ service TestServiceB {
 
     option (grpc_rest_gateway.api.statuses) = {
       successStatus: {
-        status: 204
+        status: 204 // returns default status of No Content (204)
         description: "Update resource"
       },
+      // documentation of other statuses
       otherStatus: [
         {
           status: 400
