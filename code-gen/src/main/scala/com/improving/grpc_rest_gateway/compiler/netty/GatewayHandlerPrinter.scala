@@ -105,8 +105,9 @@ class GatewayHandlerPrinter(service: ServiceDescriptor, implicits: DescriptorImp
       .newline
       .call(generateDispatchCall)
       .outdent
-      .newline
+      .indent
       .call(GenerateDelegateFunctions(implicits, "toResponse", methods))
+      .outdent
       .add("}")
   }
 

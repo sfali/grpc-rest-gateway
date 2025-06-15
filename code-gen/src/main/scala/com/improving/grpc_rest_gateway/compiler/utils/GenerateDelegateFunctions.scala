@@ -52,6 +52,7 @@ class GenerateDelegateFunctions private[utils] (
     httpMethod match {
       case PatternCase.GET | PatternCase.DELETE | PatternCase.PATCH =>
         printer
+          .newline
           .add(s"""private def $delegateFunctionName(statusCode: Int, parameters: Map[String, Seq[String]]) = {""")
           .indent
           .add("val input = Try {")
@@ -62,7 +63,6 @@ class GenerateDelegateFunctions private[utils] (
           .add(s"$responseFunctionName(input, client.$methodName, statusCode)")
           .outdent
           .add("}")
-      // .newline
       case PatternCase.PUT | PatternCase.POST =>
         printer.call(
           generateBodyParam(

@@ -466,24 +466,23 @@ class TestServiceBGatewayHandler(channel: ManagedChannel)(implicit ec: Execution
     else Future.failed(GatewayException.toInvalidArgument(s"No route defined for $methodName($path)"))
   }
 
-private def dispatchGetRequest(statusCode: Int, parameters: Map[String, Seq[String]]) = {
-  val input = Try {
-    val requestId = parameters.toLongValue("requestId")
-    rest_gateway_test.api.model.TestRequestB(requestId = requestId)
+  private def dispatchGetRequest(statusCode: Int, parameters: Map[String, Seq[String]]) = {
+    val input = Try {
+      val requestId = parameters.toLongValue("requestId")
+      rest_gateway_test.api.model.TestRequestB(requestId = requestId)
+    }
+    toResponse(input, client.getRequest, statusCode)
   }
-  toResponse(input, client.getRequest, statusCode)
-}
 
-private def dispatchProcess(statusCode: Int, body: String) = {
-  val input = parseBody[rest_gateway_test.api.model.TestRequestB](body)
-  toResponse(input, client.process, statusCode)
-}
+  private def dispatchProcess(statusCode: Int, body: String) = {
+    val input = parseBody[rest_gateway_test.api.model.TestRequestB](body)
+    toResponse(input, client.process, statusCode)
+  }
 
-private def dispatchUpdate(statusCode: Int, body: String) = {
-  val input = parseBody[rest_gateway_test.api.model.TestRequestB](body)
-  toResponse(input, client.update, statusCode)
-}
-
+  private def dispatchUpdate(statusCode: Int, body: String) = {
+    val input = parseBody[rest_gateway_test.api.model.TestRequestB](body)
+    toResponse(input, client.update, statusCode)
+  }
 }
 ----
 
@@ -509,8 +508,7 @@ import pekko.http.scaladsl.server.Directives._
 import scala.concurrent.ExecutionContext
 import scala.util.Try
 
-class TestServiceBGatewayHandler(settings: GrpcClientSettings)(implicit sys: ClassicActorSystemProvider)
-  extends GrpcGatewayHandler {
+class TestServiceBGatewayHandler(settings: GrpcClientSettings)(implicit sys: ClassicActorSystemProvider) extends GrpcGatewayHandler {
 
   private implicit val ec: ExecutionContext = sys.classicSystem.dispatcher
   private lazy val client = TestServiceBClient(settings)
@@ -524,51 +522,50 @@ class TestServiceBGatewayHandler(settings: GrpcClientSettings)(implicit sys: Cla
               pathEnd {
                 concat(
                   get {
-                      parameterMultiMap { queryParameters =>
-                        dispatchGetRequest(200, queryParameters)
-                      }
+                    parameterMultiMap { queryParameters =>
+                      dispatchGetRequest(200, queryParameters)
+                    }
                   },
                   post {
-                      entity(as[String]) { body =>
-                        dispatchProcess(200, body)
-                      }
+                    entity(as[String]) { body =>
+                      dispatchProcess(200, body)
+                    }
                   }
-                  )
+                )
               },
               pathPrefix("update") {
                 pathEnd {
                   put {
-                      entity(as[String]) { body =>
-                        dispatchUpdate(204, body)
-                      }
+                    entity(as[String]) { body =>
+                      dispatchUpdate(204, body)
+                    }
                   }
                 }
-                }
+              }
             )
-            }
           }
         }
       }
-
-    private def dispatchGetRequest(statusCode: Int, parameters: Map[String, Seq[String]]) = {
-      val input = Try {
-        val requestId = parameters.toLongValue("requestId")
-        rest_gateway_test.api.model.TestRequestB(requestId = requestId)
-      }
-      completeResponse(input, client.getRequest, statusCode)
     }
 
-    private def dispatchProcess(statusCode: Int, body: String) = {
-      val input = parseBody[rest_gateway_test.api.model.TestRequestB](body)
-      completeResponse(input, client.process, statusCode)
+  private def dispatchGetRequest(statusCode: Int, parameters: Map[String, Seq[String]]) = {
+    val input = Try {
+      val requestId = parameters.toLongValue("requestId")
+      rest_gateway_test.api.model.TestRequestB(requestId = requestId)
     }
-
-    private def dispatchUpdate(statusCode: Int, body: String) = {
-      val input = parseBody[rest_gateway_test.api.model.TestRequestB](body)
-      completeResponse(input, client.update, statusCode)
-    }
-
+    completeResponse(input, client.getRequest, statusCode)
   }
+
+  private def dispatchProcess(statusCode: Int, body: String) = {
+    val input = parseBody[rest_gateway_test.api.model.TestRequestB](body)
+    completeResponse(input, client.process, statusCode)
+  }
+
+  private def dispatchUpdate(statusCode: Int, body: String) = {
+    val input = parseBody[rest_gateway_test.api.model.TestRequestB](body)
+    completeResponse(input, client.update, statusCode)
+  }
+}
 
 object TestServiceBGatewayHandler {
 

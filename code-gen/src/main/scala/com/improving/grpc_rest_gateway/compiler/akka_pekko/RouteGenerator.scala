@@ -41,6 +41,7 @@ private class RouteGenerator(implicits: DescriptorImplicits, methods: List[Metho
         generateRouteTree(treeNode, index, totalRootNodes, parentHasMethods = false)(p)
       }
       .when(totalRootNodes > 1)(_.outdent.add(")"))
+      .outdent
       .add("}")
 
   private def generateRouteTree(
@@ -71,10 +72,10 @@ private class RouteGenerator(implicits: DescriptorImplicits, methods: List[Metho
       .print(children) { case (p, (childNode, index)) =>
         generateRouteTree(childNode, index, totalChildPaths, hasMethods)(p)
       }
-      .when(concatRoute)(_.outdent.add(")"))
+      .outdent
+      .when(concatRoute)(_.add(")").outdent)
       .when(totalPaths > 1 && !isLastChild)(_.add("},"))
       .when(isLastChild)(_.add("}"))
-      .outdent
   }
 
   private def generateMethods(methodInfos: List[MethodInfo[MethodDescriptor]], hasChildPaths: Boolean): PrinterEndo = {
@@ -87,10 +88,8 @@ private class RouteGenerator(implicits: DescriptorImplicits, methods: List[Metho
         .when(totalMethods > 1)(_.add("concat(").indent)
         .print(methods) { case (p, (methodInfo, index)) => generateMethod(methodInfo, index, totalMethods)(p) }
         .when(totalMethods > 1)(_.outdent.add(")"))
-        .when(hasChildPaths)(_.add("},"))
-        .when(!hasChildPaths)(_.add("}"))
-        .outdent
-
+        .when(hasChildPaths)(_.outdent.add("},"))
+        .when(!hasChildPaths)(_.outdent.add("}"))
   }
 
   private def generateMethod(
@@ -199,14 +198,12 @@ private class RouteGenerator(implicits: DescriptorImplicits, methods: List[Metho
     val hasParameters = body.isBlank || body != "*"
     if (hasParameters) {
       printer
-        .indent
         .add("parameterMultiMap { queryParameters =>")
         .indent
         .call(mergeParameters(fullPath, body, methodName, statusCode, hasParameters))
         .outdent
         .add("}")
-        .outdent
-    } else printer.indent.call(generateBodyIfApplicable(body, methodName, "", statusCode, hasParameters)).outdent
+    } else printer.call(generateBodyIfApplicable(body, methodName, "", statusCode, hasParameters))
   }
 
   private def mergeParameters(
