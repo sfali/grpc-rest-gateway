@@ -48,15 +48,11 @@ class GatewayHandlerPrinter(packageNamePrefix: String, service: ServiceDescripto
       .newline
       .call(generateService)
       .newline
-      .outdent
       .call(generateCompanionObject)
       .result()
 
   private def generateService: PrinterEndo =
-    _.add(s"class $handlerClassName(settings: GrpcClientSettings)(implicit sys: ClassicActorSystemProvider)")
-      .indent
-      .add("extends GrpcGatewayHandler {")
-      .outdent
+    _.add(s"class $handlerClassName(settings: GrpcClientSettings)(implicit sys: ClassicActorSystemProvider) extends GrpcGatewayHandler {")
       .newline
       .indent
       .add("private implicit val ec: ExecutionContext = sys.classicSystem.dispatcher")
@@ -64,8 +60,7 @@ class GatewayHandlerPrinter(packageNamePrefix: String, service: ServiceDescripto
       .add(s"""override val specificationName: String = "$specificationName"""")
       .newline
       .call(RouteGenerator(implicits, methods))
-      .outdent
-      .newline
+      .outdent // do we have an extra indent somewhere?
       .call(GenerateDelegateFunctions(implicits, "completeResponse", methods))
       .outdent
       .add("}")

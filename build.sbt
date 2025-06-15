@@ -2,6 +2,15 @@ import SettingsHelper.*
 import Dependencies.*
 import ReleaseTransformations.*
 
+lazy val api = (project in file("api"))
+  .configure(commonSettings)
+  .settings(
+    name := "grpc-rest-gateway-api-proto",
+    publish / skip := true,
+    scalacOptions ++= (if (isScala3.value) Seq("future", "-explain")
+                       else Seq("-Xsource:3"))
+  )
+
 lazy val `runtime-core` = (projectMatrix in file("runtime-core"))
   .configure(commonSettings)
   .configure(configureBuildInfo("com.improving.grpc_rest_gateway.runtime.core"))
@@ -58,6 +67,20 @@ lazy val `runtime-akka` = (projectMatrix in file("runtime-akka"))
   .jvmPlatform(scalaVersions = Seq(V.Scala212, V.Scala213, V.Scala3))
   .dependsOn(`runtime-core`)
 
+lazy val annotations = (projectMatrix in file("annotations"))
+  .configure(commonSettings)
+  .defaultAxes()
+  .settings(
+    name := "grpc-rest-gateway-annotations",
+    libraryDependencies ++= ApiDependencies,
+    (Compile / PB.protoSources) += (api / baseDirectory).value / "src" / "main" / "protobuf",
+    Compile / PB.targets := Seq(
+      PB.gens.java(V.Protobuf) -> (Compile / sourceManaged).value,
+      scalapb.gen() -> (Compile / sourceManaged).value
+    )
+  )
+  .jvmPlatform(scalaVersions = Seq(V.Scala212, V.Scala213, V.Scala3))
+
 lazy val codeGen = (projectMatrix in file("code-gen"))
   .configure(commonSettings)
   .configure(configureBuildInfo("com.improving.grpc_rest_gateway.compiler"))
@@ -69,6 +92,7 @@ lazy val codeGen = (projectMatrix in file("code-gen"))
                        else Seq("-Xsource:3"))
   )
   .jvmPlatform(scalaVersions = Seq(V.Scala212, V.Scala213, V.Scala3))
+  .dependsOn(annotations)
 
 lazy val codeGenJVM212 = codeGen.jvm(V.Scala212)
 
@@ -98,7 +122,7 @@ lazy val `e2e-api` = (project in file("e2e-api"))
 
 lazy val `e2e-netty` = (projectMatrix in file("e2e-netty"))
   .configure(commonSettings)
-  .dependsOn(`runtime-netty`, `e2e-core`)
+  .dependsOn(annotations, `runtime-netty`, `e2e-core`)
   .enablePlugins(LocalCodeGenPlugin)
   .defaultAxes()
   .customRow(
@@ -146,7 +170,7 @@ lazy val `e2e-netty` = (projectMatrix in file("e2e-netty"))
 
 lazy val `e2e-pekko` = (projectMatrix in file("e2e-pekko"))
   .configure(commonSettings)
-  .dependsOn(`runtime-pekko`, `e2e-core`)
+  .dependsOn(annotations, `runtime-pekko`, `e2e-core`)
   .enablePlugins(PekkoGrpcPlugin, LocalCodeGenPlugin)
   .defaultAxes()
   .customRow(
@@ -176,6 +200,7 @@ lazy val `e2e-pekko` = (projectMatrix in file("e2e-pekko"))
     libraryDependencies ++= E2EPekkoDependencies,
     /*scalacOptions ++= (if (isScala3.value) Seq("-source", "future")
                        else Seq("-Xsource:3")),*/
+    (Compile / PB.protoSources) += (api / baseDirectory).value / "src" / "main" / "protobuf",
     (Compile / PB.protoSources) += (`e2e-api` / baseDirectory).value / "src" / "main" / "protobuf",
     pekkoGrpcGeneratedLanguages := Seq(PekkoGrpc.Scala),
     pekkoGrpcGeneratedSources := Seq(PekkoGrpc.Client, PekkoGrpc.Server),
@@ -226,9 +251,9 @@ lazy val `grpc-rest-gateway` =
         pushChanges
       )
     )
-    .aggregate(protocGenGrpcRestGatewayPlugin.agg)
+    .aggregate(api, protocGenGrpcRestGatewayPlugin.agg)
     .aggregate(
-      (codeGen.projectRefs ++ `runtime-core`.projectRefs ++ `runtime-netty`.projectRefs ++
+      (annotations.projectRefs ++ codeGen.projectRefs ++ `runtime-core`.projectRefs ++ `runtime-netty`.projectRefs ++
         `runtime-pekko`.projectRefs ++ `runtime-akka`.projectRefs)*
     )
 

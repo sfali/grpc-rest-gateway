@@ -43,9 +43,9 @@ abstract class GrpcGatewayHandler(channel: ManagedChannel)(implicit ec: Executio
     * @param body
     *   request body
     * @return
-    *   result of the gRPC call
+    *   tuple containing status code and result of the gRPC call
     */
-  protected def dispatchCall(method: HttpMethod, uri: String, body: String): Future[GeneratedMessage]
+  protected def dispatchCall(method: HttpMethod, uri: String, body: String): Future[(Int, GeneratedMessage)]
 
   // TODO: figure out how to cross compile and pattern match
   override def channelRead(ctx: ChannelHandlerContext, msg: scala.Any): Unit =
@@ -55,12 +55,15 @@ abstract class GrpcGatewayHandler(channel: ManagedChannel)(implicit ec: Executio
         val body = req.content().toString(StandardCharsets.UTF_8)
 
         dispatchCall(req.method(), req.uri(), body)
-          .map(JsonFormat.toJsonString)
-          .map { json =>
+          .map { case (statusCode, msg) =>
+            (statusCode, JsonFormat.toJsonString(msg))
+          }
+          .map { case (statusCode, json) =>
+            val status = HttpResponseStatus.valueOf(statusCode)
             buildFullHttpResponse(
               requestMsg = req,
-              responseBody = json,
-              responseStatus = HttpResponseStatus.OK,
+              responseBody = if (HttpResponseStatus.NO_CONTENT == status) "" else json,
+              responseStatus = status,
               responseContentType = "application/json"
             )
           }

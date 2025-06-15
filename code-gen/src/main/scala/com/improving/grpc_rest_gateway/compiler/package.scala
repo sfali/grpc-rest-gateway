@@ -4,6 +4,8 @@ package grpc_rest_gateway
 import com.google.api.{AnnotationsProto, HttpRule}
 import com.google.api.HttpRule.PatternCase
 import com.google.protobuf.Descriptors.{MethodDescriptor, ServiceDescriptor}
+import com.improving.grpc_rest_gateway.api.GrpcRestGatewayProto
+import com.improving.grpc_rest_gateway.api.GrpcRestGatewayProto.StatusDescription
 
 import scala.jdk.CollectionConverters.*
 
@@ -42,4 +44,33 @@ package object compiler {
       // only unary calls with http method specified
       !m.isClientStreaming && !m.isServerStreaming && m.getOptions.hasExtension(AnnotationsProto.http)
     }
+
+  def getSuccessStatusCode(md: MethodDescriptor): Int = {
+    getStatusDescriptions(md).head.getStatus
+    val statusDescription =
+      if (md.getOptions.hasExtension(GrpcRestGatewayProto.statuses)) {
+        val statuses = md.getOptions.getExtension(GrpcRestGatewayProto.statuses)
+        if (statuses.hasSuccessStatus) {
+          statuses.getSuccessStatus
+        } else StatusDescription.getDefaultInstance
+      } else StatusDescription.getDefaultInstance
+
+    val value = statusDescription.getStatus
+    if (value <= 0) 200 else value
+  }
+
+  def getStatusDescriptions(md: MethodDescriptor): Seq[StatusDescription] = {
+    lazy val defaultSuccessStatus =
+      StatusDescription.newBuilder().setStatus(200).setDescription("successful operation").build()
+
+    if (md.getOptions.hasExtension(GrpcRestGatewayProto.statuses)) {
+      val statuses = md.getOptions.getExtension(GrpcRestGatewayProto.statuses)
+      val successStatus =
+        if (statuses.hasSuccessStatus) {
+          statuses.getSuccessStatus
+        } else defaultSuccessStatus
+
+      successStatus +: statuses.getOtherStatusList.asScala.toList
+    } else Seq(defaultSuccessStatus)
+  }
 }

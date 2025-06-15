@@ -13,7 +13,7 @@ import scala.jdk.CollectionConverters.*
 
 class GenerateDelegateFunctions private[utils] (
   implicits: DescriptorImplicits,
-  dispatchFunctionName: String,
+  responseFunctionName: String,
   methods: List[MethodDescriptor]) {
   import implicits.*
   import GenerateDelegateFunctions.*
@@ -52,17 +52,17 @@ class GenerateDelegateFunctions private[utils] (
     httpMethod match {
       case PatternCase.GET | PatternCase.DELETE | PatternCase.PATCH =>
         printer
-          .add(s"""private def $delegateFunctionName(parameters: Map[String, Seq[String]]) = {""")
+          .newline
+          .add(s"""private def $delegateFunctionName(statusCode: Int, parameters: Map[String, Seq[String]]) = {""")
           .indent
           .add("val input = Try {")
           .indent
           .call(generateInputFromQueryString(method.getInputType, serviceFunctionName, required = true))
           .outdent
           .add("}")
-          .add(s"$dispatchFunctionName(input, client.$methodName)")
+          .add(s"$responseFunctionName(input, client.$methodName, statusCode)")
           .outdent
           .add("}")
-          .newline
       case PatternCase.PUT | PatternCase.POST =>
         printer.call(
           generateBodyParam(
@@ -114,15 +114,15 @@ class GenerateDelegateFunctions private[utils] (
     if (body.nonEmpty) {
       if (body == "*") {
         printer
-          .add(s"""private def $delegateFunctionName(body: String) = {""")
+          .newline
+          .add(s"""private def $delegateFunctionName(statusCode: Int, body: String) = {""")
           .indent
           .add(
             s"val input = parseBody[$serviceFunctionName](body)"
           )
-          .add(s"$dispatchFunctionName(input, client.$methodName)")
+          .add(s"$responseFunctionName(input, client.$methodName, statusCode)")
           .outdent
           .add("}")
-          .newline
       } else {
         val inputTypeDescriptor = method.getInputType
         val maybeDescriptor = inputTypeDescriptor.getFields.asScala.find(_.getName == body)
@@ -134,7 +134,10 @@ class GenerateDelegateFunctions private[utils] (
             val args =
               inputTypeDescriptor.getFields.asScala.map(f => s"${f.getJsonName} = ${f.getJsonName}").mkString(", ")
             printer
-              .add(s"""private def $delegateFunctionName(body: String, parameters: Map[String, Seq[String]]) = {""")
+              .newline
+              .add(
+                s"""private def $delegateFunctionName(statusCode: Int, body: String, parameters: Map[String, Seq[String]]) = {"""
+              )
               .indent
               .when(optional)(_.add(s"val parsedBody = parseBodyOptional[$bodyFullType](body)"))
               .when(!optional)(_.add(s"val parsedBody = parseBody[$bodyFullType](body)"))
@@ -145,10 +148,9 @@ class GenerateDelegateFunctions private[utils] (
               .add(s"$serviceFunctionName($args)")
               .outdent
               .add("}")
-              .add(s"$dispatchFunctionName(input, client.$methodName)")
+              .add(s"$responseFunctionName(input, client.$methodName, statusCode)")
               .outdent
               .add("}")
-              .newline
           case None =>
             throw new RuntimeException(
               s"Unable to determine body type for input: $serviceFunctionName, body: $body, method: $methodName"
@@ -287,10 +289,10 @@ class GenerateDelegateFunctions private[utils] (
 object GenerateDelegateFunctions {
   def apply(
     implicits: DescriptorImplicits,
-    dispatchFunctionName: String,
+    responseFunctionName: String,
     methods: List[MethodDescriptor]
   ): PrinterEndo =
-    new GenerateDelegateFunctions(implicits, dispatchFunctionName, methods).generateMethodHandlerDelegates
+    new GenerateDelegateFunctions(implicits, responseFunctionName, methods).generateMethodHandlerDelegates
 
   def generateDelegateFunctionName(methodName: String): String = s"dispatch$methodName"
 }
