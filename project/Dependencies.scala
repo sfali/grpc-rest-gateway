@@ -6,7 +6,7 @@ object Dependencies {
     val Akka = "2.6.20"
     val AkkaGrpc = "2.1.6"
     val AkkaHttp = "10.2.10"
-    val CommonsIo = "2.19.0"
+    val CommonsIo = "2.20.0"
     val CommonProtos = "2.9.6-0"
     val GrpcJava: String = scalapb.compiler.Version.grpcJavaVersion
     val JavaActivation = "1.1.1"
@@ -19,12 +19,12 @@ object Dependencies {
     val Scala212 = "2.12.20"
     val Scala3 = "3.5.2"
     val ScalaPb: String = scalapb.compiler.Version.scalapbVersion
-    val ScalaPbJson = "0.12.1"
+    val ScalaPbJson = "0.12.2"
     val ScalaTest = "3.2.19"
     val Slf4j = "2.0.17"
-    val Sttp = "3.10.3"
-    val SwaggerUi = "5.22.0"
-    val TypesafeConfig = "1.4.3"
+    val Sttp = "3.11.0"
+    val SwaggerUi = "5.28.1"
+    val TypesafeConfig = "1.4.5"
   }
 
   val CodegenDependencies: Seq[ModuleID] = Seq(
