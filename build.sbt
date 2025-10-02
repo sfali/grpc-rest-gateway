@@ -247,7 +247,8 @@ lazy val `grpc-rest-gateway` =
         tagRelease,
         publishArtifacts,
         releaseStepCommand("publishSigned"),
-        releaseStepCommand("sonatypeBundleRelease"),
+        releaseStepCommand("sonaUpload"),
+        releaseStepCommand("sonaRelease"),
         pushChanges
       )
     )

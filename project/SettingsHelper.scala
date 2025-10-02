@@ -1,7 +1,7 @@
 import Dependencies.V.Scala213
 import com.awwsmm.sbt.DependencyUpdaterPlugin
 import org.scalafmt.sbt.ScalafmtPlugin
-import sbt.{Compile, Def, Global, Project, ThisBuild, url}
+import sbt.{Compile, Def, Global, Project, ThisBuild, sbtSlashSyntaxRichScope, url}
 import sbt.Keys.*
 import sbt.librarymanagement.ivy.Credentials
 import sbt.librarymanagement.{CrossVersion, Developer, ScmInfo}
@@ -26,16 +26,14 @@ object SettingsHelper {
         ThisBuild / organization := "io.github.sfali23",
         ThisBuild / scalaVersion := Scala213,
         ThisBuild / versionScheme := Some("semver-spec"),
-        ThisBuild / sonatypeRepository := "https://central.sonatype.com",
         ThisBuild / sonatypeCredentialHost := sonatypeCentralHost,
-        ThisBuild / sbtPluginPublishLegacyMavenStyle := false,
         ThisBuild / credentials += Credentials(
-          realm = "Sonatype Nexus Repository Manager",
-          host = "central.sonatype.com",
+          realm = "Sonatype Central Repository",
+          host = sonatypeCentralHost,
           userName = System.getenv("SONATYPE_USERNAME"),
           passwd = System.getenv("SONATYPE_PASSWORD")
         ),
-        ThisBuild / publishTo := sonatypePublishToBundle.value,
+        ThisBuild / publishTo := localStaging.value,
         ThisBuild / sonatypeProjectHosting := Some(
           GitHubHosting(
             "sfali",
