@@ -26,11 +26,12 @@ object SettingsHelper {
         ThisBuild / organization := "io.github.sfali23",
         ThisBuild / scalaVersion := Scala213,
         ThisBuild / versionScheme := Some("semver-spec"),
-        ThisBuild / sonatypeRepository := "https://s01.oss.sonatype.org/service/local",
-        ThisBuild / sonatypeCredentialHost := "s01.oss.sonatype.org",
+        ThisBuild / sonatypeRepository := "https://central.sonatype.com",
+        ThisBuild / sonatypeCredentialHost := sonatypeCentralHost,
+        ThisBuild / sbtPluginPublishLegacyMavenStyle := false,
         ThisBuild / credentials += Credentials(
           realm = "Sonatype Nexus Repository Manager",
-          host = "s01.oss.sonatype.org",
+          host = "central.sonatype.com",
           userName = System.getenv("SONATYPE_USERNAME"),
           passwd = System.getenv("SONATYPE_PASSWORD")
         ),
