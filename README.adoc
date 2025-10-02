@@ -2,7 +2,7 @@
 :sectnums:
 :toc:
 :toclevels: 4
-:app-version: 0.8.10
+:app-version: 0.8.11
 :scalapb-version: 0.11.8
 :sbt-protoc-version: 1.0.8
 
