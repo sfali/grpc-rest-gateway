@@ -12,4 +12,3 @@ addSbtPlugin("io.github.sfali23" % "sbt-semver-release" % "0.5.3")
 addDependencyTreePlugin
 
 libraryDependencies ++= Seq("com.thesamet.scalapb" %% "compilerplugin" % "0.11.20")
-resolvers += "Sonatype OSS" at "https://s01.oss.sonatype.org/content/groups/public/"
