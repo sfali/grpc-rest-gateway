@@ -6,7 +6,7 @@ object Dependencies {
     val Akka = "2.6.20"
     val AkkaGrpc = "2.1.6"
     val AkkaHttp = "10.2.10"
-    val CommonsIo = "2.20.0"
+    val CommonsIo = "2.21.0"
     val CommonProtos = "2.9.6-0"
     val GrpcJava: String = scalapb.compiler.Version.grpcJavaVersion
     val JavaActivation = "1.1.1"
@@ -15,16 +15,16 @@ object Dependencies {
     val PekkoGrpc = "1.1.1"
     val PekkoHttp = "1.1.0"
     val Protobuf: String = scalapb.compiler.Version.protobufVersion
-    val Scala213 = "2.13.16"
-    val Scala212 = "2.12.20"
-    val Scala3 = "3.5.2"
+    val Scala213 = "2.13.18"
+    val Scala212 = "2.12.21"
+    val Scala3 = "3.8.2"
     val ScalaPb: String = scalapb.compiler.Version.scalapbVersion
     val ScalaPbJson = "0.12.2"
     val ScalaTest = "3.2.19"
     val Slf4j = "2.0.17"
     val Sttp = "3.11.0"
-    val SwaggerUi = "5.28.1"
-    val TypesafeConfig = "1.4.5"
+    val SwaggerUi = "5.32.0"
+    val TypesafeConfig = "1.4.6"
   }
 
   val CodegenDependencies: Seq[ModuleID] = Seq(

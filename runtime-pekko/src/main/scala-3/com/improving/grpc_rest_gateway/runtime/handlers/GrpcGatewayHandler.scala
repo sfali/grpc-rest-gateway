@@ -5,9 +5,10 @@ package handlers
 
 import runtime.core.*
 import io.grpc.Status.Code
-import akka.http.scaladsl.server.Directives.*
-import akka.http.scaladsl.server.{ExceptionHandler, Route}
-import akka.http.scaladsl.model.*
+import org.apache.pekko
+import pekko.http.scaladsl.server.Directives.*
+import pekko.http.scaladsl.server.{ExceptionHandler, Route}
+import pekko.http.scaladsl.model.*
 import scalapb.GeneratedMessage
 import scalapb.json4s.JsonFormat
 
@@ -51,12 +52,12 @@ trait GrpcGatewayHandler {
     in: Try[IN],
     dispatchCall: IN => Future[OUT],
     statusCodeValue: Int
-  )(implicit
+  )(using
     ec: ExecutionContext
   ): Route = {
     val statusCode = getStatusCode(statusCodeValue)
     val eventualResponse =
-      toResponse(in, dispatchCall, statusCodeValue, ec)
+      toResponse(in, dispatchCall, statusCodeValue)
         .map(_._2)
         .map(toHttpResponse(statusCode))
     onComplete(eventualResponse) {

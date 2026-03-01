@@ -18,8 +18,18 @@ lazy val `runtime-core` = (projectMatrix in file("runtime-core"))
   .settings(
     name := "grpc-rest-gateway-runtime-core",
     libraryDependencies ++= RuntimeCoreDependencies,
-    scalacOptions ++= (if (isScala3.value) Seq("-source", "future", "-explain")
-                       else Seq("-Xsource:3"))
+    scalacOptions ++= (if (isScala3.value) Seq("-source", "future", "-explain", "-Wconf:any:s")
+                       else Seq("-Xsource:3")),
+    // Add version-specific source directories
+    Compile / unmanagedSourceDirectories += {
+      val sourceDir = (Compile / scalaSource).value
+      CrossVersion.partialVersion(scalaVersion.value) match {
+        case Some((2, 12)) => sourceDir.getParentFile / "scala-2.12"
+        case Some((2, 13)) => sourceDir.getParentFile / "scala-2.13"
+        case Some((3, _))  => sourceDir.getParentFile / "scala-3"
+        case _ => sourceDir
+      }
+    }
   )
   .jvmPlatform(scalaVersions = Seq(V.Scala212, V.Scala213, V.Scala3))
 
@@ -31,7 +41,17 @@ lazy val `runtime-netty` = (projectMatrix in file("runtime-netty"))
     name := "grpc-rest-gateway-runtime-netty",
     libraryDependencies ++= RuntimeDependencies,
     scalacOptions ++= (if (isScala3.value) Seq("-source", "future", "-explain")
-                       else Seq("-Xsource:3"))
+                       else Seq("-Xsource:3")),
+    // Add version-specific source directories
+    Compile / unmanagedSourceDirectories += {
+      val sourceDir = (Compile / scalaSource).value
+      CrossVersion.partialVersion(scalaVersion.value) match {
+        case Some((2, 12)) => sourceDir.getParentFile / "scala-2.12"
+        case Some((2, 13)) => sourceDir.getParentFile / "scala-2.13"
+        case Some((3, _))  => sourceDir.getParentFile / "scala-3"
+        case _ => sourceDir
+      }
+    }
   )
   .jvmPlatform(scalaVersions = Seq(V.Scala212, V.Scala213, V.Scala3))
   .dependsOn(`runtime-core`)
@@ -112,7 +132,17 @@ lazy val `e2e-core` = (projectMatrix in file("e2e-core"))
     publish / skip := true,
     libraryDependencies ++= E2ECore,
     scalacOptions ++= (if (isScala3.value) Seq("-source", "future")
-                       else Seq("-Xsource:3"))
+                       else Seq("-Xsource:3")),
+    // Add version-specific source directories
+    Compile / unmanagedSourceDirectories += {
+      val sourceDir = (Compile / scalaSource).value
+      CrossVersion.partialVersion(scalaVersion.value) match {
+        case Some((2, 12)) => sourceDir.getParentFile / "scala-2.12"
+        case Some((2, 13)) => sourceDir.getParentFile / "scala-2.13"
+        case Some((3, _))  => sourceDir.getParentFile / "scala-3"
+        case _ => sourceDir
+      }
+    }
   )
   .jvmPlatform(scalaVersions = Seq(V.Scala212, V.Scala213, V.Scala3))
 
@@ -130,7 +160,17 @@ lazy val `e2e-netty` = (projectMatrix in file("e2e-netty"))
     axisValues = Seq(VirtualAxis.jvm),
     settings = Seq(
       Test / unmanagedSourceDirectories += (Test / scalaSource).value.getParentFile / "jvm-2.12",
-      Compile / PB.targets ++= Seq(scalapb.gen() -> (Compile / sourceManaged).value / "scalapb")
+      // Override the gateway generator for Scala 2.12 without scala3_sources
+      Compile / PB.targets := Seq(
+        scalapb.gen() -> (Compile / sourceManaged).value / "scalapb",
+        (
+          genModule("com.improving.grpc_rest_gateway.compiler.GatewayGenerator$"),
+          Seq("implementation_type:netty")
+        ) -> (Compile / sourceManaged).value / "scalapb",
+        genModule(
+          "com.improving.grpc_rest_gateway.compiler.OpenApiGenerator$"
+        ) -> (Compile / resourceDirectory).value / "specs"
+      )
     )
   )
   .customRow(
@@ -138,7 +178,17 @@ lazy val `e2e-netty` = (projectMatrix in file("e2e-netty"))
     axisValues = Seq(VirtualAxis.jvm),
     settings = Seq(
       Test / unmanagedSourceDirectories += (Test / scalaSource).value.getParentFile / "jvm-2.13",
-      Compile / PB.targets ++= Seq(scalapb.gen(scala3Sources = true) -> (Compile / sourceManaged).value / "scalapb")
+      // Override the gateway generator for Scala 2.13 without scala3_sources
+      Compile / PB.targets := Seq(
+        scalapb.gen(scala3Sources = true) -> (Compile / sourceManaged).value / "scalapb",
+        (
+          genModule("com.improving.grpc_rest_gateway.compiler.GatewayGenerator$"),
+          Seq("implementation_type:netty")
+        ) -> (Compile / sourceManaged).value / "scalapb",
+        genModule(
+          "com.improving.grpc_rest_gateway.compiler.OpenApiGenerator$"
+        ) -> (Compile / resourceDirectory).value / "specs"
+      )
     )
   )
   .customRow(
@@ -146,20 +196,31 @@ lazy val `e2e-netty` = (projectMatrix in file("e2e-netty"))
     axisValues = Seq(VirtualAxis.jvm),
     settings = Seq(
       Test / unmanagedSourceDirectories += (Test / scalaSource).value.getParentFile / "jvm-3",
-      Compile / PB.targets ++= Seq(scalapb.gen(scala3Sources = true) -> (Compile / sourceManaged).value / "scalapb")
+      // Override the gateway generator to include scala3_sources for Scala 3
+      Compile / PB.targets := Seq(
+        scalapb.gen(scala3Sources = true) -> (Compile / sourceManaged).value / "scalapb",
+        (
+          genModule("com.improving.grpc_rest_gateway.compiler.GatewayGenerator$"),
+          Seq("scala3_sources", "implementation_type:netty")
+        ) -> (Compile / sourceManaged).value / "scalapb",
+        genModule(
+          "com.improving.grpc_rest_gateway.compiler.OpenApiGenerator$"
+        ) -> (Compile / resourceDirectory).value / "specs"
+      )
     )
   )
   .settings(
     publish / skip := true,
     codeGenClasspath := (codeGenJVM212 / Compile / fullClasspath).value,
     libraryDependencies ++= E2ENettyDependencies,
-    scalacOptions ++= (if (isScala3.value) Seq("-source", "future")
+    scalacOptions ++= (if (isScala3.value) Seq()
+                       else if (scalaBinaryVersion.value == "2.13") Seq("-Xsource:3", "-Xsource-features:eta-expand-always")
                        else Seq("-Xsource:3")),
     (Compile / PB.protoSources) += (`e2e-api` / baseDirectory).value / "src" / "main" / "protobuf",
     Compile / PB.targets := Seq(
       (
         genModule("com.improving.grpc_rest_gateway.compiler.GatewayGenerator$"),
-        Seq("scala3_sources", "implementation_type:netty")
+        Seq("implementation_type:netty")
       ) -> (Compile / sourceManaged).value / "scalapb",
       genModule(
         "com.improving.grpc_rest_gateway.compiler.OpenApiGenerator$"
@@ -177,21 +238,72 @@ lazy val `e2e-pekko` = (projectMatrix in file("e2e-pekko"))
     scalaVersions = Seq(V.Scala212),
     axisValues = Seq(VirtualAxis.jvm),
     settings = Seq(
-      Test / unmanagedSourceDirectories += (Test / scalaSource).value.getParentFile / "jvm-2.12"
+      Test / unmanagedSourceDirectories += (Test / scalaSource).value.getParentFile / "jvm-2.12",
+      // Add custom gateway generator to pekko-grpc targets
+      Compile / PB.targets ++= Seq(
+        (
+          genModule("com.improving.grpc_rest_gateway.compiler.GatewayGenerator$"),
+          Seq("implementation_type:pekko")
+        ) -> crossTarget.value / "pekko-grpc" / "main",
+        (
+          genModule(
+            "com.improving.grpc_rest_gateway.compiler.OpenApiGenerator$"
+          ),
+          Seq()
+        ) -> (Compile / resourceManaged).value / "specs"
+      ),
+      // Add pekko-grpc targets
+      pekkoGrpcCodeGeneratorSettings := Seq("grpc", "single_line_to_proto_string"),
+      pekkoGrpcGeneratedLanguages := Seq(PekkoGrpc.Scala),
+      pekkoGrpcGeneratedSources := Seq(PekkoGrpc.Client, PekkoGrpc.Server)
     )
   )
   .customRow(
     scalaVersions = Seq(V.Scala213),
     axisValues = Seq(VirtualAxis.jvm),
     settings = Seq(
-      Test / unmanagedSourceDirectories += (Test / scalaSource).value.getParentFile / "jvm-2.13"
+      Test / unmanagedSourceDirectories += (Test / scalaSource).value.getParentFile / "jvm-2.13",
+      // Add custom gateway generator to pekko-grpc targets
+      Compile / PB.targets ++= Seq(
+        (
+          genModule("com.improving.grpc_rest_gateway.compiler.GatewayGenerator$"),
+          Seq("implementation_type:pekko")
+        ) -> crossTarget.value / "pekko-grpc" / "main",
+        (
+          genModule(
+            "com.improving.grpc_rest_gateway.compiler.OpenApiGenerator$"
+          ),
+          Seq()
+        ) -> (Compile / resourceManaged).value / "specs"
+      ),
+      // Add pekko-grpc targets
+      pekkoGrpcCodeGeneratorSettings := Seq("grpc", "single_line_to_proto_string"),
+      pekkoGrpcGeneratedLanguages := Seq(PekkoGrpc.Scala),
+      pekkoGrpcGeneratedSources := Seq(PekkoGrpc.Client, PekkoGrpc.Server)
     )
   )
   .customRow(
     scalaVersions = Seq(V.Scala3),
     axisValues = Seq(VirtualAxis.jvm),
     settings = Seq(
-      Test / unmanagedSourceDirectories += (Test / scalaSource).value.getParentFile / "jvm-3"
+      Test / unmanagedSourceDirectories += (Test / scalaSource).value.getParentFile / "jvm-3",
+      // Add custom gateway generator to pekko-grpc targets
+      Compile / PB.targets ++= Seq(
+        (
+          genModule("com.improving.grpc_rest_gateway.compiler.GatewayGenerator$"),
+          Seq("scala3_sources", "implementation_type:pekko")
+        ) -> crossTarget.value / "pekko-grpc" / "main",
+        (
+          genModule(
+            "com.improving.grpc_rest_gateway.compiler.OpenApiGenerator$"
+          ),
+          Seq()
+        ) -> (Compile / resourceManaged).value / "specs"
+      ),
+      // Add pekko-grpc targets
+      pekkoGrpcCodeGeneratorSettings := Seq("grpc", "single_line_to_proto_string"),
+      pekkoGrpcGeneratedLanguages := Seq(PekkoGrpc.Scala),
+      pekkoGrpcGeneratedSources := Seq(PekkoGrpc.Client, PekkoGrpc.Server)
     )
   )
   .settings(
@@ -202,28 +314,12 @@ lazy val `e2e-pekko` = (projectMatrix in file("e2e-pekko"))
                        else Seq("-Xsource:3")),*/
     (Compile / PB.protoSources) += (api / baseDirectory).value / "src" / "main" / "protobuf",
     (Compile / PB.protoSources) += (`e2e-api` / baseDirectory).value / "src" / "main" / "protobuf",
-    pekkoGrpcGeneratedLanguages := Seq(PekkoGrpc.Scala),
-    pekkoGrpcGeneratedSources := Seq(PekkoGrpc.Client, PekkoGrpc.Server),
-    pekkoGrpcCodeGeneratorSettings := Seq("grpc", "single_line_to_proto_string"),
     scalacOptions ++= Seq(
       "-Wconf:src=pekko-grpc/.*:silent" // Ignore warnings in classes generated by pekko-grpc
     ),
     Compile / resourceGenerators += (Compile / PB.generate)
       .map(_.filter(_.getName.endsWith("yml")))
-      .taskValue,
-    Compile / PB.targets ++= Seq(
-      (
-        genModule("com.improving.grpc_rest_gateway.compiler.GatewayGenerator$"),
-        Seq("implementation_type:pekko")
-      ) ->
-        crossTarget.value / "pekko-grpc" / "main",
-      (
-        genModule(
-          "com.improving.grpc_rest_gateway.compiler.OpenApiGenerator$"
-        ),
-        Seq()
-      ) -> (Compile / resourceManaged).value / "specs"
-    )
+      .taskValue
   )
   .jvmPlatform(scalaVersions = Seq(V.Scala212, V.Scala213, V.Scala3))
 

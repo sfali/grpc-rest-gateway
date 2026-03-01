@@ -6,7 +6,7 @@ package utils
 import com.google.api.HttpRule.PatternCase
 import com.google.protobuf.Descriptors.FieldDescriptor.JavaType
 import com.google.protobuf.Descriptors.{Descriptor, FieldDescriptor, MethodDescriptor}
-import scalapb.compiler.DescriptorImplicits
+import scalapb.compiler.{DescriptorImplicits, FunctionalPrinter}
 import scalapb.compiler.FunctionalPrinter.PrinterEndo
 
 import scala.jdk.CollectionConverters.*
@@ -14,9 +14,15 @@ import scala.jdk.CollectionConverters.*
 class GenerateDelegateFunctions private[utils] (
   implicits: DescriptorImplicits,
   responseFunctionName: String,
-  methods: List[MethodDescriptor]) {
+  methods: List[MethodDescriptor],
+  isScala3: Boolean = false,
+  responseFunctionUsesImplicit: Boolean = false
+) {
   import implicits.*
   import GenerateDelegateFunctions.*
+
+  // Helper methods for Scala 3 compatibility
+  private def usingClause(param: String): String = if (isScala3) s"(using $param)" else s"($param)"
 
   private def generateMethodHandlerDelegates: PrinterEndo = { printer =>
     methods.foldLeft(printer) { case (printer, method) =>
@@ -60,7 +66,16 @@ class GenerateDelegateFunctions private[utils] (
           .call(generateInputFromQueryString(method.getInputType, serviceFunctionName, required = true))
           .outdent
           .add("}")
-          .add(s"$responseFunctionName(input, client.$methodName, statusCode)")
+          .add {
+            if (responseFunctionUsesImplicit) {
+              // For implicit response functions, don't pass ec explicitly
+              s"$responseFunctionName(input, client.$methodName, statusCode)"
+            } else {
+              // For explicit response functions, pass ec as parameter
+              val ecParam = if (isScala3) ")" else ", ec)"
+              s"$responseFunctionName(input, client.$methodName, statusCode$ecParam"
+            }
+          }
           .outdent
           .add("}")
       case PatternCase.PUT | PatternCase.POST =>
@@ -120,7 +135,16 @@ class GenerateDelegateFunctions private[utils] (
           .add(
             s"val input = parseBody[$serviceFunctionName](body)"
           )
-          .add(s"$responseFunctionName(input, client.$methodName, statusCode)")
+          .add {
+            if (responseFunctionUsesImplicit) {
+              // For implicit response functions, don't pass ec explicitly
+              s"$responseFunctionName(input, client.$methodName, statusCode)"
+            } else {
+              // For explicit response functions, pass ec as parameter
+              val ecParam = if (isScala3) ")" else ", ec)"
+              s"$responseFunctionName(input, client.$methodName, statusCode$ecParam"
+            }
+          }
           .outdent
           .add("}")
       } else {
@@ -148,7 +172,16 @@ class GenerateDelegateFunctions private[utils] (
               .add(s"$serviceFunctionName($args)")
               .outdent
               .add("}")
-              .add(s"$responseFunctionName(input, client.$methodName, statusCode)")
+              .add {
+                if (responseFunctionUsesImplicit) {
+                  // For implicit response functions, don't pass ec explicitly
+                  s"$responseFunctionName(input, client.$methodName, statusCode)"
+                } else {
+                  // For explicit response functions, pass ec as parameter
+                  val ecParam = if (isScala3) ")" else ", ec)"
+                  s"$responseFunctionName(input, client.$methodName, statusCode$ecParam"
+                }
+              }
               .outdent
               .add("}")
           case None =>
@@ -201,47 +234,47 @@ class GenerateDelegateFunctions private[utils] (
 
         case JavaType.ENUM =>
           p.when(f.isRepeated)(
-            _.add(s"""val $jsonName = parameters.toEnumValues("$prefix$inputName", ${f.singleScalaTypeName})""")
+            _.add(s"""val $jsonName = ParametersOps.toEnumValues(parameters, "$prefix$inputName", ${f.singleScalaTypeName})""")
           ).when(!f.isRepeated)(
             _.add(
-              s"""val $jsonName = parameters.toEnumValue("$prefix$inputName", ${f.singleScalaTypeName})"""
+              s"""val $jsonName = ParametersOps.toEnumValue(parameters, "$prefix$inputName", ${f.singleScalaTypeName})"""
             )
           )
 
         case JavaType.BOOLEAN =>
-          if (f.isRepeated) p.add(s"""val $jsonName = parameters.toBooleanValues("$prefix$inputName")""")
+          if (f.isRepeated) p.add(s"""val $jsonName = ParametersOps.toBooleanValues(parameters, "$prefix$inputName")""")
           else
-            p.add(s"""val $jsonName = parameters.toBooleanValue("$prefix$inputName")""")
+            p.add(s"""val $jsonName = ParametersOps.toBooleanValue(parameters, "$prefix$inputName")""")
 
         case JavaType.DOUBLE =>
-          if (f.isRepeated) p.add(s"""val $jsonName = parameters.toDoubleValues("$prefix$inputName")""")
+          if (f.isRepeated) p.add(s"""val $jsonName = ParametersOps.toDoubleValues(parameters, "$prefix$inputName")""")
           else
-            p.when(required)(_.add(s"""val $jsonName = parameters.toDoubleValue("$prefix$inputName")"""))
-              .when(!required)(_.add(s"""val $jsonName = parameters.toDoubleValue("$prefix$inputName", "")"""))
+            p.when(required)(_.add(s"""val $jsonName = ParametersOps.toDoubleValue(parameters, "$prefix$inputName")"""))
+              .when(!required)(_.add(s"""val $jsonName = ParametersOps.toDoubleValue(parameters, "$prefix$inputName", "")"""))
 
         case JavaType.FLOAT =>
-          if (f.isRepeated) p.add(s"""val $jsonName = parameters.toFloatValues("$prefix$inputName")""")
+          if (f.isRepeated) p.add(s"""val $jsonName = ParametersOps.toFloatValues(parameters, "$prefix$inputName")""")
           else
-            p.when(required)(_.add(s"""val $jsonName = parameters.toFloatValue("$prefix$inputName")"""))
-              .when(!required)(_.add(s"""val $jsonName = parameters.toFloatValue("$prefix$inputName", "")"""))
+            p.when(required)(_.add(s"""val $jsonName = ParametersOps.toFloatValue(parameters, "$prefix$inputName")"""))
+              .when(!required)(_.add(s"""val $jsonName = ParametersOps.toFloatValue(parameters, "$prefix$inputName", "")"""))
 
         case JavaType.INT =>
           if (f.isRepeated)
-            p.add(s"""val $jsonName = parameters.toIntValues("$prefix$inputName")""")
+            p.add(s"""val $jsonName = ParametersOps.toIntValues(parameters, "$prefix$inputName")""")
           else
-            p.when(required)(_.add(s"""val $jsonName = parameters.toIntValue("$prefix$inputName")"""))
-              .when(!required)(_.add(s"""val $jsonName = parameters.toIntValue("$prefix$inputName", "")"""))
+            p.when(required)(_.add(s"""val $jsonName = ParametersOps.toIntValue(parameters, "$prefix$inputName")"""))
+              .when(!required)(_.add(s"""val $jsonName = ParametersOps.toIntValue(parameters, "$prefix$inputName", "")"""))
 
         case JavaType.LONG =>
-          if (f.isRepeated) p.add(s"""val $jsonName = parameters.toLongValues("$prefix$inputName")""")
+          if (f.isRepeated) p.add(s"""val $jsonName = ParametersOps.toLongValues(parameters, "$prefix$inputName")""")
           else
-            p.when(required)(_.add(s"""val $jsonName = parameters.toLongValue("$prefix$inputName")"""))
-              .when(!required)(_.add(s"""val $jsonName = parameters.toLongValue("$prefix$inputName", "")"""))
+            p.when(required)(_.add(s"""val $jsonName = ParametersOps.toLongValue(parameters, "$prefix$inputName")"""))
+              .when(!required)(_.add(s"""val $jsonName = ParametersOps.toLongValue(parameters, "$prefix$inputName", "")"""))
 
         case JavaType.STRING =>
-          if (f.isRepeated) p.add(s"""val $jsonName = parameters.toStringValues("$prefix$inputName")""")
+          if (f.isRepeated) p.add(s"""val $jsonName = ParametersOps.toStringValues(parameters, "$prefix$inputName")""")
           else
-            p.add(s"""val $jsonName = parameters.toStringValue("$prefix$inputName")""")
+            p.add(s"""val $jsonName = ParametersOps.toStringValue(parameters, "$prefix$inputName")""")
         case jt => throw new Exception(s"Unknown java type: $jt")
       }
     }
@@ -259,27 +292,27 @@ class GenerateDelegateFunctions private[utils] (
     fd.getJavaType match {
       case JavaType.INT =>
         printer.add(
-          s"""val $variableName = Try(parameters.toIntValue("$parentFieldName.${fd.getName}", "")).toOption"""
+          s"""val $variableName = Try(ParametersOps.toIntValue(parameters, "$parentFieldName.${fd.getName}", "")).toOption"""
         )
       case JavaType.LONG =>
         printer.add(
-          s"""val $variableName = Try(parameters.toLongValue("$parentFieldName.${fd.getName}", "")).toOption"""
+          s"""val $variableName = Try(ParametersOps.toLongValue(parameters, "$parentFieldName.${fd.getName}", "")).toOption"""
         )
       case JavaType.FLOAT =>
         printer.add(
-          s"""val $variableName = Try(parameters.toFloatValue("$parentFieldName.${fd.getName}", "")).toOption"""
+          s"""val $variableName = Try(ParametersOps.toFloatValue(parameters, "$parentFieldName.${fd.getName}", "")).toOption"""
         )
       case JavaType.DOUBLE =>
         printer.add(
-          s"""val $variableName = Try(parameters.toDoubleValue("$parentFieldName.${fd.getName}", "")).toOption"""
+          s"""val $variableName = Try(ParametersOps.toDoubleValue(parameters, "$parentFieldName.${fd.getName}", "")).toOption"""
         )
       case JavaType.BOOLEAN =>
         printer.add(
-          s"""val $variableName = Try(parameters.toBooleanValue("$parentFieldName.${fd.getName}", "")).toOption"""
+          s"""val $variableName = Try(ParametersOps.toBooleanValue(parameters, "$parentFieldName.${fd.getName}", "")).toOption"""
         )
       case JavaType.STRING =>
         printer.add(
-          s"""val $variableName = Try(parameters.toStringValue("$parentFieldName.${fd.getName}", "")).toOption"""
+          s"""val $variableName = Try(ParametersOps.toStringValue(parameters, "$parentFieldName.${fd.getName}")).toOption"""
         )
       case _ => printer
     }
@@ -290,9 +323,11 @@ object GenerateDelegateFunctions {
   def apply(
     implicits: DescriptorImplicits,
     responseFunctionName: String,
-    methods: List[MethodDescriptor]
+    methods: List[MethodDescriptor],
+    isScala3: Boolean = false,
+    responseFunctionUsesImplicit: Boolean = false
   ): PrinterEndo =
-    new GenerateDelegateFunctions(implicits, responseFunctionName, methods).generateMethodHandlerDelegates
+    new GenerateDelegateFunctions(implicits, responseFunctionName, methods, isScala3, responseFunctionUsesImplicit).generateMethodHandlerDelegates
 
   def generateDelegateFunctionName(methodName: String): String = s"dispatch$methodName"
 }

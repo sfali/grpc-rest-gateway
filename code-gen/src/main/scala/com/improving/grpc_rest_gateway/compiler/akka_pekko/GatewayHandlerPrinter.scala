@@ -8,7 +8,7 @@ import compiler.utils.GenerateDelegateFunctions
 import scalapb.compiler.FunctionalPrinter.PrinterEndo
 import scalapb.compiler.{DescriptorImplicits, FunctionalPrinter}
 
-class GatewayHandlerPrinter(packageNamePrefix: String, service: ServiceDescriptor, implicits: DescriptorImplicits)
+class GatewayHandlerPrinter(packageNamePrefix: String, service: ServiceDescriptor, implicits: DescriptorImplicits, isScala3: Boolean = false)
     extends HandlerPrinter {
   import implicits.*
 
@@ -61,7 +61,7 @@ class GatewayHandlerPrinter(packageNamePrefix: String, service: ServiceDescripto
       .newline
       .call(RouteGenerator(implicits, methods))
       .outdent // do we have an extra indent somewhere?
-      .call(GenerateDelegateFunctions(implicits, "completeResponse", methods))
+      .call(GenerateDelegateFunctions(implicits, "completeResponse", methods, isScala3, responseFunctionUsesImplicit = true))
       .outdent
       .add("}")
 
