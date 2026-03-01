@@ -68,6 +68,8 @@ package object core {
       source
         .getLines()
         .mkString(System.lineSeparator())
+        .replace("{serviceNames}", serviceNames)
+        .replace("{serviceUrls}", serviceUrls)
     }.get
   }
 

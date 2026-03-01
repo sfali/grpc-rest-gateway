@@ -59,6 +59,8 @@ package object core {
   }
 
   def readSwaggerIndexPage(specificationNames: Seq[String]): String = {
+    val serviceUrls = specificationNames.map(s => s"{url: '/specs/$s.yml', name: '$s'}").mkString(", ")
+    val serviceNames = specificationNames.mkString(", ")
     Using(
       Source
         .fromInputStream(Thread.currentThread().getContextClassLoader.getResourceAsStream("swagger/index.html"))
@@ -66,6 +68,8 @@ package object core {
       source
         .getLines()
         .mkString(System.lineSeparator())
+        .replace("{serviceNames}", serviceNames)
+        .replace("{serviceUrls}", serviceUrls)
     }.get
   }
 
