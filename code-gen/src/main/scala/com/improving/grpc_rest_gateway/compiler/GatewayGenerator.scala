@@ -47,7 +47,7 @@ object GatewayGenerator extends CodeGenApp {
           )
 
         // Detect if we're generating for Scala 3
-        val isScala3 = options.contains("scala3_sources")
+        val isScala3 = options.contains("scala3_sources=true")
         // Implicits gives you extension methods that provide ScalaPB names and types
         // for protobuf entities.
         val implicits = DescriptorImplicits.fromCodeGenRequest(params, request)

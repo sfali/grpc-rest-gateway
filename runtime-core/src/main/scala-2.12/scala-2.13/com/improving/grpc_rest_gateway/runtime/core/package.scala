@@ -44,9 +44,8 @@ package object core {
   def toResponse[IN <: GeneratedMessage, OUT <: GeneratedMessage](
     in: Try[IN],
     dispatchCall: IN => Future[OUT],
-    statusCode: Int,
-    ec: ExecutionContext
-  ): Future[(Int, OUT)] = {
+    statusCode: Int
+  )(implicit ec: ExecutionContext): Future[(Int, OUT)] = {
     in match {
       case Success(parsedIn) =>
         val resultFuture = dispatchCall(parsedIn)
@@ -60,8 +59,6 @@ package object core {
   }
 
   def readSwaggerIndexPage(specificationNames: Seq[String]): String = {
-    val serviceUrls = specificationNames.map(s => s"{url: '/specs/$s.yml', name: '$s'}").mkString(", ")
-    val serviceNames = specificationNames.mkString(", ")
     Using(
       Source
         .fromInputStream(Thread.currentThread().getContextClassLoader.getResourceAsStream("swagger/index.html"))

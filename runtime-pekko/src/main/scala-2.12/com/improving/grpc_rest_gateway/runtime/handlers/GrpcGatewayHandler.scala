@@ -57,7 +57,7 @@ trait GrpcGatewayHandler {
   ): Route = {
     val statusCode = getStatusCode(statusCodeValue)
     val eventualResponse =
-      toResponse(in, dispatchCall, statusCodeValue, ec)
+      toResponse(in, dispatchCall, statusCodeValue)
         .map(_._2)
         .map(toHttpResponse(statusCode))
     onComplete(eventualResponse) {

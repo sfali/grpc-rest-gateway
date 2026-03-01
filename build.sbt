@@ -202,13 +202,12 @@ lazy val `e2e-netty` = (projectMatrix in file("e2e-netty"))
     axisValues = Seq(VirtualAxis.jvm),
     settings = Seq(
       Test / unmanagedSourceDirectories += (Test / scalaSource).value.getParentFile / "jvm-3",
-      // Debug output to verify this configuration is being used
       Compile / PB.targets := 
         Seq(
           scalapb.gen(scala3Sources = true) -> (Compile / sourceManaged).value / "scalapb",
           (
             genModule("com.improving.grpc_rest_gateway.compiler.GatewayGenerator$"),
-            Seq("scala3_sources", "implementation_type:netty")
+            Seq("scala3_sources=true", "implementation_type:netty")
           ) -> (Compile / sourceManaged).value / "scalapb",
           genModule(
             "com.improving.grpc_rest_gateway.compiler.OpenApiGenerator$"
@@ -252,7 +251,7 @@ lazy val `e2e-pekko` = (projectMatrix in file("e2e-pekko"))
     axisValues = Seq(VirtualAxis.jvm),
     settings = Seq(
       Test / unmanagedSourceDirectories += (Test / scalaSource).value.getParentFile / "jvm-2.12",
-      // Add custom gateway generator to pekko-grpc targets
+      // Add a custom gateway generator to pekko-grpc targets
       Compile / PB.targets ++= Seq(
         (
           genModule("com.improving.grpc_rest_gateway.compiler.GatewayGenerator$"),
@@ -304,7 +303,7 @@ lazy val `e2e-pekko` = (projectMatrix in file("e2e-pekko"))
       Compile / PB.targets ++= Seq(
         (
           genModule("com.improving.grpc_rest_gateway.compiler.GatewayGenerator$"),
-          Seq("scala3_sources", "implementation_type:pekko")
+          Seq("scala3_sources=true", "implementation_type:pekko")
         ) -> crossTarget.value / "pekko-grpc" / "main",
         (
           genModule(

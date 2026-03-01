@@ -6,7 +6,7 @@ package utils
 import com.google.api.HttpRule.PatternCase
 import com.google.protobuf.Descriptors.FieldDescriptor.JavaType
 import com.google.protobuf.Descriptors.{Descriptor, FieldDescriptor, MethodDescriptor}
-import scalapb.compiler.{DescriptorImplicits, FunctionalPrinter}
+import scalapb.compiler.DescriptorImplicits
 import scalapb.compiler.FunctionalPrinter.PrinterEndo
 
 import scala.jdk.CollectionConverters.*
@@ -14,15 +14,10 @@ import scala.jdk.CollectionConverters.*
 class GenerateDelegateFunctions private[utils] (
   implicits: DescriptorImplicits,
   responseFunctionName: String,
-  methods: List[MethodDescriptor],
-  isScala3: Boolean = false,
-  responseFunctionUsesImplicit: Boolean = false
+  methods: List[MethodDescriptor]
 ) {
   import implicits.*
   import GenerateDelegateFunctions.*
-
-  // Helper methods for Scala 3 compatibility
-  private def usingClause(param: String): String = if (isScala3) s"(using $param)" else s"($param)"
 
   private def generateMethodHandlerDelegates: PrinterEndo = { printer =>
     methods.foldLeft(printer) { case (printer, method) =>
@@ -32,8 +27,8 @@ class GenerateDelegateFunctions private[utils] (
         }
       }
       paths.foldLeft(printer) { case (printer, (patternCase, pathNBodies)) =>
-        // for a given method having a multiple GET make sense, if we are to have multiple paths for POST and PUT
-        // then we have a problem, for now log the error and process first one
+        // for a given method having a multiple GET makes sense, if we are to have multiple paths for POST and PUT
+        // then we have a problem, for now log the error and process the first one
         if (patternCase == PatternCase.PUT || patternCase == PatternCase.POST) {
           if (pathNBodies.size > 1) {
             Console
@@ -66,16 +61,7 @@ class GenerateDelegateFunctions private[utils] (
           .call(generateInputFromQueryString(method.getInputType, serviceFunctionName, required = true))
           .outdent
           .add("}")
-          .add {
-            if (responseFunctionUsesImplicit) {
-              // For implicit response functions, don't pass ec explicitly
-              s"$responseFunctionName(input, client.$methodName, statusCode)"
-            } else {
-              // For explicit response functions, pass ec as parameter
-              val ecParam = if (isScala3) ")" else ", ec)"
-              s"$responseFunctionName(input, client.$methodName, statusCode$ecParam"
-            }
-          }
+          .add (s"$responseFunctionName(input, client.$methodName, statusCode)")
           .outdent
           .add("}")
       case PatternCase.PUT | PatternCase.POST =>
@@ -113,7 +99,7 @@ class GenerateDelegateFunctions private[utils] (
   ): PrinterEndo = { printer =>
     val args = d.getFields.asScala.map(f => s"${f.getJsonName} = ${f.getJsonName}").mkString(", ")
 
-    // If field name in Protobuf is defined with underscore then inputName and jsonName will be different
+    // If the field name in Protobuf is defined with underscore, then inputName and jsonName will be different
     printer
       .call(generateInputFromQueryStringSingle(d, required, prefix))
       .add(s"$fullName($args)")
@@ -135,16 +121,7 @@ class GenerateDelegateFunctions private[utils] (
           .add(
             s"val input = parseBody[$serviceFunctionName](body)"
           )
-          .add {
-            if (responseFunctionUsesImplicit) {
-              // For implicit response functions, don't pass ec explicitly
-              s"$responseFunctionName(input, client.$methodName, statusCode)"
-            } else {
-              // For explicit response functions, pass ec as parameter
-              val ecParam = if (isScala3) ")" else ", ec)"
-              s"$responseFunctionName(input, client.$methodName, statusCode$ecParam"
-            }
-          }
+          .add(s"$responseFunctionName(input, client.$methodName, statusCode)")
           .outdent
           .add("}")
       } else {
@@ -172,16 +149,7 @@ class GenerateDelegateFunctions private[utils] (
               .add(s"$serviceFunctionName($args)")
               .outdent
               .add("}")
-              .add {
-                if (responseFunctionUsesImplicit) {
-                  // For implicit response functions, don't pass ec explicitly
-                  s"$responseFunctionName(input, client.$methodName, statusCode)"
-                } else {
-                  // For explicit response functions, pass ec as parameter
-                  val ecParam = if (isScala3) ")" else ", ec)"
-                  s"$responseFunctionName(input, client.$methodName, statusCode$ecParam"
-                }
-              }
+              .add (s"$responseFunctionName(input, client.$methodName, statusCode)")
               .outdent
               .add("}")
           case None =>
@@ -323,11 +291,9 @@ object GenerateDelegateFunctions {
   def apply(
     implicits: DescriptorImplicits,
     responseFunctionName: String,
-    methods: List[MethodDescriptor],
-    isScala3: Boolean = false,
-    responseFunctionUsesImplicit: Boolean = false
+    methods: List[MethodDescriptor]
   ): PrinterEndo =
-    new GenerateDelegateFunctions(implicits, responseFunctionName, methods, isScala3, responseFunctionUsesImplicit).generateMethodHandlerDelegates
+    new GenerateDelegateFunctions(implicits, responseFunctionName, methods).generateMethodHandlerDelegates
 
   def generateDelegateFunctionName(methodName: String): String = s"dispatch$methodName"
 }

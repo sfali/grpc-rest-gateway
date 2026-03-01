@@ -44,9 +44,8 @@ package object core {
   def toResponse[IN <: GeneratedMessage, OUT <: GeneratedMessage](
     in: Try[IN],
     dispatchCall: IN => Future[OUT],
-    statusCode: Int,
-    ec: ExecutionContext
-  ): Future[(Int, OUT)] = {
+    statusCode: Int
+  )(implicit ec: ExecutionContext): Future[(Int, OUT)] = {
     in match {
       case Success(parsedIn) =>
         val resultFuture = dispatchCall(parsedIn)
