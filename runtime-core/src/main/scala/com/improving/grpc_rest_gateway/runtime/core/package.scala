@@ -7,9 +7,8 @@ import scalapb.{GeneratedEnum, GeneratedEnumCompanion, GeneratedMessage, Generat
 import scalapb.json4s.{JsonFormat, JsonFormatException}
 
 import java.nio.file.{Path, Paths}
-import scala.concurrent.{ExecutionContext, Future}
 import scala.io.Source
-import scala.util.{Failure, Success, Try, Using}
+import scala.util.{Failure, Try, Using}
 
 package object core {
 
@@ -18,10 +17,8 @@ package object core {
     Paths.get(s"META-INF/resources/webjars/swagger-ui/$version")
   }
 
-  object StatusRuntimeExceptionOps {
-    def toGatewayException(src: StatusRuntimeException): GatewayException =
-      GatewayException(src.getStatus.getCode.value(), src.getStatus.getDescription)
-  }
+  def toGatewayException(src: StatusRuntimeException): GatewayException =
+    GatewayException(src.getStatus.getCode.value(), src.getStatus.getDescription)
 
   def parseBody[M <: GeneratedMessage: GeneratedMessageCompanion](body: String): Try[M] =
     Try(JsonFormat.fromJsonString[M](body)).recoverWith(jsonException2GatewayExceptionPF)
@@ -38,26 +35,6 @@ package object core {
       Failure(
         GatewayException.toInvalidArgument("Wrong json input. Check proto file. Details: " + err.getMessage)
       )
-  }
-
-  // Scala 3 version using 'using' clause
-  def toResponse[IN <: GeneratedMessage, OUT <: GeneratedMessage](
-    in: Try[IN],
-    dispatchCall: IN => Future[OUT],
-    statusCode: Int
-  )(using
-    ec: ExecutionContext
-  ): Future[(Int, OUT)] = {
-    in match {
-      case Success(parsedIn) =>
-        val resultFuture = dispatchCall(parsedIn)
-        resultFuture.map(response => (statusCode, response))
-          .recoverWith { case ex: StatusRuntimeException =>
-            Future.failed(StatusRuntimeExceptionOps.toGatewayException(ex))
-          }
-      case Failure(ex) =>
-        Future.failed(ex)
-    }
   }
 
   def readSwaggerIndexPage(specificationNames: Seq[String]): String = {

@@ -1,6 +1,7 @@
 package rest_gateway_test
 
 import com.improving.grpc_rest_gateway.runtime.core.*
+import com.improving.grpc_rest_gateway.runtime.core.internal.*
 import scalapb.json4s.JsonFormat
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 import sttp.client3.{HttpClientFutureBackend, UriContext, asString, basicRequest}

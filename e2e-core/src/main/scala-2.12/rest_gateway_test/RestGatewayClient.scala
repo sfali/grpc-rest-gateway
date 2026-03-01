@@ -24,9 +24,10 @@ class RestGatewayClient(gatewayPort: Int) {
     requestId: Long,
     useRequestParam: Boolean = true
   ): Future[Try[Response]] = {
-    val uri = (useRequestParam) match {
-      case true => uri"$serviceAUri?request_id=$requestId"
-      case false => uri"$serviceAUri/$requestId"
+    val uri = if (useRequestParam) {
+      uri"$serviceAUri?request_id=$requestId"
+    } else {
+      uri"$serviceAUri/$requestId"
     }
     basicRequest.get(uri).response(asString).send(backend).map { response =>
       response.body match {

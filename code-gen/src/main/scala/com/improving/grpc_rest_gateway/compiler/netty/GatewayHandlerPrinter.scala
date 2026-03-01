@@ -40,6 +40,7 @@ class GatewayHandlerPrinter(service: ServiceDescriptor, implicits: DescriptorImp
       .add(
         s"import com.improving.grpc_rest_gateway.runtime",
         s"import runtime.core.$wildcardImport",
+        s"import runtime.core.internal.$wildcardImport",
         s"import runtime.handlers.$wildcardImport"
       )
       .newline

@@ -4,6 +4,7 @@ package runtime
 package handlers
 
 import runtime.core.*
+import runtime.core.internal.*
 import io.grpc.Status.Code
 import org.apache.pekko
 import pekko.http.scaladsl.server.Directives.*
