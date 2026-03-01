@@ -39,7 +39,7 @@ lazy val `runtime-netty` = (projectMatrix in file("runtime-netty"))
   .defaultAxes()
   .settings(
     name := "grpc-rest-gateway-runtime-netty",
-    libraryDependencies ++= RuntimeDependencies,
+    libraryDependencies ++= RuntimeDependencies ++ TestDependencies,
     scalacOptions ++= (if (isScala3.value) Seq("-source", "future", "-explain")
                        else Seq("-Xsource:3")),
     // Add version-specific source directories
@@ -62,7 +62,7 @@ lazy val `runtime-pekko` = (projectMatrix in file("runtime-pekko"))
   .defaultAxes()
   .settings(
     name := "grpc-rest-gateway-runtime-pekko",
-    libraryDependencies ++= RuntimePekkoDependencies,
+    libraryDependencies ++= RuntimePekkoDependencies ++ PekkoTestDependencies,
     scalacOptions ++= (if (isScala3.value) Seq("-source", "future", "-explain")
                        else Seq("-Xsource:3"))
   )

@@ -56,6 +56,15 @@ object Dependencies {
     "io.grpc" % "grpc-netty" % V.GrpcJava
   )
 
+  val TestDependencies: Seq[ModuleID] = Seq(
+    "org.scalatest" %% "scalatest" % V.ScalaTest % Test
+  )
+
+  val PekkoTestDependencies: Seq[ModuleID] = TestDependencies ++ Seq(
+    "org.apache.pekko" %% "pekko-http-testkit" % V.PekkoHttp % Test,
+    "org.apache.pekko" %% "pekko-testkit" % V.Pekko % Test
+  )
+
   val RuntimePekkoDependencies: Seq[ModuleID] = Seq(
     "org.apache.pekko" %% "pekko-actor" % V.Pekko % "provided",
     "org.apache.pekko" %% "pekko-stream-typed" % V.Pekko % "provided",
