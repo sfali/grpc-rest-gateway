@@ -9,7 +9,6 @@ import io.netty.handler.codec.http.{FullHttpRequest, HttpResponseStatus}
 
 class MethodNotFoundHandler extends ChannelInboundHandlerAdapter {
 
-  // TODO: figure out how to cross compile and pattern match
   override def channelRead(ctx: ChannelHandlerContext, msg: scala.Any): Unit =
     msg.asMatchable match {
       case req: FullHttpRequest =>

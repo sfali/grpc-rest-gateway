@@ -47,46 +47,46 @@ abstract class GrpcGatewayHandler(channel: ManagedChannel)(implicit ec: Executio
     */
   protected def dispatchCall(method: HttpMethod, uri: String, body: String): Future[(Int, GeneratedMessage)]
 
-  // TODO: figure out how to cross compile and pattern match
   override def channelRead(ctx: ChannelHandlerContext, msg: scala.Any): Unit =
-    if (msg.isInstanceOf[FullHttpRequest]) {
-      val req = msg.asInstanceOf[FullHttpRequest]
-      if (supportsCall(req.method(), req.uri())) {
-        val body = req.content().toString(StandardCharsets.UTF_8)
+    msg match {
+      case req: FullHttpRequest =>
+        if (supportsCall(req.method(), req.uri())) {
+          val body = req.content().toString(StandardCharsets.UTF_8)
 
-        dispatchCall(req.method(), req.uri(), body)
-          .map { case (statusCode, msg) =>
-            (statusCode, JsonFormat.toJsonString(msg))
-          }
-          .map { case (statusCode, json) =>
-            val status = HttpResponseStatus.valueOf(statusCode)
-            buildFullHttpResponse(
-              requestMsg = req,
-              responseBody = if (HttpResponseStatus.NO_CONTENT == status) "" else json,
-              responseStatus = status,
-              responseContentType = "application/json"
-            )
-          }
-          .recover { case err =>
-            val (body, status) = err match {
-              case e: GatewayException =>
-                e.message -> GRPC_HTTP_CODE_MAP.getOrElse(e.statusCode, HttpResponseStatus.INTERNAL_SERVER_ERROR)
-              case ex =>
-                logger.warn("unable to generate json response", ex)
-                s"Internal error: ${ex.getMessage}" -> HttpResponseStatus.INTERNAL_SERVER_ERROR
+          dispatchCall(req.method(), req.uri(), body)
+            .map { case (statusCode, msg) =>
+              (statusCode, JsonFormat.toJsonString(msg))
             }
+            .map { case (statusCode, json) =>
+              val status = HttpResponseStatus.valueOf(statusCode)
+              buildFullHttpResponse(
+                requestMsg = req,
+                responseBody = if (HttpResponseStatus.NO_CONTENT == status) "" else json,
+                responseStatus = status,
+                responseContentType = "application/json"
+              )
+            }
+            .recover { case err =>
+              val (body, status) = err match {
+                case e: GatewayException =>
+                  e.message -> GRPC_HTTP_CODE_MAP.getOrElse(e.statusCode, HttpResponseStatus.INTERNAL_SERVER_ERROR)
+                case ex =>
+                  logger.warn("unable to generate json response", ex)
+                  s"Internal error: ${ex.getMessage}" -> HttpResponseStatus.INTERNAL_SERVER_ERROR
+              }
 
-            buildFullHttpResponse(
-              requestMsg = req,
-              responseBody = body,
-              responseStatus = status,
-              responseContentType = "application/text"
-            )
-          }
-          .foreach(resp => ctx.writeAndFlush(resp).addListener(ChannelFutureListener.CLOSE))
+              buildFullHttpResponse(
+                requestMsg = req,
+                responseBody = body,
+                responseStatus = status,
+                responseContentType = "application/text"
+              )
+            }
+            .foreach(resp => ctx.writeAndFlush(resp).addListener(ChannelFutureListener.CLOSE))
 
-      } else super.channelRead(ctx, msg)
-    } else super.channelRead(ctx, msg)
+        } else super.channelRead(ctx, msg)
+      case _ => super.channelRead(ctx, msg)
+    }
 }
 
 /** Helper trait to make URI path matching. This is done to make testing easier.

@@ -25,7 +25,6 @@ object SwaggerHandler {
 class SwaggerHandler(services: Seq[GrpcGatewayHandler]) extends ChannelInboundHandlerAdapter {
   import SwaggerHandler.*
 
-  // TODO: figure out how to cross compile and pattern match
   override def channelRead(ctx: ChannelHandlerContext, msg: scala.Any): Unit =
     msg.asMatchable match {
       case req: FullHttpRequest =>

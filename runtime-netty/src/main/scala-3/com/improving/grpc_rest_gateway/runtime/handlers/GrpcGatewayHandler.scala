@@ -55,7 +55,6 @@ abstract class GrpcGatewayHandler(channel: ManagedChannel)(using ec: ExecutionCo
     */
   protected def dispatchCall(method: HttpMethod, uri: String, body: String): Future[(Int, GeneratedMessage)]
 
-  // TODO: figure out how to cross compile and pattern match
   override def channelRead(ctx: ChannelHandlerContext, msg: scala.Any): Unit =
     msg.asMatchable match {
       case req: FullHttpRequest =>

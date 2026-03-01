@@ -24,30 +24,30 @@ object SwaggerHandler {
 class SwaggerHandler(services: Seq[GrpcGatewayHandler]) extends ChannelInboundHandlerAdapter {
   import SwaggerHandler.*
 
-  // TODO: figure out how to cross compile and pattern match
   override def channelRead(ctx: ChannelHandlerContext, msg: scala.Any): Unit =
-    if (msg.isInstanceOf[FullHttpRequest]) {
-      val req = msg.asInstanceOf[FullHttpRequest]
-      val queryString = new QueryStringDecoder(req.uri())
-      val path = Paths.get(queryString.path())
-      val res = path match {
-        case RootPath                      => Some(createRedirectResponse(req, DocsLandingPage))
-        case DocsPrefix                    => Some(createRedirectResponse(req, DocsLandingPage))
-        case DocsLandingPage               => Some(createStringResponse(req, indexPage))
-        case p if p.startsWith(DocsPrefix) =>
-          // swagger UI loading its own resources
-          val resourcePath = SwaggerUiPath.resolve(RootPath.relativize(path).subpath(1, path.getNameCount))
-          Some(createResourceResponse(req, resourcePath))
-        case p if p.startsWith(SpecsPrefix) =>
-          // swagger UI loading up spec file
-          Some(createResourceResponse(req, RootPath.relativize(path)))
-        case _ => None
-      }
-      res match {
-        case Some(response) => ctx.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE)
-        case None           => super.channelRead(ctx, msg)
-      }
-    } else super.channelRead(ctx, msg)
+    msg match {
+      case req: FullHttpRequest =>
+        val queryString = new QueryStringDecoder(req.uri())
+        val path = Paths.get(queryString.path())
+        val res = path match {
+          case RootPath => Some(createRedirectResponse(req, DocsLandingPage))
+          case DocsPrefix => Some(createRedirectResponse(req, DocsLandingPage))
+          case DocsLandingPage => Some(createStringResponse(req, indexPage))
+          case p if p.startsWith(DocsPrefix) =>
+            // swagger UI loading its own resources
+            val resourcePath = SwaggerUiPath.resolve(RootPath.relativize(path).subpath(1, path.getNameCount))
+            Some(createResourceResponse(req, resourcePath))
+          case p if p.startsWith(SpecsPrefix) =>
+            // swagger UI loading up spec file
+            Some(createResourceResponse(req, RootPath.relativize(path)))
+          case _ => None
+        }
+        res match {
+          case Some(response) => ctx.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE)
+          case None => super.channelRead(ctx, msg)
+        }
+      case _ => super.channelRead(ctx, msg)
+    }
 
   private def createRedirectResponse(req: FullHttpRequest, path: Path) = {
     val res = new DefaultFullHttpResponse(req.protocolVersion(), HttpResponseStatus.TEMPORARY_REDIRECT)
