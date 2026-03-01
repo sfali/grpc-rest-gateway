@@ -169,8 +169,11 @@ lazy val `e2e-netty` = (projectMatrix in file("e2e-netty"))
         ) -> (Compile / sourceManaged).value / "scalapb",
         genModule(
           "com.improving.grpc_rest_gateway.compiler.OpenApiGenerator$"
-        ) -> (Compile / resourceDirectory).value / "specs"
-      )
+        ) -> (Compile / resourceManaged).value / "specs"
+      ),
+      Compile / resourceGenerators += (Compile / PB.generate)
+        .map(_.filter(_.getName.endsWith("yml")))
+        .taskValue
     )
   )
   .customRow(
@@ -187,8 +190,11 @@ lazy val `e2e-netty` = (projectMatrix in file("e2e-netty"))
         ) -> (Compile / sourceManaged).value / "scalapb",
         genModule(
           "com.improving.grpc_rest_gateway.compiler.OpenApiGenerator$"
-        ) -> (Compile / resourceDirectory).value / "specs"
-      )
+        ) -> (Compile / resourceManaged).value / "specs"
+      ),
+      Compile / resourceGenerators += (Compile / PB.generate)
+        .map(_.filter(_.getName.endsWith("yml")))
+        .taskValue
     )
   )
   .customRow(
@@ -196,17 +202,21 @@ lazy val `e2e-netty` = (projectMatrix in file("e2e-netty"))
     axisValues = Seq(VirtualAxis.jvm),
     settings = Seq(
       Test / unmanagedSourceDirectories += (Test / scalaSource).value.getParentFile / "jvm-3",
-      // Override the gateway generator to include scala3_sources for Scala 3
-      Compile / PB.targets := Seq(
-        scalapb.gen(scala3Sources = true) -> (Compile / sourceManaged).value / "scalapb",
-        (
-          genModule("com.improving.grpc_rest_gateway.compiler.GatewayGenerator$"),
-          Seq("scala3_sources", "implementation_type:netty")
-        ) -> (Compile / sourceManaged).value / "scalapb",
-        genModule(
-          "com.improving.grpc_rest_gateway.compiler.OpenApiGenerator$"
-        ) -> (Compile / resourceDirectory).value / "specs"
-      )
+      // Debug output to verify this configuration is being used
+      Compile / PB.targets := 
+        Seq(
+          scalapb.gen(scala3Sources = true) -> (Compile / sourceManaged).value / "scalapb",
+          (
+            genModule("com.improving.grpc_rest_gateway.compiler.GatewayGenerator$"),
+            Seq("scala3_sources", "implementation_type:netty")
+          ) -> (Compile / sourceManaged).value / "scalapb",
+          genModule(
+            "com.improving.grpc_rest_gateway.compiler.OpenApiGenerator$"
+          ) -> (Compile / resourceManaged).value / "specs"
+        ),
+        Compile / resourceGenerators += (Compile / PB.generate)
+        .map(_.filter(_.getName.endsWith("yml")))
+        .taskValue
     )
   )
   .settings(
@@ -224,8 +234,11 @@ lazy val `e2e-netty` = (projectMatrix in file("e2e-netty"))
       ) -> (Compile / sourceManaged).value / "scalapb",
       genModule(
         "com.improving.grpc_rest_gateway.compiler.OpenApiGenerator$"
-      ) -> (Compile / resourceDirectory).value / "specs"
-    )
+      ) -> (Compile / resourceManaged).value / "specs"
+    ),
+    Compile / resourceGenerators += (Compile / PB.generate)
+    .map(_.filter(_.getName.endsWith("yml")))
+    .taskValue
   )
   .jvmPlatform(scalaVersions = Seq(V.Scala212, V.Scala213, V.Scala3))
 
