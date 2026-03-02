@@ -45,6 +45,9 @@ object GatewayGenerator extends CodeGenApp {
           .println(
             s"${Console.RED}Generating GatewayHandler implementation for '${Console.BOLD}$implementationType${Console.RESET}'.${Console.RESET}"
           )
+
+        // Detect if we're generating for Scala 3
+        val isScala3 = options.contains("scala3_sources=true")
         // Implicits gives you extension methods that provide ScalaPB names and types
         // for protobuf entities.
         val implicits = DescriptorImplicits.fromCodeGenRequest(params, request)
@@ -56,8 +59,8 @@ object GatewayGenerator extends CodeGenApp {
             .filterNot(getUnaryCallsWithHttpExtension(_).isEmpty)
             .map { sd =>
               implementationType match {
-                case Pekko | Akka => new akka_pekko.GatewayHandlerPrinter(implementationType, sd, implicits)
-                case _            => new netty.GatewayHandlerPrinter(sd, implicits)
+                case Pekko | Akka => new akka_pekko.GatewayHandlerPrinter(implementationType, sd, implicits, isScala3)
+                case _            => new netty.GatewayHandlerPrinter(sd, implicits, isScala3)
               }
             }
             .map(_.result)

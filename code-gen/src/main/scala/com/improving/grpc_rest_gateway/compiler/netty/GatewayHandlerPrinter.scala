@@ -12,7 +12,7 @@ import scalapb.compiler.{DescriptorImplicits, FunctionalPrinter, NameUtils}
 
 import scala.jdk.CollectionConverters.*
 
-class GatewayHandlerPrinter(service: ServiceDescriptor, implicits: DescriptorImplicits) extends HandlerPrinter {
+class GatewayHandlerPrinter(service: ServiceDescriptor, implicits: DescriptorImplicits, isScala3: Boolean = false) extends HandlerPrinter {
   import implicits.*
 
   private var ifStatementStarted = false
@@ -40,6 +40,7 @@ class GatewayHandlerPrinter(service: ServiceDescriptor, implicits: DescriptorImp
       .add(
         s"import com.improving.grpc_rest_gateway.runtime",
         s"import runtime.core.$wildcardImport",
+        s"import runtime.core.internal.$wildcardImport",
         s"import runtime.handlers.$wildcardImport"
       )
       .newline
@@ -79,9 +80,9 @@ class GatewayHandlerPrinter(service: ServiceDescriptor, implicits: DescriptorImp
       .outdent
       .newline
       .indent
-      .add(s"def apply(channel: ManagedChannel)(implicit ec: ExecutionContext): $handlerClassName = ")
+      .add(s"def apply(channel: ManagedChannel)${usingClause(isScala3, "ec: ExecutionContext")}: $handlerClassName = ")
       .indent
-      .add(s"new $handlerClassName(channel)")
+      .add(s"new $handlerClassName(channel)${if (isScala3) "(using ec)" else "(ec)"}")
       .outdent
       .outdent
       .add("}")
@@ -92,10 +93,10 @@ class GatewayHandlerPrinter(service: ServiceDescriptor, implicits: DescriptorImp
     // this is NOT the FQN of the service, we are generating gateway handler in the same package as GRPC service
     val grpcService = descriptor.companionObject.name
     printer
-      .add(s"class $handlerClassName(channel: ManagedChannel)(implicit ec: ExecutionContext)")
+      .add(s"class $handlerClassName(channel: ManagedChannel)${usingClause(isScala3, "ec: ExecutionContext")}")
       .indent
       .add(
-        "extends GrpcGatewayHandler(channel)(ec) {",
+        s"extends GrpcGatewayHandler(channel)${if (isScala3) s"(using ec)" else "(ec)"} {",
         s"import $handlerClassName.$wildcardImport",
         s"""override val serviceName: String = "${service.getName}"""",
         s"""override val specificationName: String = "$specificationName"""",

@@ -8,7 +8,7 @@ import compiler.utils.GenerateDelegateFunctions
 import scalapb.compiler.FunctionalPrinter.PrinterEndo
 import scalapb.compiler.{DescriptorImplicits, FunctionalPrinter}
 
-class GatewayHandlerPrinter(packageNamePrefix: String, service: ServiceDescriptor, implicits: DescriptorImplicits)
+class GatewayHandlerPrinter(packageNamePrefix: String, service: ServiceDescriptor, implicits: DescriptorImplicits, isScala3: Boolean = false)
     extends HandlerPrinter {
   import implicits.*
 
@@ -52,10 +52,10 @@ class GatewayHandlerPrinter(packageNamePrefix: String, service: ServiceDescripto
       .result()
 
   private def generateService: PrinterEndo =
-    _.add(s"class $handlerClassName(settings: GrpcClientSettings)(implicit sys: ClassicActorSystemProvider) extends GrpcGatewayHandler {")
+    _.add(s"class $handlerClassName(settings: GrpcClientSettings)${usingClause(isScala3, "sys: ClassicActorSystemProvider")} extends GrpcGatewayHandler {")
       .newline
       .indent
-      .add("private implicit val ec: ExecutionContext = sys.classicSystem.dispatcher")
+      .add(s"private ${givenClause(isScala3, "ec: ExecutionContext")} = sys.classicSystem.dispatcher")
       .add(s"private lazy val client = $clientClasName(settings)")
       .add(s"""override val specificationName: String = "$specificationName"""")
       .newline
@@ -70,13 +70,13 @@ class GatewayHandlerPrinter(packageNamePrefix: String, service: ServiceDescripto
       .add(s"object $handlerClassName {")
       .newline
       .indent
-      .add("def apply(settings: GrpcClientSettings)(implicit sys: ClassicActorSystemProvider): GrpcGatewayHandler = {")
+      .add(s"def apply(settings: GrpcClientSettings)${usingClause(isScala3, "sys: ClassicActorSystemProvider")}: GrpcGatewayHandler = {")
       .indent
       .add(s"new $handlerClassName(settings)")
       .outdent
       .add("}")
       .newline
-      .add("def apply(clientName: String)(implicit sys: ClassicActorSystemProvider): GrpcGatewayHandler = {")
+      .add(s"def apply(clientName: String)${usingClause(isScala3, "sys: ClassicActorSystemProvider")}: GrpcGatewayHandler = {")
       .indent
       .add(s"$handlerClassName(GrpcClientSettings.fromConfig(clientName))")
       .outdent

@@ -6,9 +6,9 @@ package handlers
 import runtime.core.*
 import org.apache.commons.io.IOUtils
 import org.apache.pekko
-import pekko.http.scaladsl.model.{ContentType, ContentTypes, HttpEntity, HttpResponse, StatusCodes}
-import pekko.http.scaladsl.server.Route
+import pekko.http.scaladsl.model.*
 import pekko.http.scaladsl.server.Directives.*
+import pekko.http.scaladsl.server.Route
 
 import java.nio.file.{Path, Paths}
 import javax.activation.MimetypesFileTypeMap

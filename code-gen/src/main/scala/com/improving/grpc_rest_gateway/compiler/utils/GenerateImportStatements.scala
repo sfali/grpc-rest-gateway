@@ -20,8 +20,9 @@ private class GenerateImportStatements private[utils] (
   private def createImportStatements: PrinterEndo =
     _.print(buildImportStatementsMap(methods).toSeq.sortBy(_._1).filterNot(_._1 == currentPackageName)) {
       case (p, (packageName, classNames)) =>
-        if (classNames.size == 1) p.add(s"import $packageName.${classNames.head}")
-        else {
+        if (classNames.size == 1) {
+          p.add(s"import $packageName.${classNames.head}")
+        } else {
           val sortedClassNames = classNames.toSeq.sorted
           p.add(s"""import $packageName.${sortedClassNames.mkString("{", ", ", "}")}""")
         }
@@ -57,9 +58,11 @@ private class GenerateImportStatements private[utils] (
       case field :: tail =>
         val updatedMap = updateMap(field.singleScalaTypeName, result)
         val subFields =
-          if (field.getJavaType == JavaType.MESSAGE)
+          if (field.getJavaType == JavaType.MESSAGE) {
             extractSubFields(field.getMessageType.getFields.asScala.toList)
-          else Nil
+          } else {
+            Nil
+          }
         buildImportStatementsMapFromFields(tail ::: subFields, updatedMap)
     }
 
@@ -76,7 +79,11 @@ private class GenerateImportStatements private[utils] (
   private def getPackageNClassNameTuple(fqn: String) = {
     val indexOfSeparator = fqn.lastIndexOf(".")
     val className = fqn.substring(indexOfSeparator + 1)
-    val packageName = if (indexOfSeparator >= 0) fqn.substring(0, indexOfSeparator) else ""
+    val packageName = if (indexOfSeparator >= 0) {
+      fqn.substring(0, indexOfSeparator)
+    } else {
+      ""
+    }
     packageName -> className
   }
 }

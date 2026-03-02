@@ -48,9 +48,9 @@ class TreeNode[Source] {
     val pathElements = rawPath.path.split("/").filterNot(_.isBlank)
     val leafNode = TreeNode(path = pathElements.last, methodInfos = rawPath.methodInfos)
     val parentNodeNames = pathElements.dropRight(1).toList
-    if (parentNodeNames.isEmpty || parentNodeNames.head != path)
+    if (parentNodeNames.isEmpty || parentNodeNames.head != path) {
       throw new IllegalArgumentException(s"root is not ${parentNodeNames.head}.")
-    else {
+    } else {
       val parentNode = getParentNode(parentNodeNames.tail, Some(this))
       parentNode.addOrUpdateChildren(leafNode)
     }
@@ -80,10 +80,12 @@ class TreeNode[Source] {
   override def hashCode(): Int = Objects.hash(path, methodInfos, children)
 
   override def equals(obj: Any): Boolean =
-    if (obj.isInstanceOf[TreeNode[Source]]) {
+    if (obj.isInstanceOf[TreeNode[?]]) {
       val other = obj.asInstanceOf[TreeNode[Source]]
       path == other._path && methodInfos == other.methodInfos && children == other.children
-    } else super.equals(obj)
+    } else {
+      super.equals(obj)
+    }
 
   override def toString: String = s"TreeNode(path = $path, methodInfos = $methodInfos, children = $children)"
 }

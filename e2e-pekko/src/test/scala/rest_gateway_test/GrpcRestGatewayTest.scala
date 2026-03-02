@@ -1,6 +1,5 @@
 package rest_gateway_test
 
-import com.google.protobuf.empty.Empty
 import com.google.rpc.Code
 import com.improving.grpc_rest_gateway.runtime.server.GatewayServer
 import io.grpc.StatusRuntimeException

@@ -14,7 +14,8 @@ import scala.jdk.CollectionConverters.*
 class GenerateDelegateFunctions private[utils] (
   implicits: DescriptorImplicits,
   responseFunctionName: String,
-  methods: List[MethodDescriptor]) {
+  methods: List[MethodDescriptor]
+) {
   import implicits.*
   import GenerateDelegateFunctions.*
 
@@ -26,8 +27,8 @@ class GenerateDelegateFunctions private[utils] (
         }
       }
       paths.foldLeft(printer) { case (printer, (patternCase, pathNBodies)) =>
-        // for a given method having a multiple GET make sense, if we are to have multiple paths for POST and PUT
-        // then we have a problem, for now log the error and process first one
+        // for a given method having a multiple GET makes sense, if we are to have multiple paths for POST and PUT
+        // then we have a problem, for now log the error and process the first one
         if (patternCase == PatternCase.PUT || patternCase == PatternCase.POST) {
           if (pathNBodies.size > 1) {
             Console
@@ -60,7 +61,7 @@ class GenerateDelegateFunctions private[utils] (
           .call(generateInputFromQueryString(method.getInputType, serviceFunctionName, required = true))
           .outdent
           .add("}")
-          .add(s"$responseFunctionName(input, client.$methodName, statusCode)")
+          .add (s"$responseFunctionName(input, client.$methodName, statusCode)")
           .outdent
           .add("}")
       case PatternCase.PUT | PatternCase.POST =>
@@ -98,7 +99,7 @@ class GenerateDelegateFunctions private[utils] (
   ): PrinterEndo = { printer =>
     val args = d.getFields.asScala.map(f => s"${f.getJsonName} = ${f.getJsonName}").mkString(", ")
 
-    // If field name in Protobuf is defined with underscore then inputName and jsonName will be different
+    // If the field name in Protobuf is defined with underscore, then inputName and jsonName will be different
     printer
       .call(generateInputFromQueryStringSingle(d, required, prefix))
       .add(s"$fullName($args)")
@@ -148,7 +149,7 @@ class GenerateDelegateFunctions private[utils] (
               .add(s"$serviceFunctionName($args)")
               .outdent
               .add("}")
-              .add(s"$responseFunctionName(input, client.$methodName, statusCode)")
+              .add (s"$responseFunctionName(input, client.$methodName, statusCode)")
               .outdent
               .add("}")
           case None =>
@@ -201,47 +202,51 @@ class GenerateDelegateFunctions private[utils] (
 
         case JavaType.ENUM =>
           p.when(f.isRepeated)(
-            _.add(s"""val $jsonName = parameters.toEnumValues("$prefix$inputName", ${f.singleScalaTypeName})""")
+            _.add(s"""val $jsonName = ParametersOps.toEnumValues(parameters, "$prefix$inputName", ${f.singleScalaTypeName})""")
           ).when(!f.isRepeated)(
             _.add(
-              s"""val $jsonName = parameters.toEnumValue("$prefix$inputName", ${f.singleScalaTypeName})"""
+              s"""val $jsonName = ParametersOps.toEnumValue(parameters, "$prefix$inputName", ${f.singleScalaTypeName})"""
             )
           )
 
         case JavaType.BOOLEAN =>
-          if (f.isRepeated) p.add(s"""val $jsonName = parameters.toBooleanValues("$prefix$inputName")""")
-          else
-            p.add(s"""val $jsonName = parameters.toBooleanValue("$prefix$inputName")""")
+          if (f.isRepeated) p.add(s"""val $jsonName = ParametersOps.toBooleanValues(parameters, "$prefix$inputName")""")
+          else p.add(s"""val $jsonName = ParametersOps.toBooleanValue(parameters, "$prefix$inputName")""")
 
         case JavaType.DOUBLE =>
-          if (f.isRepeated) p.add(s"""val $jsonName = parameters.toDoubleValues("$prefix$inputName")""")
-          else
-            p.when(required)(_.add(s"""val $jsonName = parameters.toDoubleValue("$prefix$inputName")"""))
-              .when(!required)(_.add(s"""val $jsonName = parameters.toDoubleValue("$prefix$inputName", "")"""))
+          if (f.isRepeated) p.add(s"""val $jsonName = ParametersOps.toDoubleValues(parameters, "$prefix$inputName")""")
+          else {
+            p.when(required)(_.add(s"""val $jsonName = ParametersOps.toDoubleValue(parameters, "$prefix$inputName")"""))
+              .when(!required)(_.add(s"""val $jsonName = ParametersOps.toDoubleValue(parameters, "$prefix$inputName", "")"""))
+          }
 
         case JavaType.FLOAT =>
-          if (f.isRepeated) p.add(s"""val $jsonName = parameters.toFloatValues("$prefix$inputName")""")
-          else
-            p.when(required)(_.add(s"""val $jsonName = parameters.toFloatValue("$prefix$inputName")"""))
-              .when(!required)(_.add(s"""val $jsonName = parameters.toFloatValue("$prefix$inputName", "")"""))
+          if (f.isRepeated) p.add(s"""val $jsonName = ParametersOps.toFloatValues(parameters, "$prefix$inputName")""")
+          else {
+            p.when(required)(_.add(s"""val $jsonName = ParametersOps.toFloatValue(parameters, "$prefix$inputName")"""))
+              .when(!required)(_.add(s"""val $jsonName = ParametersOps.toFloatValue(parameters, "$prefix$inputName", "")"""))
+          }
 
         case JavaType.INT =>
-          if (f.isRepeated)
-            p.add(s"""val $jsonName = parameters.toIntValues("$prefix$inputName")""")
-          else
-            p.when(required)(_.add(s"""val $jsonName = parameters.toIntValue("$prefix$inputName")"""))
-              .when(!required)(_.add(s"""val $jsonName = parameters.toIntValue("$prefix$inputName", "")"""))
+          if (f.isRepeated) {
+            p.add(s"""val $jsonName = ParametersOps.toIntValues(parameters, "$prefix$inputName")""")
+          } else {
+            p.when(required)(_.add(s"""val $jsonName = ParametersOps.toIntValue(parameters, "$prefix$inputName")"""))
+              .when(!required)(_.add(s"""val $jsonName = ParametersOps.toIntValue(parameters, "$prefix$inputName", "")"""))
+          }
 
         case JavaType.LONG =>
-          if (f.isRepeated) p.add(s"""val $jsonName = parameters.toLongValues("$prefix$inputName")""")
-          else
-            p.when(required)(_.add(s"""val $jsonName = parameters.toLongValue("$prefix$inputName")"""))
-              .when(!required)(_.add(s"""val $jsonName = parameters.toLongValue("$prefix$inputName", "")"""))
+          if (f.isRepeated) p.add(s"""val $jsonName = ParametersOps.toLongValues(parameters, "$prefix$inputName")""")
+          else {
+            p.when(required)(_.add(s"""val $jsonName = ParametersOps.toLongValue(parameters, "$prefix$inputName")"""))
+              .when(!required)(_.add(s"""val $jsonName = ParametersOps.toLongValue(parameters, "$prefix$inputName", "")"""))
+          }
 
         case JavaType.STRING =>
-          if (f.isRepeated) p.add(s"""val $jsonName = parameters.toStringValues("$prefix$inputName")""")
-          else
-            p.add(s"""val $jsonName = parameters.toStringValue("$prefix$inputName")""")
+          if (f.isRepeated) p.add(s"""val $jsonName = ParametersOps.toStringValues(parameters, "$prefix$inputName")""")
+          else {
+            p.add(s"""val $jsonName = ParametersOps.toStringValue(parameters, "$prefix$inputName")""")
+          }
         case jt => throw new Exception(s"Unknown java type: $jt")
       }
     }
@@ -259,27 +264,27 @@ class GenerateDelegateFunctions private[utils] (
     fd.getJavaType match {
       case JavaType.INT =>
         printer.add(
-          s"""val $variableName = Try(parameters.toIntValue("$parentFieldName.${fd.getName}", "")).toOption"""
+          s"""val $variableName = Try(ParametersOps.toIntValue(parameters, "$parentFieldName.${fd.getName}", "")).toOption"""
         )
       case JavaType.LONG =>
         printer.add(
-          s"""val $variableName = Try(parameters.toLongValue("$parentFieldName.${fd.getName}", "")).toOption"""
+          s"""val $variableName = Try(ParametersOps.toLongValue(parameters, "$parentFieldName.${fd.getName}", "")).toOption"""
         )
       case JavaType.FLOAT =>
         printer.add(
-          s"""val $variableName = Try(parameters.toFloatValue("$parentFieldName.${fd.getName}", "")).toOption"""
+          s"""val $variableName = Try(ParametersOps.toFloatValue(parameters, "$parentFieldName.${fd.getName}", "")).toOption"""
         )
       case JavaType.DOUBLE =>
         printer.add(
-          s"""val $variableName = Try(parameters.toDoubleValue("$parentFieldName.${fd.getName}", "")).toOption"""
+          s"""val $variableName = Try(ParametersOps.toDoubleValue(parameters, "$parentFieldName.${fd.getName}", "")).toOption"""
         )
       case JavaType.BOOLEAN =>
         printer.add(
-          s"""val $variableName = Try(parameters.toBooleanValue("$parentFieldName.${fd.getName}", "")).toOption"""
+          s"""val $variableName = Try(ParametersOps.toBooleanValue(parameters, "$parentFieldName.${fd.getName}", "")).toOption"""
         )
       case JavaType.STRING =>
         printer.add(
-          s"""val $variableName = Try(parameters.toStringValue("$parentFieldName.${fd.getName}", "")).toOption"""
+          s"""val $variableName = Try(ParametersOps.toStringValue(parameters, "$parentFieldName.${fd.getName}")).toOption"""
         )
       case _ => printer
     }

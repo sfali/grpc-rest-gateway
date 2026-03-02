@@ -73,4 +73,8 @@ package object compiler {
       successStatus +: statuses.getOtherStatusList.asScala.toList
     } else Seq(defaultSuccessStatus)
   }
+
+  // Helper methods for Scala 3 compatibility
+  def usingClause(isScala3: Boolean, param: String): String = if (isScala3) s"(using $param)" else s"(implicit $param)"
+  def givenClause(isScala3: Boolean, param: String): String = if (isScala3) s"given $param" else s"implicit val $param"
 }

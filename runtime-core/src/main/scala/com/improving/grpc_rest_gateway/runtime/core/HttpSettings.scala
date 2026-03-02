@@ -12,9 +12,10 @@ case class HttpSettings(host: String, port: Int, hardTerminationDeadline: Finite
 object HttpSettings {
   def apply(config: Config): HttpSettings = {
     val hardTerminationDeadline =
-      if (config.hasPath("hard-termination-deadline"))
-        FiniteDuration(config.getDuration("hard-termination-deadline").toSeconds, SECONDS)
-      else 10.seconds
+      Option(config)
+        .filter(_.hasPath("hard-termination-deadline"))
+        .map(c => FiniteDuration(c.getDuration("hard-termination-deadline").toSeconds, SECONDS))
+        .getOrElse(10.seconds)
     HttpSettings(
       host = config.getString("host"),
       port = config.getInt("port"),
