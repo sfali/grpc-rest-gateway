@@ -3,9 +3,9 @@ import sbt.*
 object Dependencies {
 
   object V {
-    val Akka = "2.6.20"
-    val AkkaGrpc = "2.1.6"
-    val AkkaHttp = "10.2.10"
+    val Akka = "2.7.0"
+    val AkkaGrpc = "2.3.4"
+    val AkkaHttp = "10.5.0"
     val CommonsIo = "2.21.0"
     val CommonProtos = "2.9.6-0"
     val GrpcJava: String = scalapb.compiler.Version.grpcJavaVersion
@@ -91,7 +91,14 @@ object Dependencies {
     "org.apache.pekko" %% "pekko-actor-typed" % V.Pekko,
     "org.apache.pekko" %% "pekko-stream-typed" % V.Pekko,
     "org.apache.pekko" %% "pekko-http" % V.PekkoHttp,
-    "org.apache.pekko" %% "pekko-grpc-runtime" % V.PekkoGrpc,
-    "org.scalatest" %% "scalatest" % V.ScalaTest % Test
-  )
+    "org.apache.pekko" %% "pekko-grpc-runtime" % V.PekkoGrpc
+  ) ++ TestDependencies
+
+  val E2EAkkaDependencies: Seq[ModuleID] = Seq(
+    "com.typesafe.akka" %% "akka-actor" % V.Akka,
+    "com.typesafe.akka" %% "akka-actor-typed" % V.Akka,
+    "com.typesafe.akka" %% "akka-stream-typed" % V.Akka,
+    "com.typesafe.akka" %% "akka-http" % V.AkkaHttp,
+    "com.lightbend.akka.grpc" %% "akka-grpc-runtime" % V.AkkaGrpc
+  ) ++ TestDependencies
 }

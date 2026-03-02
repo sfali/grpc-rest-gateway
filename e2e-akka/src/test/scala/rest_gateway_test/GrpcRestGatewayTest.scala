@@ -3,9 +3,9 @@ package rest_gateway_test
 import com.google.rpc.Code
 import com.improving.grpc_rest_gateway.runtime.server.GatewayServer
 import io.grpc.StatusRuntimeException
-import org.apache.pekko.actor.typed.ActorSystem
-import org.apache.pekko.actor.typed.scaladsl.Behaviors
-import org.apache.pekko.grpc.GrpcClientSettings
+import akka.actor.typed.ActorSystem
+import akka.actor.typed.scaladsl.Behaviors
+import akka.grpc.GrpcClientSettings
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.matchers.should.Matchers
