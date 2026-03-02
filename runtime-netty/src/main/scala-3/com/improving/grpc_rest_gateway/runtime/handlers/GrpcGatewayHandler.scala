@@ -80,23 +80,26 @@ abstract class GrpcGatewayHandler(channel: ManagedChannel)(using ec: ExecutionCo
               }
               .recover { case ex: Throwable =>
                 logger.error("Error while processing request", ex)
+                val (status, responseBody, contentType) = ex match {
+                  case gatewayEx: GatewayException =>
+                    (GRPC_HTTP_CODE_MAP.getOrElse(gatewayEx.statusCode, HttpResponseStatus.INTERNAL_SERVER_ERROR), 
+                     gatewayEx.getMessage, "text/plain")
+                  case _ =>
+                    (HttpResponseStatus.INTERNAL_SERVER_ERROR, ex.getMessage, "text/plain")
+                }
                 buildFullHttpResponse(
                   requestMsg = req,
-                  responseBody = ex.getMessage,
-                  responseStatus = HttpResponseStatus.INTERNAL_SERVER_ERROR,
-                  responseContentType = "text/plain"
+                  responseBody = responseBody,
+                  responseStatus = status,
+                  responseContentType = contentType
                 )
               }
               .foreach { response =>
                 ctx.writeAndFlush(response)
               }
           case false =>
-            ctx.writeAndFlush(buildFullHttpResponse(
-              requestMsg = req,
-              responseBody = "Not Found",
-              responseStatus = HttpResponseStatus.NOT_FOUND,
-              responseContentType = "text/plain"
-            ))
+            // Pass to next handler in pipeline instead of sending 404
+            ctx.fireChannelRead(req)
         }
       case _ => // Do nothing for non-HTTP requests
     }
