@@ -112,7 +112,7 @@ lazy val annotations = (projectMatrix in file("annotations"))
     (Compile / PB.protoSources) += (api / baseDirectory).value / "src" / "main" / "protobuf",
     Compile / PB.targets := Seq(
       PB.gens.java(V.Protobuf) -> (Compile / sourceManaged).value,
-      scalapb.gen() -> (Compile / sourceManaged).value
+      scalapb.gen(scala3Sources = true) -> (Compile / sourceManaged).value
     )
   )
   .jvmPlatform(scalaVersions = Seq(V.Scala212, V.Scala213, V.Scala3))

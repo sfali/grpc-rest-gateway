@@ -80,7 +80,7 @@ class TreeNode[Source] {
   override def hashCode(): Int = Objects.hash(path, methodInfos, children)
 
   override def equals(obj: Any): Boolean =
-    if (obj.isInstanceOf[TreeNode[Source]]) {
+    if (obj.isInstanceOf[TreeNode[?]]) {
       val other = obj.asInstanceOf[TreeNode[Source]]
       path == other._path && methodInfos == other.methodInfos && children == other.children
     } else {
