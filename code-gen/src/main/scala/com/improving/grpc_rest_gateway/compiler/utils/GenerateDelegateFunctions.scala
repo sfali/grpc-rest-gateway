@@ -211,38 +211,42 @@ class GenerateDelegateFunctions private[utils] (
 
         case JavaType.BOOLEAN =>
           if (f.isRepeated) p.add(s"""val $jsonName = ParametersOps.toBooleanValues(parameters, "$prefix$inputName")""")
-          else
-            p.add(s"""val $jsonName = ParametersOps.toBooleanValue(parameters, "$prefix$inputName")""")
+          else p.add(s"""val $jsonName = ParametersOps.toBooleanValue(parameters, "$prefix$inputName")""")
 
         case JavaType.DOUBLE =>
           if (f.isRepeated) p.add(s"""val $jsonName = ParametersOps.toDoubleValues(parameters, "$prefix$inputName")""")
-          else
+          else {
             p.when(required)(_.add(s"""val $jsonName = ParametersOps.toDoubleValue(parameters, "$prefix$inputName")"""))
               .when(!required)(_.add(s"""val $jsonName = ParametersOps.toDoubleValue(parameters, "$prefix$inputName", "")"""))
+          }
 
         case JavaType.FLOAT =>
           if (f.isRepeated) p.add(s"""val $jsonName = ParametersOps.toFloatValues(parameters, "$prefix$inputName")""")
-          else
+          else {
             p.when(required)(_.add(s"""val $jsonName = ParametersOps.toFloatValue(parameters, "$prefix$inputName")"""))
               .when(!required)(_.add(s"""val $jsonName = ParametersOps.toFloatValue(parameters, "$prefix$inputName", "")"""))
+          }
 
         case JavaType.INT =>
-          if (f.isRepeated)
+          if (f.isRepeated) {
             p.add(s"""val $jsonName = ParametersOps.toIntValues(parameters, "$prefix$inputName")""")
-          else
+          } else {
             p.when(required)(_.add(s"""val $jsonName = ParametersOps.toIntValue(parameters, "$prefix$inputName")"""))
               .when(!required)(_.add(s"""val $jsonName = ParametersOps.toIntValue(parameters, "$prefix$inputName", "")"""))
+          }
 
         case JavaType.LONG =>
           if (f.isRepeated) p.add(s"""val $jsonName = ParametersOps.toLongValues(parameters, "$prefix$inputName")""")
-          else
+          else {
             p.when(required)(_.add(s"""val $jsonName = ParametersOps.toLongValue(parameters, "$prefix$inputName")"""))
               .when(!required)(_.add(s"""val $jsonName = ParametersOps.toLongValue(parameters, "$prefix$inputName", "")"""))
+          }
 
         case JavaType.STRING =>
           if (f.isRepeated) p.add(s"""val $jsonName = ParametersOps.toStringValues(parameters, "$prefix$inputName")""")
-          else
+          else {
             p.add(s"""val $jsonName = ParametersOps.toStringValue(parameters, "$prefix$inputName")""")
+          }
         case jt => throw new Exception(s"Unknown java type: $jt")
       }
     }

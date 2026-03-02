@@ -29,7 +29,9 @@ package object path_parser {
         treeNode.path = pathElement
         treeNode.methodInfos = rawPath.methodInfos
         treeNode
-      } else TreeNode(path = pathElement, children = Map(treeNode.path -> treeNode))
+      } else {
+        TreeNode(path = pathElement, children = Map(treeNode.path -> treeNode))
+      }
     }
   }
 }
