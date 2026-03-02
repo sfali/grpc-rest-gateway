@@ -20,7 +20,6 @@ lazy val `runtime-core` = (projectMatrix in file("runtime-core"))
     libraryDependencies ++= RuntimeCoreDependencies,
     scalacOptions ++= (if (isScala3.value) Seq("-source", "future", "-explain", "-Wconf:any:s")
                        else Seq("-Xsource:3")),
-    // Add version-specific source directories
     Compile / unmanagedSourceDirectories += {
       val sourceDir = (Compile / scalaSource).value
       CrossVersion.partialVersion(scalaVersion.value) match {
@@ -42,7 +41,6 @@ lazy val `runtime-netty` = (projectMatrix in file("runtime-netty"))
     libraryDependencies ++= RuntimeDependencies ++ TestDependencies,
     scalacOptions ++= (if (isScala3.value) Seq("-source", "future", "-explain")
                        else Seq("-Xsource:3")),
-    // Add version-specific source directories
     Compile / unmanagedSourceDirectories += {
       val sourceDir = (Compile / scalaSource).value
       CrossVersion.partialVersion(scalaVersion.value) match {
@@ -64,7 +62,16 @@ lazy val `runtime-pekko` = (projectMatrix in file("runtime-pekko"))
     name := "grpc-rest-gateway-runtime-pekko",
     libraryDependencies ++= RuntimePekkoDependencies ++ PekkoTestDependencies,
     scalacOptions ++= (if (isScala3.value) Seq("-source", "future", "-explain")
-                       else Seq("-Xsource:3"))
+                       else Seq("-Xsource:3")),
+    Compile / unmanagedSourceDirectories += {
+      val sourceDir = (Compile / scalaSource).value
+      CrossVersion.partialVersion(scalaVersion.value) match {
+        case Some((2, 12)) => sourceDir.getParentFile / "scala-2.12"
+        case Some((2, 13)) => sourceDir.getParentFile / "scala-2.13"
+        case Some((3, _))  => sourceDir.getParentFile / "scala-3"
+        case _ => sourceDir
+      }
+    }
   )
   .jvmPlatform(scalaVersions = Seq(V.Scala212, V.Scala213, V.Scala3))
   .dependsOn(`runtime-core`)
@@ -82,7 +89,16 @@ lazy val `runtime-akka` = (projectMatrix in file("runtime-akka"))
       )
     } ++ RuntimeAkkaDependencies,
     scalacOptions ++= (if (isScala3.value) Seq("-source", "future", "-explain")
-                       else Seq("-Xsource:3"))
+                       else Seq("-Xsource:3")),
+    Compile / unmanagedSourceDirectories += {
+      val sourceDir = (Compile / scalaSource).value
+      CrossVersion.partialVersion(scalaVersion.value) match {
+        case Some((2, 12)) => sourceDir.getParentFile / "scala-2.12"
+        case Some((2, 13)) => sourceDir.getParentFile / "scala-2.13"
+        case Some((3, _))  => sourceDir.getParentFile / "scala-3"
+        case _ => sourceDir
+      }
+    }
   )
   .jvmPlatform(scalaVersions = Seq(V.Scala212, V.Scala213, V.Scala3))
   .dependsOn(`runtime-core`)

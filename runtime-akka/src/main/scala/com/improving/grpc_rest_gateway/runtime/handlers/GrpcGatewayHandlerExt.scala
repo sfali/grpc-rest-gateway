@@ -3,18 +3,15 @@ package grpc_rest_gateway
 package runtime
 package handlers
 
-import runtime.core.*
+import runtime.core.GatewayException
 import io.grpc.Status.Code
-import akka.http.scaladsl.server.Directives.*
+import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpResponse, StatusCode, StatusCodes}
+import akka.http.scaladsl.server.Directives.complete
 import akka.http.scaladsl.server.{ExceptionHandler, Route}
-import akka.http.scaladsl.model.*
 import scalapb.GeneratedMessage
 import scalapb.json4s.JsonFormat
 
-import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success, Try}
-
-trait GrpcGatewayHandler {
+trait GrpcGatewayHandlerExt {
 
   private val GrpcToStatusCodes: Map[Int, StatusCode] = Map(
     Code.OK.value() -> StatusCodes.OK,
@@ -45,27 +42,9 @@ trait GrpcGatewayHandler {
     )
   }
 
-  private def getStatusCode(value: Int): StatusCode = StatusCodes.getForKey(value).getOrElse(StatusCodes.OK)
+  protected def getStatusCode(value: Int): StatusCode = StatusCodes.getForKey(value).getOrElse(StatusCodes.OK)
 
-  protected def completeResponse[IN <: GeneratedMessage, OUT <: GeneratedMessage](
-    in: Try[IN],
-    dispatchCall: IN => Future[OUT],
-    statusCodeValue: Int
-  )(implicit
-    ec: ExecutionContext
-  ): Route = {
-    val statusCode = getStatusCode(statusCodeValue)
-    val eventualResponse =
-      toResponse(in, dispatchCall, statusCodeValue, ec)
-        .map(_._2)
-        .map(toHttpResponse(statusCode))
-    onComplete(eventualResponse) {
-      case Failure(ex)       => complete(ex)
-      case Success(response) => complete(response)
-    }
-  }
-
-  private def toHttpResponse[M <: GeneratedMessage](statusCode: StatusCode)(msg: M): HttpResponse =
+  protected def toHttpResponse[M <: GeneratedMessage](statusCode: StatusCode)(msg: M): HttpResponse =
     statusCode match {
       case StatusCodes.NoContent =>
         HttpResponse(
