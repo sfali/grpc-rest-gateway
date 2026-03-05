@@ -10,8 +10,6 @@ The gRPC-REST Gateway is a code generation tool and runtime library that automat
 
 == About this project
 
-This project has two main modules:
-
 === 1. Code Generation Module (`code-gen`)
 
 The code generation module processes protobuf definitions and generates corresponding gateway handlers and OpenAPI specifications.
@@ -79,23 +77,103 @@ There are three main classes in each runtime implementation along with server cl
 . `SwaggerHandler` &mdash; responsible for Open API yaml files and generate Swagger UI.
 . `GatewayServer` &mdash; responsible for starting HTTP server at the given host and port.
 
+=== 3. Server Components
+
+==== 3.1 Gateway Server
+
+Main server component that orchestrates the gateway functionality:
+
+* **HTTP Server**: Handles incoming REST requests
+* **gRPC Client**: Communicates with backend gRPC services
+* **Configuration Management**: Host, port, TLS settings
+* **Lifecycle Management**: Server startup and shutdown
+
+==== 3.2 Swagger Handler
+
+Provides API documentation and exploration:
+
+* **OpenAPI Specification**: Serves generated YAML/JSON specs
+* **Swagger UI**: Interactive API documentation
+* **Service Discovery**: Lists available gRPC services
+
 == System Architecture
 
 === High-Level Architecture
 
-[mermaid]
+[ditaa, system-overview, png]
 ----
-flowchart LR
-    A[REST Client] <--> B[gRPC-REST Gateway]
-    B <--> C[gRPC Server]
-    B --> D[Swagger UI]
-    C --> E[Business Logic]
-    
-    style A fill:#e1f5fe
-    style B fill:#f3e5f5
-    style C fill:#e8f5e8
-    style D fill:#fff3e0
-    style E fill:#fce4ec
++----------------+      +---------------------+      +-------------------+
+|                |      |                     |      |                   |
+|  REST Client   |<---->|  gRPC-REST Gateway  |<---->|   gRPC Server     |
+|                |      |                     |      |                   |
++----------------+      +--------+------------+      +--------+----------+
+                                 |                            |
+                                 |                            |
+                        +--------v--------+          +--------v--------+
+                        |                 |          |                 |
+                        |   Swagger UI    |          |  Business Logic |
+                        |                 |          |                 |
+                        +-----------------+          +-----------------+
+----
+
+=== Component Architecture
+
+[ditaa, component-architecture, png]
+----
++----------------------+     +----------------------+     +----------------------+
+|                      |     |                      |     |                      |
+|   Code Generation    |     |   Runtime Libraries  |     |   Server Components  |
+|                      |     |                      |     |                      |
+| +------------------+ |     | +------------------+ |     | +------------------+ |
+| | Gateway Generator| |     | | Runtime Core     | |     | | Gateway Server   | |
+| +------------------+ |     | +------------------+ |     | +------------------+ |
+| | OpenAPI Generator| |     | | Runtime Netty    | |     | | Swagger Handler  | |
+| +------------------+ |     | +------------------+ |     | +------------------+ |
+| | Annotations      | |     | | Runtime Pekko    | |     | | HTTP Handlers    | |
+| +------------------+ |     | +------------------+ |     | +------------------+ |
+|                      |     | | Runtime Akka     | |     |                      |
+|                      |     | +------------------+ |     |                      |
++----------------------+     +----------------------+     +----------------------+
+----
+
+== Data Flow
+
+=== Request Processing Flow
+
+[ditaa, request-flow, png]
+----
++-------------+     +----------------+     +-----------------+     +----------------+     +---------------+
+|             |     |                |     |                 |     |                |     |               |
+| HTTP Request|---->| Route Matching |---->| Request Parsing |---->| gRPC Call      |---->| HTTP Response |
+|             |     |                |     |                 |     |                |     |               |
++-------------+     +-------+--------+     +-------+---------+     +-------+--------+     +-------+-------+
+                            |                       |                       |                       |
+                            v                       v                       v                       v
+                   +----------------+    +----------------+    +----------------+           +----------------+
+                   |                |    |                |    |                |           |                |
+                   | Path/Method    |    | JSON to Proto  |    | gRPC Service   |           | Proto to JSON  |
+                   | Validation     |    | Conversion     |    | Invocation     |           | Conversion     |
+                   +----------------+    +----------------+    +----------------+           +----------------+
+----
+
+=== Error Handling Flow
+
+[ditaa, error-flow, png]
+----
++----------------+     +----------------+     +----------------+     +----------------+
+|                |     |                |     |                |     |                |
+| gRPC Error     |---->| Status Mapping |---->| HTTP Status    |---->| Error Response |
+| Exception      |     | Table          |     | Code           |     | Body           |
+|                |     |                |     |                |     |                |
++----------------+     +-------+--------+     +-------+--------+     +-------+--------+
+                               |                       |                     |
+                               v                       v                     v
+                      +----------------+        +----------------+    +----------------+
+                      |                |        |                |    |                |
+                      | gRPC Status    |        | HTTP Status    |    | JSON Error     |
+                      | to HTTP        |        | Code (400-500) |    | Response       |
+                      | Mapping        |        |                |    |                |
+                      +----------------+        +----------------+    +----------------+
 ----
 
 == Adding gRPC-Rest-Gateway annotation to a protobuf file
