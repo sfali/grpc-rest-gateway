@@ -2,19 +2,179 @@
 :sectnums:
 :toc:
 :toclevels: 4
-:app-version: 0.8.11
+:app-version: 0.9.0
 :scalapb-version: 0.11.8
 :sbt-protoc-version: 1.0.8
 
-gRPC to REST gateway generates a reverse-proxy server which converts REST HTTP API into gRPC. This project is based on work done by https://github.com/btlines/grpcgateway[grpcgateway].
+The gRPC-REST Gateway is a code generation tool and runtime library that automatically generates REST API endpoints from gRPC service definitions. It provides a reverse-proxy server that converts HTTP REST requests into gRPC calls, enabling dual-protocol access to backend services. This project is based on work done by https://github.com/btlines/grpcgateway[grpcgateway].
 
 == About this project
 
-This project has two main modules:
+=== 1. Code Generation Module (`code-gen`)
 
-. Runtime library that serves a bridge between HTTP request and gRPC server and responsible for converting to and from HTTP to gRPC.
+The code generation module processes protobuf definitions and generates corresponding gateway handlers and OpenAPI specifications.
 
-. Code generation module which generates runtime handler(s) from given `protobuf` definition.
+==== Key Parts
+
+* **Gateway Generator**: Creates HTTP-to-gRPC handler classes
+* **OpenAPI Generator**: Generates OpenAPI 3.1.0 specifications
+* **Path Parser**: Parses HTTP patterns and builds routing trees
+* **Template Engine**: Generates Scala code for different runtime implementations
+
+==== Code Generation Flow
+
+[ditaa, codegen-flow, png]
+----
++-------------+     +-----------------+     +----------------+     +------------------+
+|             |     |                 |     |                |     |                  |
+| Proto Files |---->| Protobuf Parser |---->| Path Parser    |---->| Code Templates   |
+|             |     |                 |     |                |     |                  |
++-------------+     +-------+---------+     +-------+--------+     +--------+---------+
+                            |                     |                         |
+                            v                     v                         v
+                   +----------------+    +----------------+         +------------------+
+                   |                |    |                |         |                  |
+                   | Service Model  |    | Routing Tree   |         | Generated Code   |
+                   |                |    |                |         |                  |
+                   +----------------+    +----------------+         +------------------+
+----
+
+=== 2. Runtime Libraries
+
+The runtime libraries provide the HTTP-to-gRPC bridge functionality with multiple implementation options.
+
+==== 2.1 Runtime Core (`runtime-core`)
+
+Core abstractions and shared functionality:
+
+* **GrpcGatewayHandler**: Abstract base class for HTTP request dispatching
+* **SwaggerHandler**: OpenAPI specification serving and Swagger UI
+* **Error Handling**: gRPC to HTTP status code mapping
+* **Request/Response Conversion**: JSON to protobuf message conversion
+
+==== 2.2 Runtime Implementations
+
+**Netty Implementation (`runtime-netty`)**
+
+* Uses Netty HTTP server
+* Direct gRPC channel management
+* Synchronous request handling
+
+**Pekko Implementation (`runtime-pekko`)**
+
+* Uses https://pekko.apache.org/[Apache Pekko] HTTP
+* Asynchronous, actor-based processing
+* Route-based DSL for HTTP handling
+
+**Akka Implementation (`runtime-akka`)**
+
+* Uses https://akka.io/[Akka] HTTP
+* Similar to Pekko implementation
+
+There are three main classes in each runtime implementation along with server classes to build REST server:
+
+. `GrpcGatewayHandler` &mdash; base abstract class / trait responsible for dispatching given HTTP request to the corresponding function in gRPC service.
+. `SwaggerHandler` &mdash; responsible for Open API yaml files and generate Swagger UI.
+. `GatewayServer` &mdash; responsible for starting HTTP server at the given host and port.
+
+=== 3. Server Components
+
+==== 3.1 Gateway Server
+
+Main server component that orchestrates the gateway functionality:
+
+* **HTTP Server**: Handles incoming REST requests
+* **gRPC Client**: Communicates with backend gRPC services
+* **Configuration Management**: Host, port, TLS settings
+* **Lifecycle Management**: Server startup and shutdown
+
+==== 3.2 Swagger Handler
+
+Provides API documentation and exploration:
+
+* **OpenAPI Specification**: Serves generated YAML/JSON specs
+* **Swagger UI**: Interactive API documentation
+* **Service Discovery**: Lists available gRPC services
+
+== System Architecture
+
+=== High-Level Architecture
+
+[ditaa, system-overview, png]
+----
++----------------+      +---------------------+      +-------------------+
+|                |      |                     |      |                   |
+|  REST Client   |<---->|  gRPC-REST Gateway  |<---->|   gRPC Server     |
+|                |      |                     |      |                   |
++----------------+      +--------+------------+      +--------+----------+
+                                 |                            |
+                                 |                            |
+                        +--------v--------+          +--------v--------+
+                        |                 |          |                 |
+                        |   Swagger UI    |          |  Business Logic |
+                        |                 |          |                 |
+                        +-----------------+          +-----------------+
+----
+
+=== Component Architecture
+
+[ditaa, component-architecture, png]
+----
++----------------------+     +----------------------+     +----------------------+
+|                      |     |                      |     |                      |
+|   Code Generation    |     |   Runtime Libraries  |     |   Server Components  |
+|                      |     |                      |     |                      |
+| +------------------+ |     | +------------------+ |     | +------------------+ |
+| | Gateway Generator| |     | | Runtime Core     | |     | | Gateway Server   | |
+| +------------------+ |     | +------------------+ |     | +------------------+ |
+| | OpenAPI Generator| |     | | Runtime Netty    | |     | | Swagger Handler  | |
+| +------------------+ |     | +------------------+ |     | +------------------+ |
+| | Annotations      | |     | | Runtime Pekko    | |     | | HTTP Handlers    | |
+| +------------------+ |     | +------------------+ |     | +------------------+ |
+|                      |     | | Runtime Akka     | |     |                      |
+|                      |     | +------------------+ |     |                      |
++----------------------+     +----------------------+     +----------------------+
+----
+
+== Data Flow
+
+=== Request Processing Flow
+
+[ditaa, request-flow, png]
+----
++-------------+     +----------------+     +-----------------+     +----------------+     +---------------+
+|             |     |                |     |                 |     |                |     |               |
+| HTTP Request|---->| Route Matching |---->| Request Parsing |---->| gRPC Call      |---->| HTTP Response |
+|             |     |                |     |                 |     |                |     |               |
++-------------+     +-------+--------+     +-------+---------+     +-------+--------+     +-------+-------+
+                            |                       |                       |                       |
+                            v                       v                       v                       v
+                   +----------------+    +----------------+    +----------------+           +----------------+
+                   |                |    |                |    |                |           |                |
+                   | Path/Method    |    | JSON to Proto  |    | gRPC Service   |           | Proto to JSON  |
+                   | Validation     |    | Conversion     |    | Invocation     |           | Conversion     |
+                   +----------------+    +----------------+    +----------------+           +----------------+
+----
+
+=== Error Handling Flow
+
+[ditaa, error-flow, png]
+----
++----------------+     +----------------+     +----------------+     +----------------+
+|                |     |                |     |                |     |                |
+| gRPC Error     |---->| Status Mapping |---->| HTTP Status    |---->| Error Response |
+| Exception      |     | Table          |     | Code           |     | Body           |
+|                |     |                |     |                |     |                |
++----------------+     +-------+--------+     +-------+--------+     +-------+--------+
+                               |                       |                     |
+                               v                       v                     v
+                      +----------------+        +----------------+    +----------------+
+                      |                |        |                |    |                |
+                      | gRPC Status    |        | HTTP Status    |    | JSON Error     |
+                      | to HTTP        |        | Code (400-500) |    | Response       |
+                      | Mapping        |        |                |    |                |
+                      +----------------+        +----------------+    +----------------+
+----
 
 == Adding gRPC-Rest-Gateway annotation to a protobuf file
 
@@ -104,20 +264,6 @@ option (grpc_rest_gateway.api.statuses) = {
       ]
 };
 ----
-
-== Runtime implementations
-
-Three different implementations are provided for a runtime library:
-
-. Netty-based runtime library &mdash; `grpc-rest-gateway-runtime-netty`.
-. https://pekko.apache.org/[Apache Pekko] based runtime library &mdash; `grpc-rest-gateway-runtime-pekko`.
-. https://akka.io/[Akka] based runtime library &mdash; `grpc-rest-gateway-runtime-akka`.
-
-There are three main classes in each runtime implementation along with server classes to build REST server:
-
-. `GrpcGatewayHandler` &mdash; base abstract class / trait responsible for dispatching given HTTP request to the corresponding function in gRPC service.
-. `SwaggerHandler` &mdash; responsible for Open API yaml files and generate Swagger UI.
-. `GatewayServer` &mdash; responsible for starting HTTP server at the given host and port.
 
 == Set up your project
 
