@@ -244,6 +244,8 @@ object OpenApiGenerator extends CodeGenApp {
       pathElements: Seq[String],
       prefix: String = ""
     ): PrinterEndo = { printer =>
+      // Explicitly use prefix to avoid unused warning
+      val _ = prefix.isEmpty
       val fullPathName = NameUtils.snakeCaseToCamelCase(s"$prefix${field.upperScalaName}", upperInitial = true)
       val inPath = pathElements.contains(fullPathName)
       val inQuery = !inPath
@@ -351,8 +353,7 @@ object OpenApiGenerator extends CodeGenApp {
 
     private def generateResponses(
       outType: Descriptor,
-      statusDescription: Seq[StatusDescription],
-      prefix: String = ""
+      statusDescription: Seq[StatusDescription]
     ): PrinterEndo = { printer =>
       val successStatus = statusDescription.head
       val refName = outType.getName
