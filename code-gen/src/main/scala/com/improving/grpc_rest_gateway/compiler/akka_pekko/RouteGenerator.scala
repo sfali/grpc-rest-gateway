@@ -38,7 +38,7 @@ private class RouteGenerator(implicits: DescriptorImplicits, methods: List[Metho
       .when(totalRootNodes > 1)(_.add("concat(").indent)
       .indent
       .print(pathTree) { case (p, (treeNode, index)) =>
-        generateRouteTree(treeNode, index, totalRootNodes, parentHasMethods = false)(p)
+        generateRouteTree(treeNode, index, totalRootNodes)(p)
       }
       .when(totalRootNodes > 1)(_.outdent.add(")"))
       .outdent
@@ -47,8 +47,7 @@ private class RouteGenerator(implicits: DescriptorImplicits, methods: List[Metho
   private def generateRouteTree(
     treeNode: TreeNode[MethodDescriptor],
     currentIndex: Int,
-    totalPaths: Int,
-    parentHasMethods: Boolean
+    totalPaths: Int
   ): PrinterEndo = { printer =>
     val children = treeNode.children.values.zipWithIndex
     val totalChildPaths = children.size
@@ -70,7 +69,7 @@ private class RouteGenerator(implicits: DescriptorImplicits, methods: List[Metho
       .when(concatRoute)(_.add("concat(").indent)
       .when(hasMethods)(_.call(generateMethods(treeNode.methodInfos, hasChildPaths)))
       .print(children) { case (p, (childNode, index)) =>
-        generateRouteTree(childNode, index, totalChildPaths, hasMethods)(p)
+        generateRouteTree(childNode, index, totalChildPaths)(p)
       }
       .outdent
       .when(concatRoute)(_.add(")").outdent)
@@ -134,6 +133,7 @@ private class RouteGenerator(implicits: DescriptorImplicits, methods: List[Metho
         .filterNot(_.isBlank)
         .filter(_.startsWith("{"))
         .map(_.replaceAll("\\{", "").replaceAll("}", ""))
+        .toIndexedSeq
       extractFieldsFromMethod(fullPath, pathVariables, method, result)
     }
 
