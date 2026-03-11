@@ -19,7 +19,7 @@ object Main {
       println("Stopping gRPC server!")
       grpcServer.stop()
       println("gRPC server stopped!")
-    }
+    }: Unit
   }
 
   private def grpcServerExecutorSvc: ExecutorService = executorSvc("grpc-server-%d")

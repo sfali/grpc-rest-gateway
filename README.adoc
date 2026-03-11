@@ -269,6 +269,14 @@ option (grpc_rest_gateway.api.statuses) = {
 
 === Configure plugin for compiler fo code generation
 
+The following are the options for the plugin:
+
+* `scala3Sources` &mdash; Generate Scala 3 sources &mdash; It is used for using `*` as wild card import instead of `_`.
+ ** For Scala 2.12 or later, set to true if `-Xsource:3` scala compiler option is used.
+ ** Always enabled if `useScala3Features` flag is on.
+* `useScala3Features` &mdash; Whether to use Scala 3 features. It is used to use `using` and `given` instead of `implicits`.
+* `implementationType` &mdash; The target implementation type (Netty, Pekko, Akka)
+
 To generate Scala classes for gateway handler and OpenApi documentation, add following in `plugin.sbt`:
 
 [source, sbt, subs="normal,attributes"]
@@ -291,13 +299,13 @@ Compile / PB.targets := Seq(
   grpc_rest_gateway.openApiGen() -> (Compile / resourceManaged).value / "specs"
 )
 
-// change the value of "implementationType" parameter to `grpc_rest_gateway.ImplementationType.Pekko` or
+// change the value of the "implementationType" parameter to `grpc_rest_gateway.ImplementationType.Pekko` or
 // `grpc_rest_gateway.ImplementationType.Akka` to generate Pekko or Akka based implementation
 
 // generate code for Scala 3
 Compile / PB.targets := Seq(
   scalapb.gen(scala3Sources = true) -> (Compile / sourceManaged).value / "scalapb",
-  grpc_rest_gateway.gatewayGen(scala3Sources = true, implementationType = "netty") -> (Compile / sourceManaged).value / "scalapb",
+  grpc_rest_gateway.gatewayGen(useScala3Features = true, implementationType = grpc_rest_gateway.ImplementationType.Pekko) -> (Compile / sourceManaged).value / "scalapb",
   grpc_rest_gateway.openApiGen() -> (Compile / resourceManaged).value / "specs"
 )
 

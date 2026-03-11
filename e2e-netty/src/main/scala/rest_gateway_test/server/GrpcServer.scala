@@ -16,7 +16,7 @@ class GrpcServer(port: Int = GrpcPort) {
   private val logger = LoggerFactory.getLogger(classOf[GrpcServer])
   private var server: Option[Server] = None
 
-  private def start(executionContext: ExecutionContext): Option[Server] = {
+  private def start(executionContext: ExecutionContext): Unit = {
     server = Some(
       ServerBuilder
         .forPort(port)
@@ -29,7 +29,6 @@ class GrpcServer(port: Int = GrpcPort) {
     )
 
     logger.info("Server started, listening on {}", port)
-    server
   }
 
   def stop(): Unit = server.foreach(_.shutdown())

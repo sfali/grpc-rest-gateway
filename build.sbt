@@ -124,8 +124,18 @@ lazy val codeGen = (projectMatrix in file("code-gen"))
   .settings(
     name := "grpc-rest-gateway-code-gen",
     libraryDependencies ++= CodegenDependencies,
-    scalacOptions ++= (if (isScala3.value) Seq("-feature", "-deprecation", "-unchecked", "-explain", "-Wunused:imports", "-Wunused:locals", "-Wunused:explicits", "-Wunused:implicits", "-Wnonunit-statement", "-Wvalue-discard")
-                       else Seq("-Xsource:3"))
+    scalacOptions ++= (if (isScala3.value) Seq(
+      "-feature",
+      "-deprecation",
+      "-unchecked",
+      "-explain",
+      "-Wunused:imports",
+      "-Wunused:locals",
+      "-Wunused:explicits",
+      "-Wunused:implicits",
+      "-Wnonunit-statement",
+      "-Wvalue-discard")
+    else Seq("-Xsource:3"))
   )
   .jvmPlatform(scalaVersions = Seq(V.Scala212, V.Scala213, V.Scala3))
   .dependsOn(annotations)
@@ -202,7 +212,7 @@ lazy val `e2e-netty` = (projectMatrix in file("e2e-netty"))
         scalapb.gen(scala3Sources = true) -> (Compile / sourceManaged).value / "scalapb",
         (
           genModule("com.improving.grpc_rest_gateway.compiler.GatewayGenerator$"),
-          Seq("implementation_type:netty")
+          Seq("scala3_sources", "implementation_type:netty")
         ) -> (Compile / sourceManaged).value / "scalapb",
         genModule(
           "com.improving.grpc_rest_gateway.compiler.OpenApiGenerator$"
@@ -223,7 +233,7 @@ lazy val `e2e-netty` = (projectMatrix in file("e2e-netty"))
           scalapb.gen(scala3Sources = true) -> (Compile / sourceManaged).value / "scalapb",
           (
             genModule("com.improving.grpc_rest_gateway.compiler.GatewayGenerator$"),
-            Seq("scala3_sources=true", "implementation_type:netty")
+            Seq("scala3_sources", "use_scala3_features", "implementation_type:netty")
           ) -> (Compile / sourceManaged).value / "scalapb",
           genModule(
             "com.improving.grpc_rest_gateway.compiler.OpenApiGenerator$"
@@ -236,21 +246,25 @@ lazy val `e2e-netty` = (projectMatrix in file("e2e-netty"))
   )
   .settings(
     publish / skip := true,
+    scalacOptions ++= (if (isScala3.value) Seq(
+     "-feature",
+     "-deprecation",
+     "-unchecked",
+     "-explain",
+     "-Wunused:imports",
+     "-Wunused:locals",
+     "-Wunused:explicits",
+     "-Wunused:implicits",
+     "-Wnonunit-statement",
+     "-Wvalue-discard")
+    else Seq("-Xsource:3")),
+    Test / scalacOptions ~= (_.filterNot(Set("-Wnonunit-statement"))),
     codeGenClasspath := (codeGenJVM212 / Compile / fullClasspath).value,
     libraryDependencies ++= E2ENettyDependencies,
     scalacOptions ++= (if (isScala3.value) Seq()
                        else if (scalaBinaryVersion.value == "2.13") Seq("-Xsource:3", "-Xsource-features:eta-expand-always")
                        else Seq("-Xsource:3")),
     (Compile / PB.protoSources) += (`e2e-api` / baseDirectory).value / "src" / "main" / "protobuf",
-    Compile / PB.targets := Seq(
-      (
-        genModule("com.improving.grpc_rest_gateway.compiler.GatewayGenerator$"),
-        Seq("implementation_type:netty")
-      ) -> (Compile / sourceManaged).value / "scalapb",
-      genModule(
-        "com.improving.grpc_rest_gateway.compiler.OpenApiGenerator$"
-      ) -> (Compile / resourceManaged).value / "specs"
-    ),
     Compile / resourceGenerators += (Compile / PB.generate)
     .map(_.filter(_.getName.endsWith("yml")))
     .taskValue
@@ -295,7 +309,7 @@ lazy val `e2e-pekko` = (projectMatrix in file("e2e-pekko"))
       Compile / PB.targets ++= Seq(
         (
           genModule("com.improving.grpc_rest_gateway.compiler.GatewayGenerator$"),
-          Seq("implementation_type:pekko")
+          Seq("scala3_sources", "implementation_type:pekko")
         ) -> crossTarget.value / "pekko-grpc" / "main",
         (
           genModule(
@@ -319,7 +333,7 @@ lazy val `e2e-pekko` = (projectMatrix in file("e2e-pekko"))
       Compile / PB.targets ++= Seq(
         (
           genModule("com.improving.grpc_rest_gateway.compiler.GatewayGenerator$"),
-          Seq("scala3_sources=true", "implementation_type:pekko")
+          Seq("scala3_sources", "use_scala3_features","implementation_type:pekko")
         ) -> crossTarget.value / "pekko-grpc" / "main",
         (
           genModule(
@@ -336,6 +350,19 @@ lazy val `e2e-pekko` = (projectMatrix in file("e2e-pekko"))
   )
   .settings(
     publish / skip := true,
+    scalacOptions ++= (if (isScala3.value) Seq(
+      "-feature",
+     "-deprecation",
+     "-unchecked",
+     "-explain",
+     "-Wunused:imports",
+     "-Wunused:locals",
+     "-Wunused:explicits",
+     "-Wunused:implicits",
+     "-Wnonunit-statement",
+     "-Wvalue-discard")
+    else Seq("-Xsource:3")),
+    Test / scalacOptions ~= (_.filterNot(Set("-Wnonunit-statement"))),
     codeGenClasspath := (codeGenJVM212 / Compile / fullClasspath).value,
     libraryDependencies ++= E2EPekkoDependencies,
     (Compile / PB.protoSources) += (api / baseDirectory).value / "src" / "main" / "protobuf",
