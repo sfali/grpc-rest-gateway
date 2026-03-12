@@ -5,6 +5,8 @@ import protocbridge.{Artifact, SandboxedJvmGenerator}
 import scalapb.GeneratorOption
 
 object swaggerGen {
+
+  @deprecated("Use grpc_rest_gateway.openApiGen() instead", "0.9.1")
   def apply(options: GeneratorOption*): (SandboxedJvmGenerator, Seq[String]) =
     (
       SandboxedJvmGenerator.forModule(
