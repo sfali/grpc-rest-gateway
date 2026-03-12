@@ -47,7 +47,7 @@ class GenerateDelegateFunctions private[utils] (
     body: String = ""
   ): PrinterEndo = { printer =>
     val name = method.getName
-    val methodName = name.charAt(0).toLower + name.substring(1)
+    val methodName = s"${name.charAt(0).toLower}${name.substring(1)}"
     val delegateFunctionName = generateDelegateFunctionName(name)
     val serviceFunctionName = method.getInputType.scalaType.fullName
     httpMethod match {
@@ -252,8 +252,10 @@ class GenerateDelegateFunctions private[utils] (
     }
 
   private def getInputName(d: FieldDescriptor, prefix: String = ""): String = {
-    val name = prefix.split(".").filter(_.nonEmpty).map(s => s.charAt(0).toUpper + s.substring(1)).mkString + d.getName
-    name.charAt(0).toLower + name.substring(1)
+    // Explicitly use prefix to avoid unused warning
+    val _ = prefix.isEmpty
+    val name = prefix.split(".").filter(_.nonEmpty).map(s => s"${s.charAt(0).toUpper}${s.substring(1)}").mkString + d.getName
+    s"${name.charAt(0).toLower}${name.substring(1)}"
   }
 
   private def generatePrimitiveTypeWrappers(

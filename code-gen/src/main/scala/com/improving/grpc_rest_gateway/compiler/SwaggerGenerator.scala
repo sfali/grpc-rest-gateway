@@ -147,7 +147,7 @@ private class SwaggerMessagePrinter(fd: FileDescriptor, implicits: DescriptorImp
     def extractDefsRec(d: Descriptor): Set[Descriptor] =
       if (explored.contains(d)) Set()
       else {
-        explored.add(d)
+        val _ = explored.add(d)
         Set(d) ++ d.getFields.asScala.flatMap { f =>
           f.getJavaType match {
             case JavaType.MESSAGE => extractDefsRec(f.getMessageType)

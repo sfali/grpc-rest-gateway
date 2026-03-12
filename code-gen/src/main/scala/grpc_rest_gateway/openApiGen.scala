@@ -2,10 +2,9 @@ package grpc_rest_gateway
 
 import com.improving.grpc_rest_gateway.compiler.BuildInfo
 import protocbridge.{Artifact, SandboxedJvmGenerator}
-import scalapb.GeneratorOption
 
 object openApiGen {
-  def apply(options: GeneratorOption*): (SandboxedJvmGenerator, Seq[String]) =
+  def apply(options: String*): (SandboxedJvmGenerator, Seq[String]) =
     (
       SandboxedJvmGenerator.forModule(
         "scala",
@@ -20,5 +19,9 @@ object openApiGen {
       options.map(_.toString)
     )
 
-  def apply(options: Set[GeneratorOption] = Set.empty): (SandboxedJvmGenerator, Seq[String]) = apply(options.toSeq*)
+  def apply(version: String = "0.1.0-SNAPSHOT"): (SandboxedJvmGenerator, Seq[String]) = {
+    val optionsBuilder = Set.newBuilder[String]
+    optionsBuilder += s"version:$version"
+    apply(optionsBuilder.result().toSeq*)
+  }
 }

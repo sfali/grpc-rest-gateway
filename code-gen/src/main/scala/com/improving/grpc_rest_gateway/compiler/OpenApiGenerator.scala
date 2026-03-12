@@ -23,6 +23,7 @@ import scalapb.options.Scalapb
 import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.jdk.CollectionConverters.*
+import scalapb.compiler.GeneratorParams
 
 object OpenApiGenerator extends CodeGenApp {
 
@@ -32,9 +33,19 @@ object OpenApiGenerator extends CodeGenApp {
     GrpcRestGatewayProto.registerAllExtensions(registry)
   }
 
-  override def process(request: CodeGenRequest): CodeGenResponse =
-    ProtobufGenerator.parseParameters(request.parameter) match {
-      case Right(params) =>
+  override def process(request: CodeGenRequest): CodeGenResponse = {
+    GeneratorParams.fromStringCollectUnrecognized(request.parameter) match {
+      case Right((params, options)) =>
+        val version = 
+          options
+               .collectFirst {
+                 case option if option.startsWith("version:") =>
+                   val separator = option.indexOf(":")
+                   val v = option.substring(separator + 1)
+                   if (v.isEmpty) "0.1.0-SNAPSHOT" else v
+               }.getOrElse("0.1.0-SNAPSHOT") 
+            
+
         // Implicits gives you extension methods that provide ScalaPB names and types
         // for protobuf entities.
         val implicits = DescriptorImplicits.fromCodeGenRequest(params, request)
@@ -47,14 +58,15 @@ object OpenApiGenerator extends CodeGenApp {
               if (services.isEmpty || services.forall(getUnaryCallsWithHttpExtension(_).isEmpty)) None
               else Some(fd)
             }
-            .map(fd => new OpenApiMessagePrinter(fd, implicits))
+            .map(fd => new OpenApiMessagePrinter(version, fd, implicits))
             .map(_.result)
         )
 
       case Left(error) => CodeGenResponse.fail(error)
     }
+  }
 
-  private class OpenApiMessagePrinter(fd: FileDescriptor, implicits: DescriptorImplicits) {
+  private class OpenApiMessagePrinter(version: String, fd: FileDescriptor, implicits: DescriptorImplicits) {
     import implicits.*
 
     // map of services defined in this file to methods with `HTTP` annotations
@@ -83,7 +95,7 @@ object OpenApiGenerator extends CodeGenApp {
       new FunctionalPrinter()
         .add("openapi: 3.1.0", "info:")
         .addIndented(
-          """version: 0.1.0-SNAPSHOT""",
+          s"""version: $version""",
           s"""description: "REST API generated from ${fd.getName}"""",
           s"""title: "${fd.getFullName}""""
         )
@@ -244,6 +256,8 @@ object OpenApiGenerator extends CodeGenApp {
       pathElements: Seq[String],
       prefix: String = ""
     ): PrinterEndo = { printer =>
+      // Explicitly use prefix to avoid unused warning
+      val _ = prefix.isEmpty
       val fullPathName = NameUtils.snakeCaseToCamelCase(s"$prefix${field.upperScalaName}", upperInitial = true)
       val inPath = pathElements.contains(fullPathName)
       val inQuery = !inPath
@@ -351,8 +365,7 @@ object OpenApiGenerator extends CodeGenApp {
 
     private def generateResponses(
       outType: Descriptor,
-      statusDescription: Seq[StatusDescription],
-      prefix: String = ""
+      statusDescription: Seq[StatusDescription]
     ): PrinterEndo = { printer =>
       val successStatus = statusDescription.head
       val refName = outType.getName
