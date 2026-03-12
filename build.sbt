@@ -193,9 +193,7 @@ lazy val `e2e-netty` = (projectMatrix in file("e2e-netty"))
           genModule("com.improving.grpc_rest_gateway.compiler.GatewayGenerator$"),
           Seq("implementation_type:netty")
         ) -> (Compile / sourceManaged).value / "scalapb",
-        genModule(
-          "com.improving.grpc_rest_gateway.compiler.OpenApiGenerator$"
-        ) -> (Compile / resourceManaged).value / "specs"
+        genModule("com.improving.grpc_rest_gateway.compiler.OpenApiGenerator$") -> (Compile / resourceManaged).value / "specs"
       ),
       Compile / resourceGenerators += (Compile / PB.generate)
         .map(_.filter(_.getName.endsWith("yml")))
@@ -214,8 +212,9 @@ lazy val `e2e-netty` = (projectMatrix in file("e2e-netty"))
           genModule("com.improving.grpc_rest_gateway.compiler.GatewayGenerator$"),
           Seq("scala3_sources", "implementation_type:netty")
         ) -> (Compile / sourceManaged).value / "scalapb",
-        genModule(
-          "com.improving.grpc_rest_gateway.compiler.OpenApiGenerator$"
+       (
+          genModule("com.improving.grpc_rest_gateway.compiler.OpenApiGenerator$"),
+          Seq("version:1.0.0")
         ) -> (Compile / resourceManaged).value / "specs"
       ),
       Compile / resourceGenerators += (Compile / PB.generate)
@@ -235,9 +234,10 @@ lazy val `e2e-netty` = (projectMatrix in file("e2e-netty"))
             genModule("com.improving.grpc_rest_gateway.compiler.GatewayGenerator$"),
             Seq("scala3_sources", "use_scala3_features", "implementation_type:netty")
           ) -> (Compile / sourceManaged).value / "scalapb",
-          genModule(
-            "com.improving.grpc_rest_gateway.compiler.OpenApiGenerator$"
-          ) -> (Compile / resourceManaged).value / "specs"
+         (
+          genModule("com.improving.grpc_rest_gateway.compiler.OpenApiGenerator$"),
+          Seq("version:1.0.0")
+        ) -> (Compile / resourceManaged).value / "specs"
         ),
         Compile / resourceGenerators += (Compile / PB.generate)
         .map(_.filter(_.getName.endsWith("yml")))
@@ -288,10 +288,8 @@ lazy val `e2e-pekko` = (projectMatrix in file("e2e-pekko"))
           Seq("implementation_type:pekko")
         ) -> crossTarget.value / "pekko-grpc" / "main",
         (
-          genModule(
-            "com.improving.grpc_rest_gateway.compiler.OpenApiGenerator$"
-          ),
-          Seq()
+          genModule("com.improving.grpc_rest_gateway.compiler.OpenApiGenerator$"),
+          Seq("version:1.0.0")
         ) -> (Compile / resourceManaged).value / "specs"
       ),
       // Add pekko-grpc targets
@@ -315,7 +313,7 @@ lazy val `e2e-pekko` = (projectMatrix in file("e2e-pekko"))
           genModule(
             "com.improving.grpc_rest_gateway.compiler.OpenApiGenerator$"
           ),
-          Seq()
+          Seq("version:1.0.0")
         ) -> (Compile / resourceManaged).value / "specs"
       ),
       // Add pekko-grpc targets
@@ -339,7 +337,7 @@ lazy val `e2e-pekko` = (projectMatrix in file("e2e-pekko"))
           genModule(
             "com.improving.grpc_rest_gateway.compiler.OpenApiGenerator$"
           ),
-          Seq()
+          Seq("version:1.0.0")
         ) -> (Compile / resourceManaged).value / "specs"
       ),
       // Add pekko-grpc targets
@@ -395,7 +393,7 @@ lazy val `e2e-akka` = (projectMatrix in file("e2e-akka"))
           genModule(
             "com.improving.grpc_rest_gateway.compiler.OpenApiGenerator$"
           ),
-          Seq()
+          Seq("version:1.0.0")
         ) -> (Compile / resourceManaged).value / "specs"
       ),
       akkaGrpcCodeGeneratorSettings := Seq("grpc", "single_line_to_proto_string"),

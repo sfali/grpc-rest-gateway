@@ -21,8 +21,6 @@ object gatewayGen {
       options
     )
 
-  def apply(options: Set[String]): (SandboxedJvmGenerator, Seq[String]) = apply(options.toSeq*)
-
   /** Creates a gateway generator with the specified options.
     *
     * @param scala3Sources
@@ -48,6 +46,6 @@ object gatewayGen {
       optionsBuilder += "use_scala3_features"
     }
     optionsBuilder += s"implementation_type:$implementationType"
-    apply(optionsBuilder.result())
+    apply(optionsBuilder.result().toSeq*)
   }
 }

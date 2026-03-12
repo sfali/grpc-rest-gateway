@@ -269,13 +269,17 @@ option (grpc_rest_gateway.api.statuses) = {
 
 === Configure plugin for compiler fo code generation
 
-The following are the options for the plugin:
+The code-generator plugin has following options:
 
 * `scala3Sources` &mdash; Generate Scala 3 sources &mdash; It is used for using `*` as wild card import instead of `_`.
  ** For Scala 2.12 or later, set to true if `-Xsource:3` scala compiler option is used.
  ** Always enabled if `useScala3Features` flag is on.
 * `useScala3Features` &mdash; Whether to use Scala 3 features. It is used to use `using` and `given` instead of `implicits`.
 * `implementationType` &mdash; The target implementation type (Netty, Pekko, Akka)
+
+The OpenApi generator has following options:
+
+* `version` &mdash; the version of the OpenApi specification to generate, default value is `0.1.0-SNAPSHOT`
 
 To generate Scala classes for gateway handler and OpenApi documentation, add following in `plugin.sbt`:
 
@@ -296,7 +300,7 @@ And following in the `build.sbt`:
 Compile / PB.targets := Seq(
   scalapb.gen() -> (Compile / sourceManaged).value / "scalapb",
   grpc_rest_gateway.gatewayGen(implementationType = grpc_rest_gateway.ImplementationType.Netty) -> (Compile / sourceManaged).value / "scalapb",
-  grpc_rest_gateway.openApiGen() -> (Compile / resourceManaged).value / "specs"
+  grpc_rest_gateway.openApiGen(version = "1.0.0") -> (Compile / resourceManaged).value / "specs"
 )
 
 // change the value of the "implementationType" parameter to `grpc_rest_gateway.ImplementationType.Pekko` or
@@ -306,7 +310,7 @@ Compile / PB.targets := Seq(
 Compile / PB.targets := Seq(
   scalapb.gen(scala3Sources = true) -> (Compile / sourceManaged).value / "scalapb",
   grpc_rest_gateway.gatewayGen(useScala3Features = true, implementationType = grpc_rest_gateway.ImplementationType.Pekko) -> (Compile / sourceManaged).value / "scalapb",
-  grpc_rest_gateway.openApiGen() -> (Compile / resourceManaged).value / "specs"
+  grpc_rest_gateway.openApiGen(version = "1.0.0") -> (Compile / resourceManaged).value / "specs"
 )
 
 // Add the following to add openapi specs into the classpath
@@ -373,7 +377,7 @@ lazy val root = project
               scala3Sources = true,
               implementationType = grpc_rest_gateway.ImplementationType.Pekko
            ) -> crossTarget.value / "pekko-grpc" / "main",
-          grpc_rest_gateway.openApiGen() -> (Compile / resourceManaged).value / "specs"
+          grpc_rest_gateway.openApiGen(version = "1.0.0") -> (Compile / resourceManaged).value / "specs"
       ),
       Compile / resourceGenerators += (Compile / PB.generate)
       .map(_.filter(_.getName.endsWith("yml")))
