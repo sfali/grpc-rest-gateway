@@ -33,18 +33,18 @@ object OpenApiGenerator extends CodeGenApp {
     GrpcRestGatewayProto.registerAllExtensions(registry)
   }
 
-  override def process(request: CodeGenRequest): CodeGenResponse = {
+  override def process(request: CodeGenRequest): CodeGenResponse =
     GeneratorParams.fromStringCollectUnrecognized(request.parameter) match {
       case Right((params, options)) =>
-        val version = 
+        val version =
           options
-               .collectFirst {
-                 case option if option.startsWith("version:") =>
-                   val separator = option.indexOf(":")
-                   val v = option.substring(separator + 1)
-                   if (v.isEmpty) "0.1.0-SNAPSHOT" else v
-               }.getOrElse("0.1.0-SNAPSHOT") 
-            
+            .collectFirst {
+              case option if option.startsWith("version:") =>
+                val separator = option.indexOf(":")
+                val v = option.substring(separator + 1)
+                if (v.isEmpty) "0.1.0-SNAPSHOT" else v
+            }
+            .getOrElse("0.1.0-SNAPSHOT")
 
         // Implicits gives you extension methods that provide ScalaPB names and types
         // for protobuf entities.
@@ -64,7 +64,6 @@ object OpenApiGenerator extends CodeGenApp {
 
       case Left(error) => CodeGenResponse.fail(error)
     }
-  }
 
   private class OpenApiMessagePrinter(version: String, fd: FileDescriptor, implicits: DescriptorImplicits) {
     import implicits.*

@@ -30,9 +30,9 @@ class SwaggerHandler(services: Seq[GrpcGatewayHandler]) extends ChannelInboundHa
         val queryString = new QueryStringDecoder(req.uri())
         val path = Paths.get(queryString.path())
         val res = path match {
-          case RootPath => Some(createRedirectResponse(req, DocsLandingPage))
-          case DocsPrefix => Some(createRedirectResponse(req, DocsLandingPage))
-          case DocsLandingPage => Some(createStringResponse(req, indexPage))
+          case RootPath                      => Some(createRedirectResponse(req, DocsLandingPage))
+          case DocsPrefix                    => Some(createRedirectResponse(req, DocsLandingPage))
+          case DocsLandingPage               => Some(createStringResponse(req, indexPage))
           case p if p.startsWith(DocsPrefix) =>
             // swagger UI loading its own resources
             val resourcePath = SwaggerUiPath.resolve(RootPath.relativize(path).subpath(1, path.getNameCount))
@@ -44,7 +44,7 @@ class SwaggerHandler(services: Seq[GrpcGatewayHandler]) extends ChannelInboundHa
         }
         res match {
           case Some(response) => ctx.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE)
-          case None => super.channelRead(ctx, msg)
+          case None           => super.channelRead(ctx, msg)
         }
       case _ => super.channelRead(ctx, msg)
     }

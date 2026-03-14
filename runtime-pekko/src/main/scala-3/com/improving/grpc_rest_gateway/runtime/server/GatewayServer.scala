@@ -46,7 +46,7 @@ class GatewayServer(
           )
         case Success(binding) =>
           val localAddress = binding.localAddress
-          logger.info("Http server started at http://{}:{}", localAddress.getHostString, localAddress.getPort)
+          logger.info("Gateway server started at http://{}:{}", localAddress.getHostString, localAddress.getPort)
       }
 
     eventualBinding

@@ -24,14 +24,14 @@ class SwaggerHandlerTest extends AnyFlatSpec with Matchers with ScalatestRouteTe
   "SwaggerHandler" should "be created with services" in {
     val services = Seq(new MockGatewayHandler("test-service"))
     val swaggerHandler = SwaggerHandler(services)
-    
+
     swaggerHandler should not be null
   }
 
   it should "handle empty services list" in {
     val services = Seq.empty[MockGatewayHandler]
     val swaggerHandler = SwaggerHandler(services)
-    
+
     swaggerHandler should not be null
   }
 
@@ -42,7 +42,7 @@ class SwaggerHandlerTest extends AnyFlatSpec with Matchers with ScalatestRouteTe
       new MockGatewayHandler("duplicate-service") // Duplicate
     )
     val swaggerHandler = SwaggerHandler(services)
-    
+
     swaggerHandler should not be null
   }
 
@@ -53,14 +53,14 @@ class SwaggerHandlerTest extends AnyFlatSpec with Matchers with ScalatestRouteTe
       new MockGatewayHandler("service.with.dots")
     )
     val swaggerHandler = SwaggerHandler(services)
-    
+
     swaggerHandler should not be null
   }
 
   "SwaggerHandler routes" should "redirect root to docs landing page" in {
     val services = Seq(new MockGatewayHandler("test-service"))
     val swaggerHandler = SwaggerHandler(services)
-    
+
     Get("/") ~> swaggerHandler.route ~> check {
       status shouldBe StatusCodes.PermanentRedirect
       header("location").get.value() shouldBe "/docs/index.html"
@@ -70,7 +70,7 @@ class SwaggerHandlerTest extends AnyFlatSpec with Matchers with ScalatestRouteTe
   it should "redirect docs prefix to docs landing page" in {
     val services = Seq(new MockGatewayHandler("test-service"))
     val swaggerHandler = SwaggerHandler(services)
-    
+
     Get("/docs") ~> swaggerHandler.route ~> check {
       status shouldBe StatusCodes.PermanentRedirect
       header("location").get.value() shouldBe "/docs/index.html"
@@ -80,11 +80,11 @@ class SwaggerHandlerTest extends AnyFlatSpec with Matchers with ScalatestRouteTe
   it should "return swagger index page for docs landing page" in {
     val services = Seq(new MockGatewayHandler("test-service"), new MockGatewayHandler("another-service"))
     val swaggerHandler = SwaggerHandler(services)
-    
+
     Get("/docs/index.html") ~> swaggerHandler.route ~> check {
       status shouldBe StatusCodes.OK
       contentType shouldBe ContentTypes.`text/html(UTF-8)`
-      
+
       val content = responseAs[String]
       content should include("test-service")
       content should include("another-service")
@@ -95,7 +95,7 @@ class SwaggerHandlerTest extends AnyFlatSpec with Matchers with ScalatestRouteTe
   it should "return 404 for non-existent swagger resources" in {
     val services = Seq(new MockGatewayHandler("test-service"))
     val swaggerHandler = SwaggerHandler(services)
-    
+
     Get("/docs/non-existent.css") ~> swaggerHandler.route ~> check {
       status shouldBe StatusCodes.NotFound
     }
@@ -104,7 +104,7 @@ class SwaggerHandlerTest extends AnyFlatSpec with Matchers with ScalatestRouteTe
   it should "return 404 for non-existent spec files" in {
     val services = Seq(new MockGatewayHandler("test-service"))
     val swaggerHandler = SwaggerHandler(services)
-    
+
     Get("/specs/non-existent.yml") ~> swaggerHandler.route ~> check {
       status shouldBe StatusCodes.NotFound
     }
@@ -113,7 +113,7 @@ class SwaggerHandlerTest extends AnyFlatSpec with Matchers with ScalatestRouteTe
   it should "pass through unsupported paths" in {
     val services = Seq(new MockGatewayHandler("test-service"))
     val swaggerHandler = SwaggerHandler(services)
-    
+
     Get("/unsupported/path") ~> swaggerHandler.route ~> check {
       handled shouldBe false
     }

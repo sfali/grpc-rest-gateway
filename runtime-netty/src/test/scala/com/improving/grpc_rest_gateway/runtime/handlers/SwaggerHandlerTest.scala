@@ -13,7 +13,11 @@ class SwaggerHandlerTest extends AnyFlatSpec with Matchers {
   // Simple mock implementation for testing
   class MockGatewayHandler(val specName: String) extends GrpcGatewayHandler(null) {
     override val specificationName: String = specName
-    override protected def dispatchCall(method: io.netty.handler.codec.http.HttpMethod, uri: String, body: String): scala.concurrent.Future[(Int, scalapb.GeneratedMessage)] = ???
+    override protected def dispatchCall(
+      method: io.netty.handler.codec.http.HttpMethod,
+      uri: String,
+      body: String
+    ): scala.concurrent.Future[(Int, scalapb.GeneratedMessage)] = ???
     override val serviceName: String = specName
     override protected val httpMethodsToUrisMap: Map[String, Seq[String]] = Map.empty
   }
@@ -21,14 +25,14 @@ class SwaggerHandlerTest extends AnyFlatSpec with Matchers {
   "SwaggerHandler" should "be created with services" in {
     val services = Seq(new MockGatewayHandler("test-service"))
     val swaggerHandler = new SwaggerHandler(services)
-    
+
     swaggerHandler should not be null
   }
 
   it should "handle empty services list" in {
     val services = Seq.empty[MockGatewayHandler]
     val swaggerHandler = new SwaggerHandler(services)
-    
+
     swaggerHandler should not be null
   }
 
@@ -39,7 +43,7 @@ class SwaggerHandlerTest extends AnyFlatSpec with Matchers {
       new MockGatewayHandler("duplicate-service") // Duplicate
     )
     val swaggerHandler = new SwaggerHandler(services)
-    
+
     swaggerHandler should not be null
   }
 
@@ -50,7 +54,7 @@ class SwaggerHandlerTest extends AnyFlatSpec with Matchers {
       new MockGatewayHandler("service.with.dots")
     )
     val swaggerHandler = new SwaggerHandler(services)
-    
+
     swaggerHandler should not be null
   }
 }

@@ -93,14 +93,23 @@ package object core {
       toValues(src.getOrElse(key, Seq.empty))
     }
 
-    def toStringValue(src: Map[String, Seq[String]], key: String): String = src.get(key).flatMap(_.headOption).getOrElse("")
+    def toStringValue(src: Map[String, Seq[String]], key: String): String =
+      src.get(key).flatMap(_.headOption).getOrElse("")
 
     def toStringValues(src: Map[String, Seq[String]], key: String): Seq[String] = src.getOrElse(key, Seq.empty)
 
-    def toEnumValue[T <: GeneratedEnum](src: Map[String, Seq[String]], key: String, companion: GeneratedEnumCompanion[T]): T =
+    def toEnumValue[T <: GeneratedEnum](
+      src: Map[String, Seq[String]],
+      key: String,
+      companion: GeneratedEnumCompanion[T]
+    ): T =
       toEnumValueInternal(toStringValue(src, key), companion)
 
-    def toEnumValues[T <: GeneratedEnum](src: Map[String, Seq[String]], key: String, companion: GeneratedEnumCompanion[T]): Seq[T] =
+    def toEnumValues[T <: GeneratedEnum](
+      src: Map[String, Seq[String]],
+      key: String,
+      companion: GeneratedEnumCompanion[T]
+    ): Seq[T] =
       toStringValues(src, key).map(v => toEnumValueInternal(v, companion))
 
     private def toEnumValueInternal[T <: GeneratedEnum](value: String, companion: GeneratedEnumCompanion[T]): T =

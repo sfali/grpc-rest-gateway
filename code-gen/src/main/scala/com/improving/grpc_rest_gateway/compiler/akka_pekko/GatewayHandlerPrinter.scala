@@ -8,7 +8,11 @@ import compiler.utils.GenerateDelegateFunctions
 import scalapb.compiler.FunctionalPrinter.PrinterEndo
 import scalapb.compiler.{DescriptorImplicits, FunctionalPrinter}
 
-class GatewayHandlerPrinter(packageNamePrefix: String, service: ServiceDescriptor, implicits: DescriptorImplicits, isScala3: Boolean = false)
+class GatewayHandlerPrinter(
+  packageNamePrefix: String,
+  service: ServiceDescriptor,
+  implicits: DescriptorImplicits,
+  isScala3: Boolean = false)
     extends HandlerPrinter {
   import implicits.*
 
@@ -52,7 +56,9 @@ class GatewayHandlerPrinter(packageNamePrefix: String, service: ServiceDescripto
       .result()
 
   private def generateService: PrinterEndo =
-    _.add(s"class $handlerClassName(settings: GrpcClientSettings)${usingClause(isScala3, "sys: ClassicActorSystemProvider")} extends GrpcGatewayHandler {")
+    _.add(
+      s"class $handlerClassName(settings: GrpcClientSettings)${usingClause(isScala3, "sys: ClassicActorSystemProvider")} extends GrpcGatewayHandler {"
+    )
       .newline
       .indent
       .add(s"private ${givenClause(isScala3, "ec: ExecutionContext")} = sys.classicSystem.dispatcher")
@@ -70,13 +76,17 @@ class GatewayHandlerPrinter(packageNamePrefix: String, service: ServiceDescripto
       .add(s"object $handlerClassName {")
       .newline
       .indent
-      .add(s"def apply(settings: GrpcClientSettings)${usingClause(isScala3, "sys: ClassicActorSystemProvider")}: GrpcGatewayHandler = {")
+      .add(
+        s"def apply(settings: GrpcClientSettings)${usingClause(isScala3, "sys: ClassicActorSystemProvider")}: GrpcGatewayHandler = {"
+      )
       .indent
       .add(s"new $handlerClassName(settings)")
       .outdent
       .add("}")
       .newline
-      .add(s"def apply(clientName: String)${usingClause(isScala3, "sys: ClassicActorSystemProvider")}: GrpcGatewayHandler = {")
+      .add(
+        s"def apply(clientName: String)${usingClause(isScala3, "sys: ClassicActorSystemProvider")}: GrpcGatewayHandler = {"
+      )
       .indent
       .add(s"$handlerClassName(GrpcClientSettings.fromConfig(clientName))")
       .outdent
