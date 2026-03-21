@@ -5,9 +5,9 @@ package server
 
 import com.typesafe.config.Config
 import runtime.handlers.{GrpcGatewayHandler, SwaggerHandler}
-import runtime.core.HttpSettings
-import org.apache.pekko
+import runtime.core.{HttpSettings, OpenApiSettings}
 import org.slf4j.LoggerFactory
+import org.apache.pekko
 import pekko.actor.ClassicActorSystemProvider
 import pekko.http.scaladsl.Http
 import pekko.http.scaladsl.server.Directives.*
@@ -25,10 +25,14 @@ class GatewayServer(
   sys: ClassicActorSystemProvider) {
 
   private val logger = LoggerFactory.getLogger(classOf[GatewayServer])
+  private val openApiSettings = OpenApiSettings(sys.classicSystem.settings.config.getConfig("openapi"))
 
   def run(): Future[Http.ServerBinding] = {
     implicit val ec: ExecutionContext = sys.classicSystem.dispatcher
-    val routes = SwaggerHandler(handlers).route +: handlers.map(_.route)
+    val handlerRoutes = handlers.map(_.route)
+    val routes =
+      if (openApiSettings.enabled) SwaggerHandler(openApiSettings.specsFolder, handlers).route +: handlerRoutes
+      else handlerRoutes
     val eventualBinding = Http()
       .newServerAt(host, port)
       .bind(concat(routes*))

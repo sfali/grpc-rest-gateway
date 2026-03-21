@@ -17,7 +17,7 @@ import com.improving.grpc_rest_gateway.api.GrpcRestGatewayProto
 import com.improving.grpc_rest_gateway.api.GrpcRestGatewayProto.StatusDescription
 import protocgen.{CodeGenApp, CodeGenRequest, CodeGenResponse}
 import scalapb.compiler.FunctionalPrinter.PrinterEndo
-import scalapb.compiler.{DescriptorImplicits, FunctionalPrinter, NameUtils, ProtobufGenerator}
+import scalapb.compiler.{DescriptorImplicits, FunctionalPrinter, NameUtils}
 import scalapb.options.Scalapb
 
 import scala.annotation.tailrec

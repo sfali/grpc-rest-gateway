@@ -27,7 +27,7 @@ class SwaggerHandlerIntegrationTest extends AnyFlatSpec with Matchers with Scala
       new MockGatewayHandler("service-b"),
       new MockGatewayHandler("service-c")
     )
-    val swaggerHandler = SwaggerHandler(services)
+    val swaggerHandler = SwaggerHandler("specs", services)
 
     Get("/docs/index.html") ~> swaggerHandler.route ~> check {
       val content = responseAs[String]
@@ -43,7 +43,7 @@ class SwaggerHandlerIntegrationTest extends AnyFlatSpec with Matchers with Scala
       new MockGatewayHandler("unique-service"),
       new MockGatewayHandler("duplicate-service") // Duplicate
     )
-    val swaggerHandler = SwaggerHandler(services)
+    val swaggerHandler = SwaggerHandler("specs", services)
 
     Get("/docs/index.html") ~> swaggerHandler.route ~> check {
       val content = responseAs[String]
@@ -63,7 +63,7 @@ class SwaggerHandlerIntegrationTest extends AnyFlatSpec with Matchers with Scala
 
   it should "handle empty services list in index page" in {
     val services = Seq.empty[MockGatewayHandler]
-    val swaggerHandler = SwaggerHandler(services)
+    val swaggerHandler = SwaggerHandler("specs", services)
 
     Get("/docs/index.html") ~> swaggerHandler.route ~> check {
       val content = responseAs[String]
@@ -76,7 +76,7 @@ class SwaggerHandlerIntegrationTest extends AnyFlatSpec with Matchers with Scala
       new MockGatewayHandler("test-service"),
       new MockGatewayHandler("another-service")
     )
-    val swaggerHandler = SwaggerHandler(services)
+    val swaggerHandler = SwaggerHandler("specs", services)
 
     Get("/docs/index.html") ~> swaggerHandler.route ~> check {
       val content = responseAs[String]
@@ -91,7 +91,7 @@ class SwaggerHandlerIntegrationTest extends AnyFlatSpec with Matchers with Scala
       new MockGatewayHandler("a-service"),
       new MockGatewayHandler("m-service")
     )
-    val swaggerHandler = SwaggerHandler(services)
+    val swaggerHandler = SwaggerHandler("specs", services)
 
     Get("/docs/index.html") ~> swaggerHandler.route ~> check {
       val content = responseAs[String]
@@ -105,7 +105,7 @@ class SwaggerHandlerIntegrationTest extends AnyFlatSpec with Matchers with Scala
       new MockGatewayHandler("service_with_underscores"),
       new MockGatewayHandler("service.with.dots")
     )
-    val swaggerHandler = SwaggerHandler(services)
+    val swaggerHandler = SwaggerHandler("specs", services)
 
     Get("/docs/index.html") ~> swaggerHandler.route ~> check {
       val content = responseAs[String]
@@ -122,7 +122,7 @@ class SwaggerHandlerIntegrationTest extends AnyFlatSpec with Matchers with Scala
 
   it should "generate valid HTML structure" in {
     val services = Seq(new MockGatewayHandler("test-service"))
-    val swaggerHandler = SwaggerHandler(services)
+    val swaggerHandler = SwaggerHandler("specs", services)
 
     Get("/docs/index.html") ~> swaggerHandler.route ~> check {
       val content = responseAs[String]

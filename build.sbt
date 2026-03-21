@@ -290,7 +290,7 @@ lazy val `e2e-pekko` = (projectMatrix in file("e2e-pekko"))
         (
           genModule("com.improving.grpc_rest_gateway.compiler.OpenApiGenerator$"),
           Seq("version:1.0.0")
-        ) -> (Compile / resourceManaged).value / "specs"
+        ) -> (Compile / resourceManaged).value / "specs-2.12"
       ),
       // Add pekko-grpc targets
       pekkoGrpcCodeGeneratorSettings := Seq("grpc", "single_line_to_proto_string"),
@@ -338,7 +338,7 @@ lazy val `e2e-pekko` = (projectMatrix in file("e2e-pekko"))
             "com.improving.grpc_rest_gateway.compiler.OpenApiGenerator$"
           ),
           Seq("version:1.0.0")
-        ) -> (Compile / resourceManaged).value / "specs"
+        ) -> (Compile / resourceManaged).value
       ),
       // Add pekko-grpc targets
       pekkoGrpcCodeGeneratorSettings := Seq("grpc", "single_line_to_proto_string"),
@@ -370,7 +370,16 @@ lazy val `e2e-pekko` = (projectMatrix in file("e2e-pekko"))
     ),
     Compile / resourceGenerators += (Compile / PB.generate)
       .map(_.filter(_.getName.endsWith("yml")))
-      .taskValue
+      .taskValue,
+    Compile / unmanagedResourceDirectories += {
+      val resourceDir = (Compile / resourceDirectory).value
+      CrossVersion.partialVersion(scalaVersion.value) match {
+        case Some((2, 12)) => resourceDir.getParentFile / "resources-2.12"
+        case Some((2, 13)) => resourceDir.getParentFile / "resources-2.13"
+        case Some((3, _))  => resourceDir.getParentFile / "resources-3"
+        case _ => resourceDir
+      }
+    }
   )
   .jvmPlatform(scalaVersions = Seq(V.Scala212, V.Scala213, V.Scala3))
 

@@ -37,8 +37,13 @@ package object core {
       )
   }
 
-  def readSwaggerIndexPage(specificationNames: Seq[String]): String = {
-    val serviceUrls = specificationNames.map(s => s"{url: '/specs/$s.yml', name: '$s'}").mkString(", ")
+  def readSwaggerIndexPage(specsPrefix: String, specificationNames: Seq[String]): String = {
+    val specsFolder = 
+      specsPrefix match {
+        case "" => ""
+        case _ => s"/$specsPrefix"
+      }
+    val serviceUrls = specificationNames.map(s => s"{url: '$specsFolder/$s.yml', name: '$s'}").mkString(", ")
     val serviceNames = specificationNames.mkString(", ")
     Using(
       Source
