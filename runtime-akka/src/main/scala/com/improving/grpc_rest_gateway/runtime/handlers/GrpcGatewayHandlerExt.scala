@@ -5,7 +5,7 @@ package handlers
 
 import runtime.core.GatewayException
 import io.grpc.Status.Code
-import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpResponse, StatusCode, StatusCodes}
+import akka.http.scaladsl.model.*
 import akka.http.scaladsl.server.Directives.complete
 import akka.http.scaladsl.server.{ExceptionHandler, Route}
 import scalapb.GeneratedMessage
