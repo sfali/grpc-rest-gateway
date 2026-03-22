@@ -31,7 +31,7 @@ class SwaggerHandlerIntegrationTest extends AnyFlatSpec with Matchers {
       new MockGatewayHandler("service-b"),
       new MockGatewayHandler("service-c")
     )
-    val swaggerHandler = new SwaggerHandler(services)
+    val swaggerHandler = new SwaggerHandler("specs", services)
 
     // Use reflection to access the private indexPage field
     val indexPageField = swaggerHandler.getClass.getDeclaredField("indexPage")
@@ -49,7 +49,7 @@ class SwaggerHandlerIntegrationTest extends AnyFlatSpec with Matchers {
       new MockGatewayHandler("unique-service"),
       new MockGatewayHandler("duplicate-service") // Duplicate
     )
-    val swaggerHandler = new SwaggerHandler(services)
+    val swaggerHandler = new SwaggerHandler("specs", services)
 
     // Use reflection to access the private indexPage field
     val indexPageField = swaggerHandler.getClass.getDeclaredField("indexPage")
@@ -70,7 +70,7 @@ class SwaggerHandlerIntegrationTest extends AnyFlatSpec with Matchers {
 
   it should "handle empty services list in index page" in {
     val services = Seq.empty[MockGatewayHandler]
-    val swaggerHandler = new SwaggerHandler(services)
+    val swaggerHandler = new SwaggerHandler("specs", services)
 
     // Use reflection to access the private indexPage field
     val indexPageField = swaggerHandler.getClass.getDeclaredField("indexPage")
@@ -85,7 +85,7 @@ class SwaggerHandlerIntegrationTest extends AnyFlatSpec with Matchers {
       new MockGatewayHandler("test-service"),
       new MockGatewayHandler("another-service")
     )
-    val swaggerHandler = new SwaggerHandler(services)
+    val swaggerHandler = new SwaggerHandler("specs", services)
 
     // Use reflection to access the private indexPage field
     val indexPageField = swaggerHandler.getClass.getDeclaredField("indexPage")
@@ -102,7 +102,7 @@ class SwaggerHandlerIntegrationTest extends AnyFlatSpec with Matchers {
       new MockGatewayHandler("a-service"),
       new MockGatewayHandler("m-service")
     )
-    val swaggerHandler = new SwaggerHandler(services)
+    val swaggerHandler = new SwaggerHandler("specs", services)
 
     // Use reflection to access the private indexPage field
     val indexPageField = swaggerHandler.getClass.getDeclaredField("indexPage")
@@ -118,7 +118,7 @@ class SwaggerHandlerIntegrationTest extends AnyFlatSpec with Matchers {
       new MockGatewayHandler("service_with_underscores"),
       new MockGatewayHandler("service.with.dots")
     )
-    val swaggerHandler = new SwaggerHandler(services)
+    val swaggerHandler = new SwaggerHandler("specs", services)
 
     // Use reflection to access the private indexPage field
     val indexPageField = swaggerHandler.getClass.getDeclaredField("indexPage")

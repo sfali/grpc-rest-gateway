@@ -115,7 +115,8 @@ class SwaggerHandlerTest extends AnyFlatSpec with Matchers with ScalatestRouteTe
     val swaggerHandler = SwaggerHandler("specs", services)
 
     Get("/unsupported/path") ~> swaggerHandler.route ~> check {
-      handled shouldBe false
+      handled shouldBe true
+      response.status shouldBe StatusCodes.NotFound
     }
   }
 

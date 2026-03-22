@@ -7,6 +7,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 class SwaggerHandlerTest extends AnyFlatSpec with Matchers {
 
@@ -17,21 +18,21 @@ class SwaggerHandlerTest extends AnyFlatSpec with Matchers {
       method: io.netty.handler.codec.http.HttpMethod,
       uri: String,
       body: String
-    ): scala.concurrent.Future[(Int, scalapb.GeneratedMessage)] = ???
+    ): scala.concurrent.Future[(Int, scalapb.GeneratedMessage)] = Future.successful((200, null))
     override val serviceName: String = specName
     override protected val httpMethodsToUrisMap: Map[String, Seq[String]] = Map.empty
   }
 
   "SwaggerHandler" should "be created with services" in {
     val services = Seq(new MockGatewayHandler("test-service"))
-    val swaggerHandler = new SwaggerHandler(services)
+    val swaggerHandler = new SwaggerHandler("specs", services)
 
     swaggerHandler should not be null
   }
 
   it should "handle empty services list" in {
     val services = Seq.empty[MockGatewayHandler]
-    val swaggerHandler = new SwaggerHandler(services)
+    val swaggerHandler = new SwaggerHandler("specs", services)
 
     swaggerHandler should not be null
   }
@@ -42,7 +43,7 @@ class SwaggerHandlerTest extends AnyFlatSpec with Matchers {
       new MockGatewayHandler("unique-service"),
       new MockGatewayHandler("duplicate-service") // Duplicate
     )
-    val swaggerHandler = new SwaggerHandler(services)
+    val swaggerHandler = new SwaggerHandler("specs", services)
 
     swaggerHandler should not be null
   }
@@ -53,7 +54,7 @@ class SwaggerHandlerTest extends AnyFlatSpec with Matchers {
       new MockGatewayHandler("service_with_underscores"),
       new MockGatewayHandler("service.with.dots")
     )
-    val swaggerHandler = new SwaggerHandler(services)
+    val swaggerHandler = new SwaggerHandler("specs", services)
 
     swaggerHandler should not be null
   }
