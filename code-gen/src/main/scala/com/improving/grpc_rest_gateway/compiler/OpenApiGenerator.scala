@@ -100,6 +100,8 @@ object OpenApiGenerator extends CodeGenApp {
         )
         .add("tags:")
         .print(services) { case (p, service) => generateTag(service)(p) }
+        .call(generatePaths)
+        .call(generateComponents)
         .result()
 
     private def generateTag(service: ServiceDescriptor): PrinterEndo = { printer =>
@@ -109,16 +111,20 @@ object OpenApiGenerator extends CodeGenApp {
         .add(s"- name: ${esd.name}")
         .add(s"  description: ${esd.comment.map(_.trim).getOrElse(esd.name)}")
         .outdent
-        .add("paths:")
+    }
+
+    private def generatePaths: PrinterEndo =
+      _.add("paths:")
         .indent
         .print(services) { case (p, service) => generatePaths(service)(p) }
         .outdent
-        .add("components:")
+
+    private def generateComponents: PrinterEndo =
+      _.add("components:")
         .addIndented("schemas:")
         .indent
         .print(services) { case (p, service) => generateComponentsForService(service)(p) }
         .outdent
-    }
 
     // START OF PATHS SECTION
 
@@ -150,28 +156,37 @@ object OpenApiGenerator extends CodeGenApp {
             result + (path -> updatedValues)
         }
 
-    private def generatePaths(service: ServiceDescriptor): PrinterEndo =
-      _.print(getPaths(service).toSeq.sortBy(_._1)) { case (p, (path, pathMethods)) =>
-        generatePath(path, pathMethods.sortBy(_._1))(p)
-      }
+    private def generatePaths(service: ServiceDescriptor): PrinterEndo = { printer =>
+      val tagName = ExtendedServiceDescriptor(service).name
+      printer
+        .print(getPaths(service).toSeq.sortBy(_._1)) { case (p, (path, pathMethods)) =>
+          generatePath(tagName, path, pathMethods.sortBy(_._1))(p)
+        }
+    }
 
-    private def generatePath(path: String, pathMethods: Seq[(PatternCase, MethodDescriptor)]): PrinterEndo =
+    private def generatePath(
+      tagName: String,
+      path: String,
+      pathMethods: Seq[(PatternCase, MethodDescriptor)]
+    ): PrinterEndo =
       _.add(s"$path:")
         .indent
         .print(pathMethods) { case (p, (patternCase, methodDescriptor)) =>
-          val printer = generateMethod(patternCase, path, methodDescriptor)(p)
+          val printer = generateMethod(tagName, patternCase, path, methodDescriptor)(p)
           val statusDescriptions = getStatusDescriptions(methodDescriptor)
           generateResponses(methodDescriptor.getOutputType, statusDescriptions)(printer)
         }
         .outdent
 
     private def generateMethod(
+      tagName: String,
       patternCase: PatternCase,
       path: String,
       methodDescriptor: MethodDescriptor
-    ): PrinterEndo = _.call(generateMethod(path, patternCase, methodDescriptor))
+    ): PrinterEndo = _.call(generateMethod(tagName, path, patternCase, methodDescriptor))
 
     private def generateMethod(
+      tagName: String,
       path: String,
       patternCase: PatternCase,
       methodDescriptor: MethodDescriptor
@@ -185,14 +200,14 @@ object OpenApiGenerator extends CodeGenApp {
           printer
             .add("get:")
             .indent
-            .call(generateMethodInfo(methodDescriptor))
+            .call(generateMethodInfo(tagName, methodDescriptor))
             .call(generateParameters(methodDescriptor.getInputType, pathElements))
             .outdent
         case PatternCase.POST =>
           printer
             .add("post:")
             .indent
-            .call(generateMethodInfo(methodDescriptor))
+            .call(generateMethodInfo(tagName, methodDescriptor))
             .when(hasPathVariables)(
               _.call(generateParameters(methodDescriptor.getInputType, pathElements))
             )
@@ -203,7 +218,7 @@ object OpenApiGenerator extends CodeGenApp {
           printer
             .add("put:")
             .indent
-            .call(generateMethodInfo(methodDescriptor))
+            .call(generateMethodInfo(tagName, methodDescriptor))
             .when(hasPathVariables)(
               _.call(generateParameters(methodDescriptor.getInputType, pathElements))
             )
@@ -214,20 +229,20 @@ object OpenApiGenerator extends CodeGenApp {
           printer
             .add("delete:")
             .indent
-            .call(generateMethodInfo(methodDescriptor))
+            .call(generateMethodInfo(tagName, methodDescriptor))
             .call(generateParameters(methodDescriptor.getInputType, pathElements))
             .outdent
         case _ => printer
       }
     }
 
-    private def generateMethodInfo(m: MethodDescriptor): PrinterEndo = {
+    private def generateMethodInfo(tagName: String, m: MethodDescriptor): PrinterEndo = {
       val descriptor = ExtendedMethodDescriptor(m)
       val description = descriptor.comment.filterNot(_.isBlank).getOrElse(s"Generated from ${m.getName}").trim
       val indexOfSeparator = description.indexOf(".")
       val summary = if (indexOfSeparator > 0) description.substring(0, indexOfSeparator) else ""
       _.add("tags:")
-        .addIndented(s"- ${m.getName}")
+        .addIndented(s"- $tagName")
         .when(summary.nonEmpty && summary.length <= 15)(_.add(s"summary: $summary"))
         .add(s"description: $description")
     }
