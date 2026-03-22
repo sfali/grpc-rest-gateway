@@ -52,7 +52,7 @@ class SwaggerHandler(specsPrefix: String, handlers: Seq[GrpcGatewayHandler]) {
         val resourcePath = RootPath.relativize(Paths.get(s"/$specsPrefix", rem.toString()))
         complete(createResourceResponse(resourcePath))
       } else {
-        complete(HttpResponse(status = StatusCodes.NotFound))
+        reject() // allow concat(GatewayServer) to try gRPC routes; do not 404 all non-Swagger paths
       }
     }
 

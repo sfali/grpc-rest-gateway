@@ -12,6 +12,13 @@ import akka.http.scaladsl.server.Route
 import java.nio.file.{Path, Paths}
 import javax.activation.MimetypesFileTypeMap
 
+/** Swagger handler for serving OpenAPI documentation and Swagger UI.
+  *
+  * @param specsPrefix
+  *   The root path where specification files are served from, e.g. "specs" (without leading slash)
+  * @param handlers
+  *   The sequence of gateway handlers to extract specification names from
+  */
 class SwaggerHandler(specsPrefix: String, handlers: Seq[GrpcGatewayHandler]) {
   import SwaggerHandler.*
 
@@ -44,7 +51,7 @@ class SwaggerHandler(specsPrefix: String, handlers: Seq[GrpcGatewayHandler]) {
         val resourcePath = RootPath.relativize(Paths.get(s"/$specsPrefix", rem.toString()))
         complete(createResourceResponse(resourcePath))
       } else {
-        complete(HttpResponse(status = StatusCodes.NotFound))
+        reject() // allow concat(GatewayServer) to try gRPC routes; do not 404 all non-Swagger paths
       }
     }
 
