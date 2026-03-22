@@ -23,7 +23,7 @@ object Dependencies {
     val ScalaTest = "3.2.19"
     val Slf4j = "2.0.17"
     val Sttp = "3.11.0"
-    val SwaggerUi = "5.32.0"
+    val SwaggerUi = "5.32.1"
     val TypesafeConfig = "1.4.6"
   }
 
