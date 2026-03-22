@@ -24,7 +24,7 @@ service TestServiceD {
   // Get request for service D
   rpc GetRequest (Request) returns (Response) {
     option (google.api.http) = {
-      get: "/restgateway/c/testservice"
+      get: "/restgateway/d/testservice"
     };
   }
 }
@@ -35,7 +35,7 @@ service TestServiceE {
   // Get request for service E
   rpc GetRequest (Request) returns (Response) {
     option (google.api.http) = {
-      get: "/restgateway/d/testservice"
+      get: "/restgateway/e/testservice"
     };
   }
 }

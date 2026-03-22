@@ -18,7 +18,7 @@ option (scalapb.options) = {
   package_name: "rest_gateway_test.api.scala_api"
 };
 
-// Test service C
+// Test service C, this proto file doesn't have any http annotations, so no gateway handler will be generated
 service TestServiceC {
   rpc GetRequest (rest_gateway_test.api.model.TestRequestB) returns (rest_gateway_test.api.model.TestResponseB);
   rpc Process (rest_gateway_test.api.model.TestRequestB) returns (rest_gateway_test.api.model.TestResponseB);
