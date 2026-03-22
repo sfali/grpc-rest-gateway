@@ -4,7 +4,7 @@ package runtime
 package server
 
 import runtime.handlers.GrpcGatewayHandler
-import com.typesafe.config.Config
+import com.typesafe.config.ConfigFactory
 import io.grpc.{ManagedChannel, ManagedChannelBuilder}
 import org.slf4j.LoggerFactory
 
@@ -49,6 +49,8 @@ object GatewayServer {
     serviceHost: String,
     servicePort: Int,
     gatewayPort: Int,
+    enableSwagger: Boolean,
+    specsPrefix: String,
     toHandlers: ManagedChannel => Seq[GrpcGatewayHandler],
     executor: Option[Executor],
     usePlainText: Boolean = true
@@ -58,20 +60,28 @@ object GatewayServer {
     executor.map(channelBuilder.executor)
     val channel = channelBuilder.build()
 
-    new GatewayServerImpl(GrpcGatewayServerBuilder(gatewayPort, toHandlers(channel)).build(), gatewayPort)
+    new GatewayServerImpl(
+      GrpcGatewayServerBuilder(gatewayPort, enableSwagger, specsPrefix, toHandlers(channel)).build(),
+      gatewayPort
+    )
   }
 
   def apply(
-    config: Config,
     toHandlers: ManagedChannel => Seq[GrpcGatewayHandler],
     executor: Option[Executor]
-  ): GatewayServer =
+  ): GatewayServer = {
+    val rootConfig = ConfigFactory.load()
+    val serviceConfig = rootConfig.getConfig("rest-gateway")
+    val openApiConfig = rootConfig.getConfig("openapi")
     GatewayServer(
-      serviceHost = config.getString("host"),
-      servicePort = config.getInt("service-port"),
-      gatewayPort = config.getInt("gateway-port"),
+      serviceHost = serviceConfig.getString("host"),
+      servicePort = serviceConfig.getInt("service-port"),
+      gatewayPort = serviceConfig.getInt("gateway-port"),
+      enableSwagger = openApiConfig.getBoolean("enabled"),
+      specsPrefix = openApiConfig.getString("specs-dir"),
       toHandlers = toHandlers,
-      usePlainText = config.getBoolean("use-plain-text"),
+      usePlainText = serviceConfig.getBoolean("use-plain-text"),
       executor = executor
     )
+  }
 }

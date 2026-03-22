@@ -61,13 +61,33 @@ object GrpcServer {
   def startGateWayServer(
     executorService: ExecutorService,
     grpcPort: Int = GrpcPort,
-    gatewayPort: Int = GatewayPort
+    gatewayPort: Int = GatewayPort,
+    enableSwagger: Boolean = true,
+    specsPrefix: String = "specs"
   ): GatewayServer = {
     implicit val ec: ExecutionContext = ExecutionContext.fromExecutor(executorService)
     val server = GatewayServer(
       serviceHost = host,
       servicePort = grpcPort,
       gatewayPort = gatewayPort,
+      enableSwagger = enableSwagger,
+      specsPrefix = specsPrefix,
+      toHandlers = channel =>
+        Seq(
+          TestServiceAGatewayHandler(channel),
+          TestServiceBGatewayHandler(channel),
+          TestServiceDGatewayHandler(channel),
+          TestServiceEGatewayHandler(channel)
+        ),
+      executor = Some(executorService)
+    )
+    server.start()
+    server
+  }
+
+  def startGateWayServer(executorService: ExecutorService): GatewayServer = {
+    implicit val ec: ExecutionContext = ExecutionContext.fromExecutor(executorService)
+    val server = GatewayServer(
       toHandlers = channel =>
         Seq(
           TestServiceAGatewayHandler(channel),

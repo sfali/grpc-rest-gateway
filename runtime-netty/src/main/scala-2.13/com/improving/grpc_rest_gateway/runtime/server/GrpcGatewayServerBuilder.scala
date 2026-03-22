@@ -11,7 +11,11 @@ import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioServerSocketChannel
 import io.netty.handler.codec.http.{HttpObjectAggregator, HttpServerCodec}
 
-case class GrpcGatewayServerBuilder(port: Int, services: Seq[GrpcGatewayHandler]) {
+case class GrpcGatewayServerBuilder(
+  port: Int,
+  enableSwagger: Boolean,
+  specsDirectory: String,
+  services: Seq[GrpcGatewayHandler]) {
 
   def build(): GrpcGatewayServer = {
     val masterGroup = new NioEventLoopGroup()
@@ -24,7 +28,9 @@ case class GrpcGatewayServerBuilder(port: Int, services: Seq[GrpcGatewayHandler]
         override def initChannel(ch: SocketChannel): Unit = {
           ch.pipeline().addLast("codec", new HttpServerCodec())
           ch.pipeline().addLast("aggregator", new HttpObjectAggregator(512 * 1024))
-          ch.pipeline().addLast("swagger", new SwaggerHandler(services))
+          if (enableSwagger) {
+            ch.pipeline().addLast("swagger", new SwaggerHandler(specsDirectory, services))
+          }
           services.foreach(handler => ch.pipeline().addLast(handler.serviceName, handler))
           ch.pipeline().addLast(new MethodNotFoundHandler())
         }

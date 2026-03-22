@@ -193,7 +193,7 @@ lazy val `e2e-netty` = (projectMatrix in file("e2e-netty"))
           genModule("com.improving.grpc_rest_gateway.compiler.GatewayGenerator$"),
           Seq("implementation_type:netty")
         ) -> (Compile / sourceManaged).value / "scalapb",
-        genModule("com.improving.grpc_rest_gateway.compiler.OpenApiGenerator$") -> (Compile / resourceManaged).value / "specs"
+        genModule("com.improving.grpc_rest_gateway.compiler.OpenApiGenerator$") -> (Compile / resourceManaged).value / "specs-2.12"
       ),
       Compile / resourceGenerators += (Compile / PB.generate)
         .map(_.filter(_.getName.endsWith("yml")))
@@ -237,7 +237,7 @@ lazy val `e2e-netty` = (projectMatrix in file("e2e-netty"))
          (
           genModule("com.improving.grpc_rest_gateway.compiler.OpenApiGenerator$"),
           Seq("version:1.0.0")
-        ) -> (Compile / resourceManaged).value / "specs"
+        ) -> (Compile / resourceManaged).value
         ),
         Compile / resourceGenerators += (Compile / PB.generate)
         .map(_.filter(_.getName.endsWith("yml")))
@@ -267,7 +267,16 @@ lazy val `e2e-netty` = (projectMatrix in file("e2e-netty"))
     (Compile / PB.protoSources) += (`e2e-api` / baseDirectory).value / "src" / "main" / "protobuf",
     Compile / resourceGenerators += (Compile / PB.generate)
     .map(_.filter(_.getName.endsWith("yml")))
-    .taskValue
+    .taskValue,
+    Compile / unmanagedResourceDirectories += {
+      val resourceDir = (Compile / resourceDirectory).value
+      CrossVersion.partialVersion(scalaVersion.value) match {
+        case Some((2, 12)) => resourceDir.getParentFile / "resources-2.12"
+        case Some((2, 13)) => resourceDir.getParentFile / "resources-2.13"
+        case Some((3, _))  => resourceDir.getParentFile / "resources-3"
+        case _ => resourceDir
+      }
+    }
   )
   .jvmPlatform(scalaVersions = Seq(V.Scala212, V.Scala213, V.Scala3))
 
