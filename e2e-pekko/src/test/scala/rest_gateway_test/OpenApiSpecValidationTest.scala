@@ -111,6 +111,20 @@ class OpenApiSpecValidationTest extends AnyWordSpec with Matchers {
       }
     }
 
+    "have correct version from proto-level configuration for TestServiceA" in {
+      val yaml = new Yaml()
+      val resourcePath = getResourcePath("TestServiceA.yml")
+      
+      Using(getClass.getClassLoader.getResourceAsStream(resourcePath)) { inputStream =>
+        val spec = yaml.load[java.util.Map[String, Any]](inputStream)
+        val info = spec.get("info").asInstanceOf[java.util.Map[String, Any]]
+        
+        withClue("TestServiceA should have version 1.0.1 from proto file openapi_info option: ") {
+          info.get("version") shouldBe "1.0.1"
+        }
+      }
+    }
+
     "contain valid HTTP methods in paths" in {
       val yaml = new Yaml()
       val validMethods = Set("get", "post", "put", "delete", "patch", "options", "head")
