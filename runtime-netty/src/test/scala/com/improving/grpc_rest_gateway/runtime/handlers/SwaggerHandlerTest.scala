@@ -38,8 +38,8 @@ class SwaggerHandlerTest extends AnyFlatSpec with Matchers with TableDrivenPrope
 
   "SwaggerHandler" should "be created with different specs directory configurations" in {
     forAll(specsDirectoryConfigs) { specsDirectory =>
-      val services = Seq(new MockGatewayHandler("test-service"))
-      val swaggerHandler = new SwaggerHandler(specsDirectory, services)
+      val specificationNames = Seq("test-service")
+      val swaggerHandler = new SwaggerHandler(specsDirectory, specificationNames)
 
       swaggerHandler should not be null
     }
@@ -47,8 +47,8 @@ class SwaggerHandlerTest extends AnyFlatSpec with Matchers with TableDrivenPrope
 
   it should "handle empty services list with different specs directory configurations" in {
     forAll(specsDirectoryConfigs) { specsDirectory =>
-      val services = Seq.empty[MockGatewayHandler]
-      val swaggerHandler = new SwaggerHandler(specsDirectory, services)
+      val specificationNames = Seq.empty[String]
+      val swaggerHandler = new SwaggerHandler(specsDirectory, specificationNames)
 
       swaggerHandler should not be null
     }
@@ -56,12 +56,12 @@ class SwaggerHandlerTest extends AnyFlatSpec with Matchers with TableDrivenPrope
 
   it should "handle multiple services with duplicate names with different specs directory configurations" in {
     forAll(specsDirectoryConfigs) { specsDirectory =>
-      val services = Seq(
-        new MockGatewayHandler("duplicate-service"),
-        new MockGatewayHandler("unique-service"),
-        new MockGatewayHandler("duplicate-service") // Duplicate
+      val specificationNames = Seq(
+        "duplicate-service",
+        "unique-service",
+        "duplicate-service" // Duplicate
       )
-      val swaggerHandler = new SwaggerHandler(specsDirectory, services)
+      val swaggerHandler = new SwaggerHandler(specsDirectory, specificationNames)
 
       swaggerHandler should not be null
     }
@@ -69,12 +69,12 @@ class SwaggerHandlerTest extends AnyFlatSpec with Matchers with TableDrivenPrope
 
   it should "handle services with special characters in names with different specs directory configurations" in {
     forAll(specsDirectoryConfigs) { specsDirectory =>
-      val services = Seq(
-        new MockGatewayHandler("service-with-dashes"),
-        new MockGatewayHandler("service_with_underscores"),
-        new MockGatewayHandler("service.with.dots")
+      val specificationNames = Seq(
+        "service-with-dashes",
+        "service_with_underscores",
+        "service.with.dots"
       )
-      val swaggerHandler = new SwaggerHandler(specsDirectory, services)
+      val swaggerHandler = new SwaggerHandler(specsDirectory, specificationNames)
 
       swaggerHandler should not be null
     }
@@ -82,8 +82,8 @@ class SwaggerHandlerTest extends AnyFlatSpec with Matchers with TableDrivenPrope
 
   "SwaggerHandler custom specs directory verification" should "generate correct URLs with different specs directory configurations" in {
     forAll(specsDirectoryConfigs) { specsDirectory =>
-      val services = Seq(new MockGatewayHandler("test-service"))
-      val swaggerHandler = new SwaggerHandler(specsDirectory, services)
+      val specificationNames = Seq("test-service")
+      val swaggerHandler = new SwaggerHandler(specsDirectory, specificationNames)
 
       // Use reflection to access the private indexPage field
       val indexPageField = swaggerHandler.getClass.getDeclaredField("indexPage")

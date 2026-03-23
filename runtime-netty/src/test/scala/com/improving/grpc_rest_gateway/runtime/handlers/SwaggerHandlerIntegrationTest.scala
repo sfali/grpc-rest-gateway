@@ -44,12 +44,12 @@ class SwaggerHandlerIntegrationTest extends AnyFlatSpec with Matchers {
   }
 
   it should "deduplicate service names in index page" in {
-    val services = Seq(
-      new MockGatewayHandler("duplicate-service"),
-      new MockGatewayHandler("unique-service"),
-      new MockGatewayHandler("duplicate-service") // Duplicate
+    val specificationNames = Seq(
+      "duplicate-service",
+      "unique-service",
+      "duplicate-service" // Duplicate
     )
-    val swaggerHandler = new SwaggerHandler("specs", services)
+    val swaggerHandler = new SwaggerHandler("specs", specificationNames)
 
     // Use reflection to access the private indexPage field
     val indexPageField = swaggerHandler.getClass.getDeclaredField("indexPage")
@@ -69,8 +69,8 @@ class SwaggerHandlerIntegrationTest extends AnyFlatSpec with Matchers {
   }
 
   it should "handle empty services list in index page" in {
-    val services = Seq.empty[MockGatewayHandler]
-    val swaggerHandler = new SwaggerHandler("specs", services)
+    val specificationNames = Seq.empty[String]
+    val swaggerHandler = new SwaggerHandler("specs", specificationNames)
 
     // Use reflection to access the private indexPage field
     val indexPageField = swaggerHandler.getClass.getDeclaredField("indexPage")
@@ -81,11 +81,11 @@ class SwaggerHandlerIntegrationTest extends AnyFlatSpec with Matchers {
   }
 
   it should "generate correct service names in title" in {
-    val services = Seq(
-      new MockGatewayHandler("test-service"),
-      new MockGatewayHandler("another-service")
+    val specificationNames = Seq(
+      "test-service",
+      "another-service"
     )
-    val swaggerHandler = new SwaggerHandler("specs", services)
+    val swaggerHandler = new SwaggerHandler("specs", specificationNames)
 
     // Use reflection to access the private indexPage field
     val indexPageField = swaggerHandler.getClass.getDeclaredField("indexPage")
@@ -97,12 +97,12 @@ class SwaggerHandlerIntegrationTest extends AnyFlatSpec with Matchers {
   }
 
   it should "sort service names alphabetically" in {
-    val services = Seq(
-      new MockGatewayHandler("z-service"),
-      new MockGatewayHandler("a-service"),
-      new MockGatewayHandler("m-service")
+    val specificationNames = Seq(
+      "z-service",
+      "a-service",
+      "m-service"
     )
-    val swaggerHandler = new SwaggerHandler("specs", services)
+    val swaggerHandler = new SwaggerHandler("specs", specificationNames)
 
     // Use reflection to access the private indexPage field
     val indexPageField = swaggerHandler.getClass.getDeclaredField("indexPage")
@@ -113,12 +113,12 @@ class SwaggerHandlerIntegrationTest extends AnyFlatSpec with Matchers {
   }
 
   it should "handle services with special characters in names" in {
-    val services = Seq(
-      new MockGatewayHandler("service-with-dashes"),
-      new MockGatewayHandler("service_with_underscores"),
-      new MockGatewayHandler("service.with.dots")
+    val specificationNames = Seq(
+      "service-with-dashes",
+      "service_with_underscores",
+      "service.with.dots"
     )
-    val swaggerHandler = new SwaggerHandler("specs", services)
+    val swaggerHandler = new SwaggerHandler("specs", specificationNames)
 
     // Use reflection to access the private indexPage field
     val indexPageField = swaggerHandler.getClass.getDeclaredField("indexPage")

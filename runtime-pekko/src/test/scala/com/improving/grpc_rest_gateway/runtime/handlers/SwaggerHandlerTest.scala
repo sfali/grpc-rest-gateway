@@ -36,8 +36,8 @@ class SwaggerHandlerTest extends AnyFlatSpec with Matchers with ScalatestRouteTe
 
   "SwaggerHandler" should "be created with different specs directory configurations" in {
     forAll(specsDirectoryConfigs) { specsDirectory =>
-      val services = Seq(new MockGatewayHandler("test-service"))
-      val swaggerHandler = SwaggerHandler(specsDirectory, services)
+      val specificationNames = Seq("test-service")
+      val swaggerHandler = SwaggerHandler(specsDirectory, specificationNames)
 
       swaggerHandler should not be null
     }
@@ -45,8 +45,8 @@ class SwaggerHandlerTest extends AnyFlatSpec with Matchers with ScalatestRouteTe
 
   it should "handle empty services list with different specs directory configurations" in {
     forAll(specsDirectoryConfigs) { specsDirectory =>
-      val services = Seq.empty[MockGatewayHandler]
-      val swaggerHandler = SwaggerHandler(specsDirectory, services)
+      val specificationNames = Seq.empty[String]
+      val swaggerHandler = SwaggerHandler(specsDirectory, specificationNames)
 
       swaggerHandler should not be null
     }
@@ -54,12 +54,12 @@ class SwaggerHandlerTest extends AnyFlatSpec with Matchers with ScalatestRouteTe
 
   it should "handle multiple services with duplicate names with different specs directory configurations" in {
     forAll(specsDirectoryConfigs) { specsDirectory =>
-      val services = Seq(
-        new MockGatewayHandler("duplicate-service"),
-        new MockGatewayHandler("unique-service"),
-        new MockGatewayHandler("duplicate-service") // Duplicate
+      val specificationNames = Seq(
+        "duplicate-service",
+        "unique-service",
+        "duplicate-service" // Duplicate
       )
-      val swaggerHandler = SwaggerHandler(specsDirectory, services)
+      val swaggerHandler = SwaggerHandler(specsDirectory, specificationNames)
 
       swaggerHandler should not be null
     }
@@ -67,12 +67,12 @@ class SwaggerHandlerTest extends AnyFlatSpec with Matchers with ScalatestRouteTe
 
   it should "handle services with special characters in names with different specs directory configurations" in {
     forAll(specsDirectoryConfigs) { specsDirectory =>
-      val services = Seq(
-        new MockGatewayHandler("service-with-dashes"),
-        new MockGatewayHandler("service_with_underscores"),
-        new MockGatewayHandler("service.with.dots")
+      val specificationNames = Seq(
+        "service-with-dashes",
+        "service_with_underscores",
+        "service.with.dots"
       )
-      val swaggerHandler = SwaggerHandler(specsDirectory, services)
+      val swaggerHandler = SwaggerHandler(specsDirectory, specificationNames)
 
       swaggerHandler should not be null
     }
@@ -80,8 +80,8 @@ class SwaggerHandlerTest extends AnyFlatSpec with Matchers with ScalatestRouteTe
 
   "SwaggerHandler routes" should "redirect root to docs landing page with different specs directory configurations" in {
     forAll(specsDirectoryConfigs) { specsDirectory =>
-      val services = Seq(new MockGatewayHandler("test-service"))
-      val swaggerHandler = SwaggerHandler(specsDirectory, services)
+      val specificationNames = Seq("test-service")
+      val swaggerHandler = SwaggerHandler(specsDirectory, specificationNames)
 
       Get("/") ~> swaggerHandler.route ~> check {
         status shouldBe StatusCodes.PermanentRedirect
@@ -92,8 +92,8 @@ class SwaggerHandlerTest extends AnyFlatSpec with Matchers with ScalatestRouteTe
 
   it should "redirect docs prefix to docs landing page with different specs directory configurations" in {
     forAll(specsDirectoryConfigs) { specsDirectory =>
-      val services = Seq(new MockGatewayHandler("test-service"))
-      val swaggerHandler = SwaggerHandler(specsDirectory, services)
+      val specificationNames = Seq("test-service")
+      val swaggerHandler = SwaggerHandler(specsDirectory, specificationNames)
 
       Get("/docs") ~> swaggerHandler.route ~> check {
         status shouldBe StatusCodes.PermanentRedirect
@@ -104,8 +104,8 @@ class SwaggerHandlerTest extends AnyFlatSpec with Matchers with ScalatestRouteTe
 
   it should "return swagger index page for docs landing page with different specs directory configurations" in {
     forAll(specsDirectoryConfigs) { specsDirectory =>
-      val services = Seq(new MockGatewayHandler("test-service"), new MockGatewayHandler("another-service"))
-      val swaggerHandler = SwaggerHandler(specsDirectory, services)
+      val specificationNames = Seq("test-service", "another-service")
+      val swaggerHandler = SwaggerHandler(specsDirectory, specificationNames)
 
       Get("/docs/index.html") ~> swaggerHandler.route ~> check {
         status shouldBe StatusCodes.OK
@@ -121,8 +121,8 @@ class SwaggerHandlerTest extends AnyFlatSpec with Matchers with ScalatestRouteTe
 
   it should "return 404 for non-existent swagger resources with different specs directory configurations" in {
     forAll(specsDirectoryConfigs) { specsDirectory =>
-      val services = Seq(new MockGatewayHandler("test-service"))
-      val swaggerHandler = SwaggerHandler(specsDirectory, services)
+      val specificationNames = Seq("test-service")
+      val swaggerHandler = SwaggerHandler(specsDirectory, specificationNames)
 
       Get("/docs/non-existent.css") ~> swaggerHandler.route ~> check {
         status shouldBe StatusCodes.NotFound
@@ -132,8 +132,8 @@ class SwaggerHandlerTest extends AnyFlatSpec with Matchers with ScalatestRouteTe
 
   it should "return 404 for non-existent spec files with different specs directory configurations" in {
     forAll(specsDirectoryConfigs) { specsDirectory =>
-      val services = Seq(new MockGatewayHandler("test-service"))
-      val swaggerHandler = SwaggerHandler(specsDirectory, services)
+      val specificationNames = Seq("test-service")
+      val swaggerHandler = SwaggerHandler(specsDirectory, specificationNames)
 
       val specPath = if (specsDirectory.isEmpty) "/non-existent.yml" else s"/$specsDirectory/non-existent.yml"
       Get(specPath) ~> swaggerHandler.route ~> check {
@@ -144,8 +144,8 @@ class SwaggerHandlerTest extends AnyFlatSpec with Matchers with ScalatestRouteTe
 
   it should "pass through unsupported paths with different specs directory configurations" in {
     forAll(specsDirectoryConfigs) { specsDirectory =>
-      val services = Seq(new MockGatewayHandler("test-service"))
-      val swaggerHandler = SwaggerHandler(specsDirectory, services)
+      val specificationNames = Seq("test-service")
+      val swaggerHandler = SwaggerHandler(specsDirectory, specificationNames)
 
       Get("/unsupported/path") ~> swaggerHandler.route ~> check {
         handled shouldBe false
@@ -155,8 +155,8 @@ class SwaggerHandlerTest extends AnyFlatSpec with Matchers with ScalatestRouteTe
 
   "SwaggerHandler custom specs directory verification" should "return swagger index page with correct service URLs for different specs directory configurations" in {
     forAll(specsDirectoryConfigs) { specsDirectory =>
-      val services = Seq(new MockGatewayHandler("test-service"), new MockGatewayHandler("another-service"))
-      val swaggerHandler = SwaggerHandler(specsDirectory, services)
+      val specificationNames = Seq("test-service", "another-service")
+      val swaggerHandler = SwaggerHandler(specsDirectory, specificationNames)
 
       Get("/docs/index.html") ~> swaggerHandler.route ~> check {
         status shouldBe StatusCodes.OK
@@ -177,8 +177,8 @@ class SwaggerHandlerTest extends AnyFlatSpec with Matchers with ScalatestRouteTe
 
   it should "serve spec files from different specs directory configurations" in {
     forAll(specsDirectoryConfigs) { specsDirectory =>
-      val services = Seq(new MockGatewayHandler("test-service"))
-      val swaggerHandler = SwaggerHandler(specsDirectory, services)
+      val specificationNames = Seq("test-service")
+      val swaggerHandler = SwaggerHandler(specsDirectory, specificationNames)
 
       // This should route through the specs directory
       val specPath = if (specsDirectory.isEmpty) "/test-service.yml" else s"/$specsDirectory/test-service.yml"
@@ -192,8 +192,8 @@ class SwaggerHandlerTest extends AnyFlatSpec with Matchers with ScalatestRouteTe
 
   it should "return 404 for non-existent spec files with different specs directory configurations" in {
     forAll(specsDirectoryConfigs) { specsDirectory =>
-      val services = Seq(new MockGatewayHandler("test-service"))
-      val swaggerHandler = SwaggerHandler(specsDirectory, services)
+      val specificationNames = Seq("test-service")
+      val swaggerHandler = SwaggerHandler(specsDirectory, specificationNames)
 
       val specPath = if (specsDirectory.isEmpty) "/non-existent.yml" else s"/$specsDirectory/non-existent.yml"
       Get(specPath) ~> swaggerHandler.route ~> check {
