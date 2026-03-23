@@ -6,15 +6,29 @@ import org.yaml.snakeyaml.Yaml
 
 import scala.jdk.CollectionConverters.*
 import scala.util.{Try, Using}
+import com.improving.grpc_rest_gateway.runtime.core.BuildInfo
 
 class OpenApiSpecValidationTest extends AnyWordSpec with Matchers {
+
+  // Determine specs folder based on Scala version
+  private val specsFolder: String = 
+    BuildInfo.scalaPartialVersion.map {
+      case (2, 12) => "specs-2.12"
+      case (2, 13) => "specs"
+      case _ => ""
+    }.getOrElse("")
+
+  private def getResourcePath(fileName: String): String = {
+    if (specsFolder.isEmpty) fileName
+    else s"$specsFolder/$fileName"
+  }
 
   "OpenAPI YAML specifications" should {
     "be generated and accessible from classpath" in {
       val specFiles = Seq("TestServiceA.yml", "TestServiceB.yml", "test/MultipleServices.yml")
       
       specFiles.foreach { fileName =>
-        val resourcePath = s"specs/$fileName"
+        val resourcePath = getResourcePath(fileName)
         val inputStream = getClass.getClassLoader.getResourceAsStream(resourcePath)
         
         withClue(s"File $resourcePath should exist in classpath: ") {
@@ -32,7 +46,7 @@ class OpenApiSpecValidationTest extends AnyWordSpec with Matchers {
       val specFiles = Seq("TestServiceA.yml", "TestServiceB.yml", "test/MultipleServices.yml")
       
       specFiles.foreach { fileName =>
-        val resourcePath = s"specs/$fileName"
+        val resourcePath = getResourcePath(fileName)
         Using(getClass.getClassLoader.getResourceAsStream(resourcePath)) { inputStream =>
           withClue(s"$fileName should be parseable as YAML: ") {
             val result = Try(yaml.load[java.util.Map[String, Any]](inputStream))
@@ -48,7 +62,7 @@ class OpenApiSpecValidationTest extends AnyWordSpec with Matchers {
       val specFiles = Seq("TestServiceA.yml", "TestServiceB.yml")
       
       specFiles.foreach { fileName =>
-        val resourcePath = s"specs/$fileName"
+        val resourcePath = getResourcePath(fileName)
         Using(getClass.getClassLoader.getResourceAsStream(resourcePath)) { inputStream =>
           val spec = yaml.load[java.util.Map[String, Any]](inputStream)
           
@@ -85,7 +99,7 @@ class OpenApiSpecValidationTest extends AnyWordSpec with Matchers {
 
     "have correct version from proto-level configuration for TestServiceB" in {
       val yaml = new Yaml()
-      val resourcePath = "specs/TestServiceB.yml"
+      val resourcePath = getResourcePath("TestServiceB.yml")
       
       Using(getClass.getClassLoader.getResourceAsStream(resourcePath)) { inputStream =>
         val spec = yaml.load[java.util.Map[String, Any]](inputStream)
@@ -101,7 +115,7 @@ class OpenApiSpecValidationTest extends AnyWordSpec with Matchers {
       val yaml = new Yaml()
       val validMethods = Set("get", "post", "put", "delete", "patch", "options", "head")
       
-      val resourcePath = "specs/TestServiceB.yml"
+      val resourcePath = getResourcePath("TestServiceB.yml")
       Using(getClass.getClassLoader.getResourceAsStream(resourcePath)) { inputStream =>
         val spec = yaml.load[java.util.Map[String, Any]](inputStream)
         val paths = spec.get("paths").asInstanceOf[java.util.Map[String, Any]]
@@ -121,7 +135,7 @@ class OpenApiSpecValidationTest extends AnyWordSpec with Matchers {
 
     "have responses section for each operation" in {
       val yaml = new Yaml()
-      val resourcePath = "specs/TestServiceB.yml"
+      val resourcePath = getResourcePath("TestServiceB.yml")
       
       Using(getClass.getClassLoader.getResourceAsStream(resourcePath)) { inputStream =>
         val spec = yaml.load[java.util.Map[String, Any]](inputStream)
@@ -148,7 +162,7 @@ class OpenApiSpecValidationTest extends AnyWordSpec with Matchers {
 
     "have correct status codes for TestServiceB operations" in {
       val yaml = new Yaml()
-      val resourcePath = "specs/TestServiceB.yml"
+      val resourcePath = getResourcePath("TestServiceB.yml")
       
       Using(getClass.getClassLoader.getResourceAsStream(resourcePath)) { inputStream =>
         val spec = yaml.load[java.util.Map[String, Any]](inputStream)
@@ -184,7 +198,7 @@ class OpenApiSpecValidationTest extends AnyWordSpec with Matchers {
 
     "have schema components referenced in paths" in {
       val yaml = new Yaml()
-      val resourcePath = "specs/TestServiceB.yml"
+      val resourcePath = getResourcePath("TestServiceB.yml")
       
       Using(getClass.getClassLoader.getResourceAsStream(resourcePath)) { inputStream =>
         val spec = yaml.load[java.util.Map[String, Any]](inputStream)
@@ -212,7 +226,7 @@ class OpenApiSpecValidationTest extends AnyWordSpec with Matchers {
 
     "have tags section with service names" in {
       val yaml = new Yaml()
-      val resourcePath = "specs/TestServiceB.yml"
+      val resourcePath = getResourcePath("TestServiceB.yml")
       
       Using(getClass.getClassLoader.getResourceAsStream(resourcePath)) { inputStream =>
         val spec = yaml.load[java.util.Map[String, Any]](inputStream)
