@@ -1281,6 +1281,216 @@ export OPENAPI_SPECS_FOLDER="my-specs"
 sbt run
 ----
 
+== Verifying Generated YAML Files
+
+The gRPC-REST Gateway generates OpenAPI 3.1.0 YAML specifications from your protobuf definitions. This section explains how to verify that YAML files are generated correctly and contain valid OpenAPI specifications.
+
+=== Quick Verification
+
+To quickly verify YAML generation, use the provided verification script:
+
+[source, shell]
+----
+./scripts/verify-yaml-generation.sh
+----
+
+This script will:
+
+1. Compile the e2e projects
+2. Check that YAML files exist in the expected locations
+3. Validate basic YAML structure and OpenAPI fields
+4. Verify proto-level configuration is applied correctly
+
+=== Manual Verification
+
+==== Check Generated Files
+
+After compilation, YAML files are generated in the `resource_managed` directory:
+
+[source, shell]
+----
+# For Scala 2.13
+find e2e-netty/target/jvm-2.13/resource_managed/main/specs -name "*.yml"
+find e2e-pekko/target/jvm-2.13/resource_managed/main/specs -name "*.yml"
+
+# For Scala 2.12
+find e2e-netty/target/jvm-2.12/resource_managed/main/specs-2.12 -name "*.yml"
+find e2e-pekko/target/jvm-2.12/resource_managed/main/specs-2.12 -name "*.yml"
+
+# For Scala 3
+find e2e-netty/target/jvm-3/resource_managed/main -name "*.yml"
+find e2e-pekko/target/jvm-3/resource_managed/main -name "*.yml"
+----
+
+==== View Generated YAML
+
+To view the contents of a generated YAML file:
+
+[source, shell]
+----
+# View TestServiceB.yml (Scala 2.13)
+cat e2e-netty/target/jvm-2.13/classes/specs/TestServiceB.yml
+
+# Or from Pekko module
+cat e2e-pekko/target/jvm-2.13/classes/specs/TestServiceB.yml
+----
+
+The generated YAML should contain:
+
+* `openapi: 3.1.0` - OpenAPI version
+* `info` section with version, title, and description
+* `paths` section with HTTP endpoints
+* `components/schemas` section with message definitions
+* `tags` section with service names
+
+==== Verify Proto-Level Configuration
+
+If you've configured OpenAPI metadata in your proto file using `openapi_info`:
+
+[source, protobuf]
+----
+option (grpc_rest_gateway.api.openapi_info) = {
+  version: "1.0.0"
+  title: "My Service API"
+  description: "API description"
+};
+----
+
+Verify the generated YAML reflects these values:
+
+[source, shell]
+----
+# Check version in generated YAML
+grep "version:" e2e-netty/target/jvm-2.13/classes/specs/TestServiceB.yml
+----
+
+Expected output should show `version: 1.0.0` (not the default `0.1.0-SNAPSHOT`).
+
+=== Automated Tests
+
+The project includes comprehensive automated tests to validate YAML generation and content.
+
+==== Running Validation Tests
+
+Run the OpenAPI specification validation tests:
+
+[source, shell]
+----
+# For Netty implementation
+sbt "e2e-nettyJVM2_13/test:testOnly rest_gateway_test.OpenApiSpecValidationTest"
+
+# For Pekko implementation
+sbt "e2e-pekkoJVM2_13/test:testOnly rest_gateway_test.OpenApiSpecValidationTest"
+
+# Run all tests including validation
+sbt "nettyJVM213Test"
+sbt "pekkoJVM213Test"
+----
+
+==== What the Tests Validate
+
+The `OpenApiSpecValidationTest` validates:
+
+1. **File Existence**: YAML files are generated and accessible from classpath
+2. **YAML Structure**: Files are valid, parseable YAML
+3. **OpenAPI Compliance**: Contains required OpenAPI 3.1.0 fields (openapi, info, paths, components)
+4. **Proto-Level Configuration**: Version from `openapi_info` option is correctly applied
+5. **HTTP Methods**: Only valid HTTP methods (GET, POST, PUT, DELETE, etc.) are used
+6. **Responses**: Each operation has a responses section
+7. **Status Codes**: Custom status codes from annotations are correctly applied
+8. **Schema Components**: Message types are defined in components/schemas
+9. **Tags**: Service names are included in tags section
+
+==== Example Test Output
+
+[source]
+----
+[info] OpenApiSpecValidationTest:
+[info] OpenAPI YAML specifications
+[info] - should be generated and accessible from classpath
+[info] - should have valid YAML structure
+[info] - should contain required OpenAPI 3.1.0 fields
+[info] - should have correct version from proto-level configuration for TestServiceB
+[info] - should contain valid HTTP methods in paths
+[info] - should have responses section for each operation
+[info] - should have correct status codes for TestServiceB operations
+[info] - should have schema components referenced in paths
+[info] - should have tags section with service names
+[info] All tests passed.
+----
+
+=== Troubleshooting YAML Generation
+
+==== YAML Files Not Generated
+
+If YAML files are not being generated:
+
+1. **Check build configuration**: Ensure `openApiGen()` is included in `PB.targets`
++
+[source, sbt]
+----
+Compile / PB.targets := Seq(
+  scalapb.gen() -> (Compile / sourceManaged).value / "scalapb",
+  grpc_rest_gateway.gatewayGen(...) -> (Compile / sourceManaged).value / "scalapb",
+  grpc_rest_gateway.openApiGen() -> (Compile / resourceManaged).value / "specs"
+)
+----
+
+2. **Verify proto files have HTTP annotations**: Only services with `google.api.http` annotations generate YAML
++
+[source, protobuf]
+----
+rpc GetRequest (TestRequest) returns (TestResponse) {
+  option (google.api.http) = {
+    get: "/api/resource"
+  };
+}
+----
+
+3. **Check compilation**: Run `sbt compile` and look for protobuf generation messages
+
+==== YAML Files Not in Classpath
+
+If YAML files are generated but not accessible at runtime:
+
+1. **Verify resourceGenerators**: Ensure YAML files are included in classpath
++
+[source, sbt]
+----
+Compile / resourceGenerators += (Compile / PB.generate)
+  .map(_.filter(_.getName.endsWith("yml")))
+  .taskValue
+----
+
+2. **Check resource directory**: YAML files should be in `target/.../classes/specs/`
+
+==== Version Not Applied from Proto File
+
+If the version in generated YAML doesn't match your proto file's `openapi_info`:
+
+1. **Verify import**: Ensure you import the annotations proto file
++
+[source, protobuf]
+----
+import "grpc_rest_gateway/api/annotations.proto";
+----
+
+2. **Check option syntax**: Verify the `openapi_info` option is correctly formatted
++
+[source, protobuf]
+----
+option (grpc_rest_gateway.api.openapi_info) = {
+  version: "1.0.0"
+};
+----
+
+3. **Rebuild**: Clean and recompile to ensure changes are picked up
++
+[source, shell]
+----
+sbt clean compile
+----
+
 == Limitations
 
 . Streaming calls are not supported.
