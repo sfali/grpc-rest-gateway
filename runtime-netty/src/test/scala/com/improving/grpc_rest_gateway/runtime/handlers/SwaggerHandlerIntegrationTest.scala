@@ -26,12 +26,12 @@ class SwaggerHandlerIntegrationTest extends AnyFlatSpec with Matchers {
   }
 
   "SwaggerHandler" should "generate correct service URLs in index page" in {
-    val services = Seq(
-      new MockGatewayHandler("service-a"),
-      new MockGatewayHandler("service-b"),
-      new MockGatewayHandler("service-c")
+    val specificationNames = Seq(
+      "service-a",
+      "service-b",
+      "service-c"
     )
-    val swaggerHandler = new SwaggerHandler("specs", services)
+    val swaggerHandler = new SwaggerHandler("specs", specificationNames)
 
     // Use reflection to access the private indexPage field
     val indexPageField = swaggerHandler.getClass.getDeclaredField("indexPage")

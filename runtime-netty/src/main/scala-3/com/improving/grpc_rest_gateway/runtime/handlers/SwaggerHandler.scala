@@ -21,7 +21,7 @@ object SwaggerHandler {
 }
 
 @Sharable
-class SwaggerHandler(specsDirectory: String, services: Seq[GrpcGatewayHandler]) extends ChannelInboundHandlerAdapter {
+class SwaggerHandler(specsDirectory: String, specificationNames: Seq[String]) extends ChannelInboundHandlerAdapter {
   import SwaggerHandler.*
 
   private val specsPrefix = Paths.get(s"/$specsDirectory/")
@@ -96,6 +96,6 @@ class SwaggerHandler(specsDirectory: String, services: Seq[GrpcGatewayHandler]) 
   private val mimeTypes = new MimetypesFileTypeMap()
   mimeTypes.addMimeTypes("image/png png PNG")
   mimeTypes.addMimeTypes("text/css css CSS")
-  private val indexPage = readSwaggerIndexPage(specsDirectory, services.map(_.specificationName).distinct.sorted)
+  private val indexPage = readSwaggerIndexPage(specsDirectory, specificationNames.distinct.sorted)
 
 }
