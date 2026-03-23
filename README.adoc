@@ -208,7 +208,7 @@ Add the following dependency to your build.sbt:
 
 [source, sbt]
 ----
-  "io.github.sfali23" %% "grpc-rest-gateway-annotations" % ${app-version} % "compile,protobuf"
+  "io.github.sfali23" %% "grpc-rest-gateway-annotations" % "{app-version}" % "compile,protobuf"
 ----
 
 The following is definition of annotation:
