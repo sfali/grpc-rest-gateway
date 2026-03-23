@@ -431,6 +431,10 @@ option (scalapb.options) = {
   package_name: "rest_gateway_test.api.scala_api"
 };
 
+option (grpc_rest_gateway.api.openapi_info) = {
+   version: "1.0.0"
+};
+
 // Test service B
 service TestServiceB {
   rpc GetRequest (rest_gateway_test.api.model.TestRequestB) returns (rest_gateway_test.api.model.TestResponseB) {
@@ -479,7 +483,7 @@ service TestServiceB {
 ----
 openapi: 3.1.0
 info:
-  version: 0.1.0-SNAPSHOT
+  version: 1.0.0
   description: "REST API generated from TestServiceB.proto"
   title: "TestServiceB.proto"
 tags:
@@ -1064,7 +1068,14 @@ The gRPC-REST Gateway automatically generates OpenAPI 3.1.0 specifications from 
 
 The OpenAPI specs generator accepts the following configuration options:
 
-* **`version`** &mdash; The version of the OpenAPI specification to generate. Default value is `0.1.0-SNAPSHOT`.
+* **`version`** &mdash; The version of the OpenAPI specification to generate. Default value is `0.1.0-SNAPSHOT`. This can be declared by setting the `version` option in the proto file. 
++
+[source, proto]
+----
+option (grpc_rest_gateway.api.openapi_info) = {
+  version: "1.0.0"
+};
+----
 * **`specsDirectory`** &mdash; The directory where OpenAPI specification files will be generated. This is configured at build time and runtime. The default value is `specs`.
 
 === Build-Time Configuration
@@ -1078,7 +1089,7 @@ To generate OpenAPI specifications during the build process, add the `openApiGen
 Compile / PB.targets := Seq(
   scalapb.gen() -> (Compile / sourceManaged).value / "scalapb",
   grpc_rest_gateway.gatewayGen(implementationType = grpc_rest_gateway.ImplementationType.Netty) -> (Compile / sourceManaged).value / "scalapb",
-  grpc_rest_gateway.openApiGen(version = "1.0.0") -> (Compile / resourceManaged).value / "specs"
+  grpc_rest_gateway.openApiGen() -> (Compile / resourceManaged).value / "specs"
 )
 
 // Add the following to include OpenAPI specs in the classpath
@@ -1201,7 +1212,7 @@ lazy val myService = project
       grpc_rest_gateway.gatewayGen(
         implementationType = grpc_rest_gateway.ImplementationType.Pekko
       ) -> (Compile / sourceManaged).value / "scalapb",
-      grpc_rest_gateway.openApiGen(version = "1.0.0") -> (Compile / resourceManaged).value / "api-specs"
+      grpc_rest_gateway.openApiGen() -> (Compile / resourceManaged).value / "api-specs"
     ),
     Compile / resourceGenerators += (Compile / PB.generate)
       .map(_.filter(_.getName.endsWith("yml")))
