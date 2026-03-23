@@ -204,6 +204,13 @@ The detail mapping between RPC and HTTP method can be found https://buf.build/go
 
 Standard Google http annotations don't provide a way to configure HTTP status code, default HTTP status code is mapped to `200 OK`. The gRPC-rest gateway provides its own annotation to configure HTTP status code other than `200 OK`.
 
+Add the following dependency to your build.sbt:
+
+[source, sbt]
+----
+  "io.github.sfali23" %% "grpc-rest-gateway-annotations" % ${app-version} % "compile,protobuf"
+----
+
 The following is definition of annotation:
 
 [source, protobuf]
