@@ -11,9 +11,9 @@ object Dependencies {
     val GrpcJava: String = scalapb.compiler.Version.grpcJavaVersion
     val JavaActivation = "1.1.1"
     val Logback = "1.5.32"
-    val Pekko = "1.1.2"
-    val PekkoGrpc = "1.1.1"
-    val PekkoHttp = "1.1.0"
+    val Pekko = "1.4.0"
+    val PekkoGrpc = "1.2.0"
+    val PekkoHttp = "1.3.0"
     val Protobuf: String = scalapb.compiler.Version.protobufVersion
     val Scala213 = "2.13.18"
     val Scala212 = "2.12.21"
@@ -90,6 +90,7 @@ object Dependencies {
     "org.apache.pekko" %% "pekko-actor" % V.Pekko,
     "org.apache.pekko" %% "pekko-actor-typed" % V.Pekko,
     "org.apache.pekko" %% "pekko-stream-typed" % V.Pekko,
+    "org.apache.pekko" %% "pekko-discovery" % V.Pekko,
     "org.apache.pekko" %% "pekko-http" % V.PekkoHttp,
     "org.apache.pekko" %% "pekko-grpc-runtime" % V.PekkoGrpc
   ) ++ TestDependencies
