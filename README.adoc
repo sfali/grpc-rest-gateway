@@ -267,7 +267,7 @@ option (grpc_rest_gateway.api.statuses) = {
 
 == Set up your project
 
-=== Configure plugin for compiler fo code generation
+=== Configure compiler plugin for code generation
 
 The code-generator plugin has following options:
 
@@ -277,11 +277,13 @@ The code-generator plugin has following options:
 * `useScala3Features` &mdash; Whether to use Scala 3 features. It is used to use `using` and `given` instead of `implicits`.
 * `implementationType` &mdash; The target implementation type (Netty, Pekko, Akka)
 
-The OpenApi generator has following options:
+The OpenApi specs generator has following options:
 
-* `version` &mdash; the version of the OpenApi specification to generate, default value is `0.1.0-SNAPSHOT`
+* `version` &mdash; the version of the OpenApi specification to generate, default value is `0.1.0-SNAPSHOT`.
 
-To generate Scala classes for gateway handler and OpenApi documentation, add following in `plugin.sbt`:
+See <<openapi-specs-configuration>> for more details.
+
+To generate Scala classes for gateway handler and OpenApi specification, add following in `plugin.sbt`:
 
 [source, sbt, subs="normal,attributes"]
 ----
@@ -1052,6 +1054,221 @@ Open browser and paste following URL in address bar `http://localhost:7070`, you
 image::media/petstore.png[]
 
 Following is corresponding https://github.com/sfali/petstore-grpc/blob/main/api/src/main/protobuf/petstore/petstore.proto[proto] file.
+
+[#openapi-specs-configuration]
+== OpenAPI Specifications Configuration
+
+The gRPC-REST Gateway automatically generates OpenAPI 3.1.0 specifications from your protobuf definitions and serves them through the Swagger UI. This section explains how to configure the OpenAPI specs generator and customize the specs directory.
+
+=== OpenAPI Generator Options
+
+The OpenAPI specs generator accepts the following configuration options:
+
+* **`version`** &mdash; The version of the OpenAPI specification to generate. Default value is `0.1.0-SNAPSHOT`.
+* **`specsDirectory`** &mdash; The directory where OpenAPI specification files will be generated. This is configured at build time and runtime. The default value is `specs`.
+
+=== Build-Time Configuration
+
+==== Generating OpenAPI Specifications
+
+To generate OpenAPI specifications during the build process, add the `openApiGen` target to your `build.sbt`:
+
+[source, sbt, subs="normal,attributes"]
+----
+Compile / PB.targets := Seq(
+  scalapb.gen() -> (Compile / sourceManaged).value / "scalapb",
+  grpc_rest_gateway.gatewayGen(implementationType = grpc_rest_gateway.ImplementationType.Netty) -> (Compile / sourceManaged).value / "scalapb",
+  grpc_rest_gateway.openApiGen(version = "1.0.0") -> (Compile / resourceManaged).value / "specs"
+)
+
+// Add the following to include OpenAPI specs in the classpath
+Compile / resourceGenerators += (Compile / PB.generate)
+  .map(_.filter(_.getName.endsWith("yml")))
+  .taskValue
+----
+
+In this configuration:
+
+* OpenAPI specs are generated to `(Compile / resourceManaged).value / "specs"` directory
+* The `version` parameter sets the OpenAPI specification version (e.g., `"1.0.0"`)
+* The `resourceGenerators` task ensures the generated YAML files are included in the classpath
+
+==== Using a Custom Specs Directory at Build Time
+
+You can customize the output directory for OpenAPI specifications:
+
+[source, sbt, subs="normal,attributes"]
+----
+// Generate specs to a custom directory
+Compile / PB.targets := Seq(
+  scalapb.gen() -> (Compile / sourceManaged).value / "scalapb",
+  grpc_rest_gateway.gatewayGen(implementationType = grpc_rest_gateway.ImplementationType.Pekko) -> (Compile / sourceManaged).value / "scalapb",
+  grpc_rest_gateway.openApiGen(version = "2.0.0") -> (Compile / resourceManaged).value / "openapi-specs"
+)
+
+// Include the custom directory specs in the classpath
+Compile / resourceGenerators += (Compile / PB.generate)
+  .map(_.filter(_.getName.endsWith("yml")))
+  .taskValue
+----
+
+=== Runtime Configuration
+
+==== Default Configuration
+
+The runtime configuration for OpenAPI specifications is managed through Typesafe Config (HOCON format). The default configuration is defined in `reference.conf`:
+
+[source, hocon]
+----
+openapi {
+  enabled = true
+  enabled = ${?OPENAPI_ENABLED}
+  specs-dir = "specs"
+  specs-dir = ${?OPENAPI_SPECS_FOLDER}
+}
+----
+
+Configuration properties:
+
+* **`enabled`** &mdash; Enable or disable OpenAPI/Swagger UI functionality. Default: `true`
+* **`specs-dir`** &mdash; The directory name where OpenAPI specification files are located in the classpath. Default: `"specs"`
+
+Both properties can be overridden using environment variables:
+
+* `OPENAPI_ENABLED` &mdash; Set to `true` or `false`
+* `OPENAPI_SPECS_FOLDER` &mdash; Set to your custom directory name
+
+==== Configuring a Custom Specs Directory
+
+To use a custom specs directory, create or modify your `application.conf`:
+
+[source, hocon]
+----
+openapi {
+  enabled = true
+  specs-dir = "my-custom-specs" 
+  // or empty string to look for specs in the root of the classpath
+  // specs-dir = ""
+}
+----
+
+Or override via environment variable:
+
+[source, shell]
+----
+export OPENAPI_SPECS_FOLDER="my-custom-specs"
+----
+
+IMPORTANT: The `specs-dir` value must match the directory name where you generated the OpenAPI specs at build time (relative to the resource root).
+
+==== Disabling OpenAPI/Swagger UI
+
+To disable OpenAPI specifications and Swagger UI:
+
+[source, hocon]
+----
+openapi {
+  enabled = false
+}
+----
+
+Or via environment variable:
+
+[source, shell]
+----
+export OPENAPI_ENABLED=false
+----
+
+When disabled, the gateway will not serve Swagger UI or OpenAPI specifications, reducing memory footprint and startup time.
+
+=== Accessing OpenAPI Specifications
+
+Once configured, you can access the OpenAPI specifications through the following endpoints:
+
+* **Swagger UI Landing Page:** `http://localhost:7070`
+
+=== Complete Configuration Example
+
+==== Build Configuration (build.sbt)
+
+[source, sbt, subs="normal,attributes"]
+----
+lazy val myService = project
+  .in(file("."))
+  .settings(
+    Compile / PB.targets := Seq(
+      scalapb.gen() -> (Compile / sourceManaged).value / "scalapb",
+      grpc_rest_gateway.gatewayGen(
+        implementationType = grpc_rest_gateway.ImplementationType.Pekko
+      ) -> (Compile / sourceManaged).value / "scalapb",
+      grpc_rest_gateway.openApiGen(version = "1.0.0") -> (Compile / resourceManaged).value / "api-specs"
+    ),
+    Compile / resourceGenerators += (Compile / PB.generate)
+      .map(_.filter(_.getName.endsWith("yml")))
+      .taskValue
+  )
+----
+
+==== Runtime Configuration (application.conf)
+
+[source, hocon]
+----
+# gRPC service configuration
+pekko {
+  grpc {
+    client {
+      my-service {
+        host = "localhost"
+        port = 8080
+        use-tls = false
+      }
+    }
+  }
+}
+
+# REST gateway configuration
+rest-gateway {
+  host = "0.0.0.0"
+  host = ${?REST_GATEWAY_HOST}
+  port = 7070
+  port = ${?REST_GATEWAY_PORT}
+  hard-termination-deadline = 10.seconds
+  hard-termination-deadline = ${?REST_GATEWAY_HARD_TERMINATION_DEADLINE}
+}
+
+# OpenAPI configuration
+openapi {
+  enabled = true
+  enabled = ${?OPENAPI_ENABLED}
+  specs-dir = "api-specs"
+  specs-dir = ${?OPENAPI_SPECS_FOLDER}
+}
+----
+
+=== Troubleshooting
+
+==== Swagger UI Not Loading
+
+If Swagger UI is not loading, verify:
+
+1. **OpenAPI is enabled:** Check that `openapi.enabled = true` in your configuration
+2. **Specs directory matches:** Ensure the `specs-dir` in `application.conf` matches the directory used in `build.sbt`
+3. **Specs are in classpath:** Verify that `resourceGenerators` task is configured correctly
+4. **YAML files exist:** Check that `.yml` files were generated during compilation
+
+==== Environment Variable Override Not Working
+
+Ensure environment variables are set before starting the application:
+
+[source, shell]
+----
+# Set environment variables
+export OPENAPI_ENABLED=true
+export OPENAPI_SPECS_FOLDER="my-specs"
+
+# Then run your application
+sbt run
+----
 
 == Limitations
 
