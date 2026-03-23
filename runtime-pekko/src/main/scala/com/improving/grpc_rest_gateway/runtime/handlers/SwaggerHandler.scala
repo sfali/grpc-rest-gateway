@@ -17,16 +17,16 @@ import javax.activation.MimetypesFileTypeMap
   *
   * @param specsPrefix
   *   The root path where specification files are served from, e.g. "specs" (without leading slash)
-  * @param handlers
-  *   The sequence of gateway handlers to extract specification names from
+  * @param specificationNames
+  *   The sequence of specification names to include in the Swagger UI
   */
-class SwaggerHandler(specsPrefix: String, handlers: Seq[GrpcGatewayHandler]) {
+class SwaggerHandler(specsPrefix: String, specificationNames: Seq[String]) {
   import SwaggerHandler.*
 
   private val mimeTypes = new MimetypesFileTypeMap()
   mimeTypes.addMimeTypes("image/png png PNG")
   mimeTypes.addMimeTypes("text/css css CSS")
-  private val indexPage = readSwaggerIndexPage(specsPrefix, handlers.map(_.specificationName).distinct.sorted)
+  private val indexPage = readSwaggerIndexPage(specsPrefix, specificationNames.distinct.sorted)
 
   private[runtime] val route: Route =
     pathSingleSlash {
@@ -83,6 +83,6 @@ object SwaggerHandler {
   private val DocsLandingPage = s"/$DocsPrefix/$IndexPage"
   private val RootPath = Paths.get("/")
 
-  def apply(specsPrefix: String, handlers: Seq[GrpcGatewayHandler]): SwaggerHandler =
-    new SwaggerHandler(specsPrefix, handlers)
+  def apply(specsPrefix: String, specificationNames: Seq[String]): SwaggerHandler =
+    new SwaggerHandler(specsPrefix, specificationNames)
 }
