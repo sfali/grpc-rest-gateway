@@ -19,9 +19,8 @@ object openApiGen {
       options.map(_.toString)
     )
 
-  def apply(version: String = "0.1.0-SNAPSHOT"): (SandboxedJvmGenerator, Seq[String]) = {
+  def apply(): (SandboxedJvmGenerator, Seq[String]) = {
     val optionsBuilder = Set.newBuilder[String]
-    optionsBuilder += s"version:$version"
     apply(optionsBuilder.result().toSeq*)
   }
 }

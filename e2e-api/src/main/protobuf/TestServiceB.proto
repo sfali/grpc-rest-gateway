@@ -22,6 +22,10 @@ option (scalapb.options) = {
   package_name: "rest_gateway_test.api.scala_api"
 };
 
+option (grpc_rest_gateway.api.openapi_info) = {
+   version: "1.0.0"
+};
+
 // Test service B
 service TestServiceB {
   rpc GetRequest (rest_gateway_test.api.model.TestRequestB) returns (rest_gateway_test.api.model.TestResponseB) {

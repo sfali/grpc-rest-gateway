@@ -30,3 +30,11 @@ message Statuses {
 extend google.protobuf.MethodOptions {
   Statuses statuses = 50000;
 }
+
+message OpenApiInfo {
+  string version = 1;
+}
+
+extend google.protobuf.FileOptions {
+  OpenApiInfo openapi_info = 50001;
+}
