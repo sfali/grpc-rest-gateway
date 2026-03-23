@@ -31,7 +31,7 @@ class GatewayServer(
     implicit val ec: ExecutionContext = sys.classicSystem.dispatcher
     val handlerRoutes = handlers.map(_.route)
     val routes =
-      if (openApiSettings.enabled) SwaggerHandler(openApiSettings.specsDirectory, handlers).route +: handlerRoutes
+      if (openApiSettings.enabled) handlerRoutes :+ SwaggerHandler(openApiSettings.specsDirectory, handlers).route
       else handlerRoutes
     val eventualBinding = Http()
       .newServerAt(host, port)
