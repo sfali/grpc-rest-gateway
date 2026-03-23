@@ -27,7 +27,8 @@ object gatewayGen {
     *   Whether to generate Scala 3 sources. It is used for using `*` as the wild card import instead of `_`. For Scala
     *   2.12 or later, set to true if the "-Xsource:3" scala compiler option is used. Always enabled if the project is
     *   using Scala 3
-    * @param useScala3Features Whether to use Scala 3 features. It is used to use `using` and `given` instead of `implicits`.
+    * @param useScala3Features
+    *   Whether to use Scala 3 features. It is used to use `using` and `given` instead of `implicits`.
     * @param implementationType
     *   The implementation type (Netty, Pekko, Akka)
     * @return

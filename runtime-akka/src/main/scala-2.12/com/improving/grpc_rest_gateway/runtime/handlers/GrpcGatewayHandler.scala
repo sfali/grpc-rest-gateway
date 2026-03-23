@@ -3,9 +3,9 @@ package grpc_rest_gateway
 package runtime
 package handlers
 
+import runtime.core.internal.*
 import akka.http.scaladsl.server.Directives.*
 import akka.http.scaladsl.server.Route
-import com.improving.grpc_rest_gateway.runtime.core.internal.*
 import scalapb.GeneratedMessage
 
 import scala.concurrent.{ExecutionContext, Future}

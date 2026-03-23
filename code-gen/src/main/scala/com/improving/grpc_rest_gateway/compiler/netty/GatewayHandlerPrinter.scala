@@ -12,7 +12,8 @@ import scalapb.compiler.{DescriptorImplicits, FunctionalPrinter, NameUtils}
 
 import scala.jdk.CollectionConverters.*
 
-class GatewayHandlerPrinter(service: ServiceDescriptor, implicits: DescriptorImplicits, isScala3: Boolean = false) extends HandlerPrinter {
+class GatewayHandlerPrinter(service: ServiceDescriptor, implicits: DescriptorImplicits, isScala3: Boolean = false)
+    extends HandlerPrinter {
   import implicits.*
 
   private var ifStatementStarted = false

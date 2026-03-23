@@ -36,9 +36,9 @@ abstract class GrpcGatewayHandler(channel: ManagedChannel)(using ec: ExecutionCo
     */
   val specificationName: String
 
-  def shutdown(): Unit = 
+  def shutdown(): Unit =
     (!channel.isShutdown) match {
-      case true => channel.shutdown()
+      case true  => channel.shutdown()
       case false => // Do nothing
     }
 
@@ -71,7 +71,7 @@ abstract class GrpcGatewayHandler(channel: ManagedChannel)(using ec: ExecutionCo
                 buildFullHttpResponse(
                   requestMsg = req,
                   responseBody = (HttpResponseStatus.NO_CONTENT == status) match {
-                    case true => ""
+                    case true  => ""
                     case false => json
                   },
                   responseStatus = status,
@@ -82,8 +82,11 @@ abstract class GrpcGatewayHandler(channel: ManagedChannel)(using ec: ExecutionCo
                 logger.error("Error while processing request", ex)
                 val (status, responseBody, contentType) = ex match {
                   case gatewayEx: GatewayException =>
-                    (GRPC_HTTP_CODE_MAP.getOrElse(gatewayEx.statusCode, HttpResponseStatus.INTERNAL_SERVER_ERROR), 
-                     gatewayEx.getMessage, "text/plain")
+                    (
+                      GRPC_HTTP_CODE_MAP.getOrElse(gatewayEx.statusCode, HttpResponseStatus.INTERNAL_SERVER_ERROR),
+                      gatewayEx.getMessage,
+                      "text/plain"
+                    )
                   case _ =>
                     (HttpResponseStatus.INTERNAL_SERVER_ERROR, ex.getMessage, "text/plain")
                 }
@@ -157,7 +160,7 @@ trait PathMatchingSupport {
         .toMap
 
     (configuredPath == path) match {
-      case true => flattenQueryParameters
+      case true  => flattenQueryParameters
       case false =>
         // "{" has special meaning in regex, replacing "{" and "}" with "#" for now
         val configuredPathElements =
@@ -168,13 +171,14 @@ trait PathMatchingSupport {
         val configuredToRuntimeDiff = configuredPathElements.diff(runtimePathElements)
         val runtimeToConfiguredDiff = runtimePathElements.diff(configuredPathElements)
         val mismatchPaths = configuredToRuntimeDiff.exists(s => !s.contains("#"))
-        
+
         (!mismatchPaths && configuredToRuntimeDiff.length == runtimeToConfiguredDiff.length) match {
           case true =>
             // now remove "#"
-            val pathParameters = configuredToRuntimeDiff.map(_.replaceAll("#", "")).zip(runtimeToConfiguredDiff).toMap.map {
-              case (key, value) => key -> Seq(value)
-            }
+            val pathParameters =
+              configuredToRuntimeDiff.map(_.replaceAll("#", "")).zip(runtimeToConfiguredDiff).toMap.map {
+                case (key, value) => key -> Seq(value)
+              }
             Map.empty[String, Seq[String]] ++ pathParameters ++ flattenQueryParameters
           case false => flattenQueryParameters
         }
@@ -183,7 +187,7 @@ trait PathMatchingSupport {
 
   private def isMatchingPaths(configuredPath: String, runtimePath: String): Boolean =
     (configuredPath == runtimePath) match {
-      case true => true
+      case true  => true
       case false =>
         // "{" has special meaning in regex, replacing "{" and "}" with "#" for now
         val configuredPathElements =

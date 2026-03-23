@@ -18,6 +18,20 @@ object SettingsHelper {
 
   def isScala3: Def.Initialize[Boolean] = Def.setting[Boolean](scalaVersion.value.startsWith("3."))
 
+  def defaultScalacOptions(isScala3: Boolean) : Seq[String] =
+    if (isScala3) Seq(
+      "-feature",
+      "-deprecation",
+      "-unchecked",
+      "-explain",
+      "-Wunused:imports",
+      "-Wunused:locals",
+      "-Wunused:explicits",
+      "-Wunused:implicits",
+      "-Wnonunit-statement",
+      "-Wvalue-discard")
+    else Seq("-Xsource:3")
+
   def commonSettings(project: Project): Project =
     project
       .enablePlugins(ScalafmtPlugin, DependencyUpdaterPlugin)

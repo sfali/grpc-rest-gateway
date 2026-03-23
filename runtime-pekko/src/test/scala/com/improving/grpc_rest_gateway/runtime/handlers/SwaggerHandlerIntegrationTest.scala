@@ -22,12 +22,12 @@ class SwaggerHandlerIntegrationTest extends AnyFlatSpec with Matchers with Scala
   }
 
   "SwaggerHandler" should "generate correct service URLs in index page" in {
-    val services = Seq(
-      new MockGatewayHandler("service-a"),
-      new MockGatewayHandler("service-b"),
-      new MockGatewayHandler("service-c")
+    val specificationNames = Seq(
+      "service-a",
+      "service-b",
+      "service-c"
     )
-    val swaggerHandler = SwaggerHandler(services)
+    val swaggerHandler = SwaggerHandler("specs", specificationNames)
 
     Get("/docs/index.html") ~> swaggerHandler.route ~> check {
       val content = responseAs[String]
@@ -38,12 +38,12 @@ class SwaggerHandlerIntegrationTest extends AnyFlatSpec with Matchers with Scala
   }
 
   it should "deduplicate service names in index page" in {
-    val services = Seq(
-      new MockGatewayHandler("duplicate-service"),
-      new MockGatewayHandler("unique-service"),
-      new MockGatewayHandler("duplicate-service") // Duplicate
+    val specificationNames = Seq(
+      "duplicate-service",
+      "unique-service",
+      "duplicate-service" // Duplicate
     )
-    val swaggerHandler = SwaggerHandler(services)
+    val swaggerHandler = SwaggerHandler("specs", specificationNames)
 
     Get("/docs/index.html") ~> swaggerHandler.route ~> check {
       val content = responseAs[String]
@@ -62,8 +62,8 @@ class SwaggerHandlerIntegrationTest extends AnyFlatSpec with Matchers with Scala
   }
 
   it should "handle empty services list in index page" in {
-    val services = Seq.empty[MockGatewayHandler]
-    val swaggerHandler = SwaggerHandler(services)
+    val specificationNames = Seq.empty[String]
+    val swaggerHandler = SwaggerHandler("specs", specificationNames)
 
     Get("/docs/index.html") ~> swaggerHandler.route ~> check {
       val content = responseAs[String]
@@ -72,11 +72,11 @@ class SwaggerHandlerIntegrationTest extends AnyFlatSpec with Matchers with Scala
   }
 
   it should "generate correct service names in title" in {
-    val services = Seq(
-      new MockGatewayHandler("test-service"),
-      new MockGatewayHandler("another-service")
+    val specificationNames = Seq(
+      "test-service",
+      "another-service"
     )
-    val swaggerHandler = SwaggerHandler(services)
+    val swaggerHandler = SwaggerHandler("specs", specificationNames)
 
     Get("/docs/index.html") ~> swaggerHandler.route ~> check {
       val content = responseAs[String]
@@ -86,12 +86,12 @@ class SwaggerHandlerIntegrationTest extends AnyFlatSpec with Matchers with Scala
   }
 
   it should "sort service names alphabetically" in {
-    val services = Seq(
-      new MockGatewayHandler("z-service"),
-      new MockGatewayHandler("a-service"),
-      new MockGatewayHandler("m-service")
+    val specificationNames = Seq(
+      "z-service",
+      "a-service",
+      "m-service"
     )
-    val swaggerHandler = SwaggerHandler(services)
+    val swaggerHandler = SwaggerHandler("specs", specificationNames)
 
     Get("/docs/index.html") ~> swaggerHandler.route ~> check {
       val content = responseAs[String]
@@ -100,12 +100,12 @@ class SwaggerHandlerIntegrationTest extends AnyFlatSpec with Matchers with Scala
   }
 
   it should "handle services with special characters in names" in {
-    val services = Seq(
-      new MockGatewayHandler("service-with-dashes"),
-      new MockGatewayHandler("service_with_underscores"),
-      new MockGatewayHandler("service.with.dots")
+    val specificationNames = Seq(
+      "service-with-dashes",
+      "service_with_underscores",
+      "service.with.dots"
     )
-    val swaggerHandler = SwaggerHandler(services)
+    val swaggerHandler = SwaggerHandler("specs", specificationNames)
 
     Get("/docs/index.html") ~> swaggerHandler.route ~> check {
       val content = responseAs[String]
@@ -121,8 +121,8 @@ class SwaggerHandlerIntegrationTest extends AnyFlatSpec with Matchers with Scala
   }
 
   it should "generate valid HTML structure" in {
-    val services = Seq(new MockGatewayHandler("test-service"))
-    val swaggerHandler = SwaggerHandler(services)
+    val specificationNames = Seq("test-service")
+    val swaggerHandler = SwaggerHandler("specs", specificationNames)
 
     Get("/docs/index.html") ~> swaggerHandler.route ~> check {
       val content = responseAs[String]

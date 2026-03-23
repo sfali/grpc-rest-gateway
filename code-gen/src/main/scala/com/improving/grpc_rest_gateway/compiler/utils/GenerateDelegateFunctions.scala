@@ -14,8 +14,7 @@ import scala.jdk.CollectionConverters.*
 class GenerateDelegateFunctions private[utils] (
   implicits: DescriptorImplicits,
   responseFunctionName: String,
-  methods: List[MethodDescriptor]
-) {
+  methods: List[MethodDescriptor]) {
   import implicits.*
   import GenerateDelegateFunctions.*
 
@@ -61,7 +60,7 @@ class GenerateDelegateFunctions private[utils] (
           .call(generateInputFromQueryString(method.getInputType, serviceFunctionName, required = true))
           .outdent
           .add("}")
-          .add (s"$responseFunctionName(input, client.$methodName, statusCode)")
+          .add(s"$responseFunctionName(input, client.$methodName, statusCode)")
           .outdent
           .add("}")
       case PatternCase.PUT | PatternCase.POST =>
@@ -149,7 +148,7 @@ class GenerateDelegateFunctions private[utils] (
               .add(s"$serviceFunctionName($args)")
               .outdent
               .add("}")
-              .add (s"$responseFunctionName(input, client.$methodName, statusCode)")
+              .add(s"$responseFunctionName(input, client.$methodName, statusCode)")
               .outdent
               .add("}")
           case None =>
@@ -217,14 +216,18 @@ class GenerateDelegateFunctions private[utils] (
           if (f.isRepeated) p.add(s"""val $jsonName = ParametersOps.toDoubleValues(parameters, "$prefix$inputName")""")
           else {
             p.when(required)(_.add(s"""val $jsonName = ParametersOps.toDoubleValue(parameters, "$prefix$inputName")"""))
-              .when(!required)(_.add(s"""val $jsonName = ParametersOps.toDoubleValue(parameters, "$prefix$inputName", "")"""))
+              .when(!required)(
+                _.add(s"""val $jsonName = ParametersOps.toDoubleValue(parameters, "$prefix$inputName", "")""")
+              )
           }
 
         case JavaType.FLOAT =>
           if (f.isRepeated) p.add(s"""val $jsonName = ParametersOps.toFloatValues(parameters, "$prefix$inputName")""")
           else {
             p.when(required)(_.add(s"""val $jsonName = ParametersOps.toFloatValue(parameters, "$prefix$inputName")"""))
-              .when(!required)(_.add(s"""val $jsonName = ParametersOps.toFloatValue(parameters, "$prefix$inputName", "")"""))
+              .when(!required)(
+                _.add(s"""val $jsonName = ParametersOps.toFloatValue(parameters, "$prefix$inputName", "")""")
+              )
           }
 
         case JavaType.INT =>
@@ -232,14 +235,18 @@ class GenerateDelegateFunctions private[utils] (
             p.add(s"""val $jsonName = ParametersOps.toIntValues(parameters, "$prefix$inputName")""")
           } else {
             p.when(required)(_.add(s"""val $jsonName = ParametersOps.toIntValue(parameters, "$prefix$inputName")"""))
-              .when(!required)(_.add(s"""val $jsonName = ParametersOps.toIntValue(parameters, "$prefix$inputName", "")"""))
+              .when(!required)(
+                _.add(s"""val $jsonName = ParametersOps.toIntValue(parameters, "$prefix$inputName", "")""")
+              )
           }
 
         case JavaType.LONG =>
           if (f.isRepeated) p.add(s"""val $jsonName = ParametersOps.toLongValues(parameters, "$prefix$inputName")""")
           else {
             p.when(required)(_.add(s"""val $jsonName = ParametersOps.toLongValue(parameters, "$prefix$inputName")"""))
-              .when(!required)(_.add(s"""val $jsonName = ParametersOps.toLongValue(parameters, "$prefix$inputName", "")"""))
+              .when(!required)(
+                _.add(s"""val $jsonName = ParametersOps.toLongValue(parameters, "$prefix$inputName", "")""")
+              )
           }
 
         case JavaType.STRING =>
@@ -254,7 +261,8 @@ class GenerateDelegateFunctions private[utils] (
   private def getInputName(d: FieldDescriptor, prefix: String = ""): String = {
     // Explicitly use prefix to avoid unused warning
     val _ = prefix.isEmpty
-    val name = prefix.split(".").filter(_.nonEmpty).map(s => s"${s.charAt(0).toUpper}${s.substring(1)}").mkString + d.getName
+    val name =
+      prefix.split(".").filter(_.nonEmpty).map(s => s"${s.charAt(0).toUpper}${s.substring(1)}").mkString + d.getName
     s"${name.charAt(0).toLower}${name.substring(1)}"
   }
 

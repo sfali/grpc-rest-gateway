@@ -15,15 +15,16 @@ import io.netty.util.CharsetUtil
 import org.apache.commons.io.IOUtils
 
 object SwaggerHandler {
-  private val SpecsPrefix = Paths.get("/specs/")
   private val DocsPrefix = Paths.get("/docs/")
   private val DocsLandingPage = Paths.get("/docs/index.html")
   private val RootPath = Paths.get("/")
 }
 
 @Sharable
-class SwaggerHandler(services: Seq[GrpcGatewayHandler]) extends ChannelInboundHandlerAdapter {
+class SwaggerHandler(specsDirectory: String, specificationNames: Seq[String]) extends ChannelInboundHandlerAdapter {
   import SwaggerHandler.*
+
+  private val specsPrefix = Paths.get(s"/$specsDirectory/")
 
   override def channelRead(ctx: ChannelHandlerContext, msg: scala.Any): Unit =
     msg.asMatchable match {
@@ -38,8 +39,8 @@ class SwaggerHandler(services: Seq[GrpcGatewayHandler]) extends ChannelInboundHa
             // swagger UI loading its own resources
             val resourcePath = SwaggerUiPath.resolve(RootPath.relativize(path).subpath(1, path.getNameCount))
             Some(createResourceResponse(req, resourcePath))
-          case p if p.startsWith(SpecsPrefix) =>
-            // swagger UI loading up spec file
+          case p if p.startsWith(specsPrefix) =>
+            // swagger UI loading up the spec file
             Some(createResourceResponse(req, RootPath.relativize(path)))
           case _ => None
         }
@@ -95,6 +96,6 @@ class SwaggerHandler(services: Seq[GrpcGatewayHandler]) extends ChannelInboundHa
   private val mimeTypes = new MimetypesFileTypeMap()
   mimeTypes.addMimeTypes("image/png png PNG")
   mimeTypes.addMimeTypes("text/css css CSS")
-  private val indexPage = readSwaggerIndexPage(services.map(_.specificationName).distinct.sorted)
+  private val indexPage = readSwaggerIndexPage(specsDirectory, specificationNames.distinct.sorted)
 
 }

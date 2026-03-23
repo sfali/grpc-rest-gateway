@@ -7,8 +7,7 @@ lazy val api = (project in file("api"))
   .settings(
     name := "grpc-rest-gateway-api-proto",
     publish / skip := true,
-    scalacOptions ++= (if (isScala3.value) Seq("future", "-explain")
-                       else Seq("-Xsource:3"))
+    scalacOptions ++= defaultScalacOptions(isScala3.value)
   )
 
 lazy val `runtime-core` = (projectMatrix in file("runtime-core"))
@@ -18,8 +17,7 @@ lazy val `runtime-core` = (projectMatrix in file("runtime-core"))
   .settings(
     name := "grpc-rest-gateway-runtime-core",
     libraryDependencies ++= RuntimeCoreDependencies,
-    scalacOptions ++= (if (isScala3.value) Seq("-source", "future", "-explain", "-Wconf:any:s")
-                       else Seq("-Xsource:3")),
+    scalacOptions ++= defaultScalacOptions(isScala3.value),
     Compile / unmanagedSourceDirectories += {
       val sourceDir = (Compile / scalaSource).value
       CrossVersion.partialVersion(scalaVersion.value) match {
@@ -39,8 +37,7 @@ lazy val `runtime-netty` = (projectMatrix in file("runtime-netty"))
   .settings(
     name := "grpc-rest-gateway-runtime-netty",
     libraryDependencies ++= RuntimeDependencies ++ TestDependencies,
-    scalacOptions ++= (if (isScala3.value) Seq("-source", "future", "-explain")
-                       else Seq("-Xsource:3")),
+    scalacOptions ++= defaultScalacOptions(isScala3.value),
     Compile / unmanagedSourceDirectories += {
       val sourceDir = (Compile / scalaSource).value
       CrossVersion.partialVersion(scalaVersion.value) match {
@@ -61,8 +58,7 @@ lazy val `runtime-pekko` = (projectMatrix in file("runtime-pekko"))
   .settings(
     name := "grpc-rest-gateway-runtime-pekko",
     libraryDependencies ++= RuntimePekkoDependencies ++ PekkoTestDependencies,
-    scalacOptions ++= (if (isScala3.value) Seq("-source", "future", "-explain")
-                       else Seq("-Xsource:3")),
+    scalacOptions ++= defaultScalacOptions(isScala3.value),
     Compile / unmanagedSourceDirectories += {
       val sourceDir = (Compile / scalaSource).value
       CrossVersion.partialVersion(scalaVersion.value) match {
@@ -88,8 +84,7 @@ lazy val `runtime-akka` = (projectMatrix in file("runtime-akka"))
         else "com.typesafe.akka" %% "akka-http" % V.AkkaHttp % "provided"
       )
     } ++ RuntimeAkkaDependencies,
-    scalacOptions ++= (if (isScala3.value) Seq("-source", "future", "-explain")
-                       else Seq("-Xsource:3")),
+    scalacOptions ++= defaultScalacOptions(isScala3.value),
     Compile / unmanagedSourceDirectories += {
       val sourceDir = (Compile / scalaSource).value
       CrossVersion.partialVersion(scalaVersion.value) match {
@@ -124,18 +119,7 @@ lazy val codeGen = (projectMatrix in file("code-gen"))
   .settings(
     name := "grpc-rest-gateway-code-gen",
     libraryDependencies ++= CodegenDependencies,
-    scalacOptions ++= (if (isScala3.value) Seq(
-      "-feature",
-      "-deprecation",
-      "-unchecked",
-      "-explain",
-      "-Wunused:imports",
-      "-Wunused:locals",
-      "-Wunused:explicits",
-      "-Wunused:implicits",
-      "-Wnonunit-statement",
-      "-Wvalue-discard")
-    else Seq("-Xsource:3"))
+    scalacOptions ++= defaultScalacOptions(isScala3.value)
   )
   .jvmPlatform(scalaVersions = Seq(V.Scala212, V.Scala213, V.Scala3))
   .dependsOn(annotations)
@@ -157,8 +141,7 @@ lazy val `e2e-core` = (projectMatrix in file("e2e-core"))
   .settings(
     publish / skip := true,
     libraryDependencies ++= E2ECore,
-    scalacOptions ++= (if (isScala3.value) Seq("-source", "future")
-                       else Seq("-Xsource:3")),
+    scalacOptions ++= defaultScalacOptions(isScala3.value),
     // Add version-specific source directories
     Compile / unmanagedSourceDirectories += {
       val sourceDir = (Compile / scalaSource).value
@@ -193,7 +176,7 @@ lazy val `e2e-netty` = (projectMatrix in file("e2e-netty"))
           genModule("com.improving.grpc_rest_gateway.compiler.GatewayGenerator$"),
           Seq("implementation_type:netty")
         ) -> (Compile / sourceManaged).value / "scalapb",
-        genModule("com.improving.grpc_rest_gateway.compiler.OpenApiGenerator$") -> (Compile / resourceManaged).value / "specs"
+        genModule("com.improving.grpc_rest_gateway.compiler.OpenApiGenerator$") -> (Compile / resourceManaged).value / "specs-2.12"
       ),
       Compile / resourceGenerators += (Compile / PB.generate)
         .map(_.filter(_.getName.endsWith("yml")))
@@ -237,7 +220,7 @@ lazy val `e2e-netty` = (projectMatrix in file("e2e-netty"))
          (
           genModule("com.improving.grpc_rest_gateway.compiler.OpenApiGenerator$"),
           Seq("version:1.0.0")
-        ) -> (Compile / resourceManaged).value / "specs"
+        ) -> (Compile / resourceManaged).value
         ),
         Compile / resourceGenerators += (Compile / PB.generate)
         .map(_.filter(_.getName.endsWith("yml")))
@@ -246,18 +229,7 @@ lazy val `e2e-netty` = (projectMatrix in file("e2e-netty"))
   )
   .settings(
     publish / skip := true,
-    scalacOptions ++= (if (isScala3.value) Seq(
-     "-feature",
-     "-deprecation",
-     "-unchecked",
-     "-explain",
-     "-Wunused:imports",
-     "-Wunused:locals",
-     "-Wunused:explicits",
-     "-Wunused:implicits",
-     "-Wnonunit-statement",
-     "-Wvalue-discard")
-    else Seq("-Xsource:3")),
+    scalacOptions ++= defaultScalacOptions(isScala3.value),
     Test / scalacOptions ~= (_.filterNot(Set("-Wnonunit-statement"))),
     codeGenClasspath := (codeGenJVM212 / Compile / fullClasspath).value,
     libraryDependencies ++= E2ENettyDependencies,
@@ -267,7 +239,16 @@ lazy val `e2e-netty` = (projectMatrix in file("e2e-netty"))
     (Compile / PB.protoSources) += (`e2e-api` / baseDirectory).value / "src" / "main" / "protobuf",
     Compile / resourceGenerators += (Compile / PB.generate)
     .map(_.filter(_.getName.endsWith("yml")))
-    .taskValue
+    .taskValue,
+    Compile / unmanagedResourceDirectories += {
+      val resourceDir = (Compile / resourceDirectory).value
+      CrossVersion.partialVersion(scalaVersion.value) match {
+        case Some((2, 12)) => resourceDir.getParentFile / "resources-2.12"
+        case Some((2, 13)) => resourceDir.getParentFile / "resources-2.13"
+        case Some((3, _))  => resourceDir.getParentFile / "resources-3"
+        case _ => resourceDir
+      }
+    }
   )
   .jvmPlatform(scalaVersions = Seq(V.Scala212, V.Scala213, V.Scala3))
 
@@ -290,7 +271,7 @@ lazy val `e2e-pekko` = (projectMatrix in file("e2e-pekko"))
         (
           genModule("com.improving.grpc_rest_gateway.compiler.OpenApiGenerator$"),
           Seq("version:1.0.0")
-        ) -> (Compile / resourceManaged).value / "specs"
+        ) -> (Compile / resourceManaged).value / "specs-2.12"
       ),
       // Add pekko-grpc targets
       pekkoGrpcCodeGeneratorSettings := Seq("grpc", "single_line_to_proto_string"),
@@ -338,7 +319,7 @@ lazy val `e2e-pekko` = (projectMatrix in file("e2e-pekko"))
             "com.improving.grpc_rest_gateway.compiler.OpenApiGenerator$"
           ),
           Seq("version:1.0.0")
-        ) -> (Compile / resourceManaged).value / "specs"
+        ) -> (Compile / resourceManaged).value
       ),
       // Add pekko-grpc targets
       pekkoGrpcCodeGeneratorSettings := Seq("grpc", "single_line_to_proto_string"),
@@ -348,18 +329,7 @@ lazy val `e2e-pekko` = (projectMatrix in file("e2e-pekko"))
   )
   .settings(
     publish / skip := true,
-    scalacOptions ++= (if (isScala3.value) Seq(
-      "-feature",
-     "-deprecation",
-     "-unchecked",
-     "-explain",
-     "-Wunused:imports",
-     "-Wunused:locals",
-     "-Wunused:explicits",
-     "-Wunused:implicits",
-     "-Wnonunit-statement",
-     "-Wvalue-discard")
-    else Seq("-Xsource:3")),
+    scalacOptions ++= defaultScalacOptions(isScala3.value),
     Test / scalacOptions ~= (_.filterNot(Set("-Wnonunit-statement"))),
     codeGenClasspath := (codeGenJVM212 / Compile / fullClasspath).value,
     libraryDependencies ++= E2EPekkoDependencies,
@@ -370,7 +340,16 @@ lazy val `e2e-pekko` = (projectMatrix in file("e2e-pekko"))
     ),
     Compile / resourceGenerators += (Compile / PB.generate)
       .map(_.filter(_.getName.endsWith("yml")))
-      .taskValue
+      .taskValue,
+    Compile / unmanagedResourceDirectories += {
+      val resourceDir = (Compile / resourceDirectory).value
+      CrossVersion.partialVersion(scalaVersion.value) match {
+        case Some((2, 12)) => resourceDir.getParentFile / "resources-2.12"
+        case Some((2, 13)) => resourceDir.getParentFile / "resources-2.13"
+        case Some((3, _))  => resourceDir.getParentFile / "resources-3"
+        case _ => resourceDir
+      }
+    }
   )
   .jvmPlatform(scalaVersions = Seq(V.Scala212, V.Scala213, V.Scala3))
 
