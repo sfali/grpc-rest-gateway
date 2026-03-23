@@ -32,4 +32,3 @@ sbt-cache/**
 .toDelete
 **/buf*.yaml
 *.dylib
-YAML_VERIFICATION_SUMMARY.md
