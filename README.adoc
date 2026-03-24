@@ -206,7 +206,7 @@ Standard Google http annotations don't provide a way to configure HTTP status co
 
 Add the following dependency to your build.sbt:
 
-[source, sbt]
+[source, sbt, subs="normal,attributes"]
 ----
   "io.github.sfali23" %% "grpc-rest-gateway-annotations" % "{app-version}" % "compile,protobuf"
 ----
