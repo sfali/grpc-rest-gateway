@@ -24,6 +24,7 @@ import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.jdk.CollectionConverters.*
 import scalapb.compiler.GeneratorParams
+import scalapb.compiler.ProtobufGenerator
 
 object OpenApiGenerator extends CodeGenApp {
 
@@ -34,18 +35,8 @@ object OpenApiGenerator extends CodeGenApp {
   }
 
   override def process(request: CodeGenRequest): CodeGenResponse =
-    GeneratorParams.fromStringCollectUnrecognized(request.parameter) match {
-      case Right((params, options)) =>
-        val version =
-          options
-            .collectFirst {
-              case option if option.startsWith("version:") =>
-                val separator = option.indexOf(":")
-                val v = option.substring(separator + 1)
-                if (v.isEmpty) "0.1.0-SNAPSHOT" else v
-            }
-            .getOrElse("0.1.0-SNAPSHOT")
-
+    ProtobufGenerator.parseParameters(request.parameter) match {
+      case Right(params) =>
         // Implicits gives you extension methods that provide ScalaPB names and types
         // for protobuf entities.
         val implicits = DescriptorImplicits.fromCodeGenRequest(params, request)
@@ -58,14 +49,14 @@ object OpenApiGenerator extends CodeGenApp {
               if (services.isEmpty || services.forall(getUnaryCallsWithHttpExtension(_).isEmpty)) None
               else Some(fd)
             }
-            .map(fd => new OpenApiMessagePrinter(version, fd, implicits))
+            .map(fd => new OpenApiMessagePrinter(fd, implicits))
             .map(_.result)
         )
 
       case Left(error) => CodeGenResponse.fail(error)
     }
 
-  private class OpenApiMessagePrinter(version: String, fd: FileDescriptor, implicits: DescriptorImplicits) {
+  private class OpenApiMessagePrinter(fd: FileDescriptor, implicits: DescriptorImplicits) {
     import implicits.*
 
     // map of services defined in this file to methods with `HTTP` annotations
@@ -79,6 +70,7 @@ object OpenApiGenerator extends CodeGenApp {
       }
       .toMap
     private val services = serviceDescriptorToMethodsMap.keys
+    private val specVersion = getSpecVersion(fd)
 
     // maps of already traversed methods in order to avoid duplication
     private val componentsMap = mutable.Map.empty[String, Boolean].withDefaultValue(false)
@@ -94,7 +86,7 @@ object OpenApiGenerator extends CodeGenApp {
       new FunctionalPrinter()
         .add("openapi: 3.1.0", "info:")
         .addIndented(
-          s"""version: $version""",
+          s"""version: $specVersion""",
           s"""description: "REST API generated from ${fd.getName}"""",
           s"""title: "${fd.getFullName}""""
         )

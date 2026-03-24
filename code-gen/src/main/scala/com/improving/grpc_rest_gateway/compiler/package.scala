@@ -8,6 +8,7 @@ import com.improving.grpc_rest_gateway.api.GrpcRestGatewayProto
 import com.improving.grpc_rest_gateway.api.GrpcRestGatewayProto.StatusDescription
 
 import scala.jdk.CollectionConverters.*
+import com.google.protobuf.Descriptors.FileDescriptor
 
 package object compiler {
 
@@ -73,6 +74,11 @@ package object compiler {
       successStatus +: statuses.getOtherStatusList.asScala.toList
     } else Seq(defaultSuccessStatus)
   }
+
+  def getSpecVersion(fd: FileDescriptor): String =
+    if (fd.getOptions.hasExtension(GrpcRestGatewayProto.openapiInfo)) {
+      fd.getOptions.getExtension(GrpcRestGatewayProto.openapiInfo).getVersion
+    } else "0.1.0-SNAPSHOT"
 
   // Helper methods for Scala 3 compatibility
   def usingClause(isScala3: Boolean, param: String): String = if (isScala3) s"(using $param)" else s"(implicit $param)"
